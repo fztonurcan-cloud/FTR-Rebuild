@@ -1,0 +1,25 @@
+{
+  "generated_at": "2026-08-24T22:15:41.899777+00:00",
+  "phase": 58,
+  "main_readiness_percent": 99,
+  "media_storage_review": "119/119",
+  "release_candidate": {
+    "github_release_workflow": true,
+    "signed_aab_target": "FTR-release-4.0.0-25.aab",
+    "signed_apk_target": "FTR-release-4.0.0-25.apk",
+    "flutter": "3.47.0",
+    "java": "17",
+    "android_compile_target": "36",
+    "application_id": "com.mobiroller.mobi743032079412",
+    "version_name": "4.0.0",
+    "version_code": 25,
+    "release_dart_define_bug_fixed": true,
+    "real_build_executed": false
+  },
+  "external_blockers": [
+    "GitHub accessible repository = 0",
+    "Real Play upload key/fingerprint continuity",
+    "Play verification + RTDN + product allowlist",
+    "Real device and purchase/restore test"
+  ]
+}

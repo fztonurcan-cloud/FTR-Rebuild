@@ -1,0 +1,166 @@
+name: FTR Android Release Candidate
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    defaults:
+      run:
+        working-directory: phase_04/ftr_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36 platform
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Flutter 3.47.0
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Validate required secrets
+        env:
+          FTR_UPLOAD_KEYSTORE_B64: ${{ secrets.FTR_UPLOAD_KEYSTORE_B64 }}
+          FTR_UPLOAD_STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
+          FTR_UPLOAD_KEY_ALIAS: ${{ secrets.FTR_UPLOAD_KEY_ALIAS }}
+          FTR_UPLOAD_KEY_PASSWORD: ${{ secrets.FTR_UPLOAD_KEY_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
+          PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
+        run: |
+          set -euo pipefail
+          for v in FTR_UPLOAD_KEYSTORE_B64 FTR_UPLOAD_STORE_PASSWORD FTR_UPLOAD_KEY_ALIAS FTR_UPLOAD_KEY_PASSWORD SUPABASE_URL SUPABASE_PUBLISHABLE_KEY PLAY_MONTHLY_PRODUCT_ID PLAY_YEARLY_PRODUCT_ID; do
+            test -n "${!v:-}" || { echo "Missing required secret: $v"; exit 2; }
+          done
+
+      - name: Materialize signing files
+        env:
+          FTR_UPLOAD_KEYSTORE_B64: ${{ secrets.FTR_UPLOAD_KEYSTORE_B64 }}
+          FTR_UPLOAD_STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
+          FTR_UPLOAD_KEY_ALIAS: ${{ secrets.FTR_UPLOAD_KEY_ALIAS }}
+          FTR_UPLOAD_KEY_PASSWORD: ${{ secrets.FTR_UPLOAD_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$FTR_UPLOAD_KEYSTORE_B64" | base64 --decode > android/app/ftr-upload-keystore.jks
+          chmod 600 android/app/ftr-upload-keystore.jks
+          cat > android/key.properties <<EOF
+          storeFile=ftr-upload-keystore.jks
+          storePassword=$FTR_UPLOAD_STORE_PASSWORD
+          keyAlias=$FTR_UPLOAD_KEY_ALIAS
+          keyPassword=$FTR_UPLOAD_KEY_PASSWORD
+          EOF
+          chmod 600 android/key.properties
+
+      - name: Materialize release environment
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
+          PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
+        run: |
+          cat > android_release.env <<EOF
+          FTR_PACKAGE_IDENTITY_CONFIRMED=YES
+          FTR_ANDROID_APPLICATION_ID=com.mobiroller.mobi743032079412
+          FTR_PLAY_HIGHEST_VERSION_CODE=24
+          FTR_ANDROID_VERSION_CODE=25
+          FTR_ANDROID_VERSION_NAME=4.0.0
+          FTR_EXPECT_LEGACY_ANDROID_ID=com.mobiroller.mobi743032079412
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY
+          PLAY_MONTHLY_PRODUCT_ID=$PLAY_MONTHLY_PRODUCT_ID
+          PLAY_YEARLY_PRODUCT_ID=$PLAY_YEARLY_PRODUCT_ID
+          EOF
+          chmod 600 android_release.env
+
+      - name: Flutter environment
+        run: flutter doctor -v
+
+      - name: Identity regression gate
+        run: python3 tools/test_android_release_gate.py
+
+      - name: Release dart-define regression gate
+        run: python3 tools/release_dart_define_gate.py
+
+      - name: Auth, billing, premium and account-deletion gates
+        run: |
+          python3 tools/phase45_auth_billing_gate.py
+          python3 tools/account_deletion_gate.py
+          python3 tools/phase47_premium_access_gate.py
+          python3 tools/auth_recovery_gate.py
+
+      - name: Signing gate
+        run: python3 tools/release_signing_gate.py --root .
+
+      - name: Build signed AAB
+        run: ./tools/build_android_release.sh android_release.env
+
+      - name: Build signed release APK
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
+          PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
+        run: |
+          flutter build apk --release --build-name=4.0.0 --build-number=25 \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
+            --dart-define=PLAY_MONTHLY_PRODUCT_ID="$PLAY_MONTHLY_PRODUCT_ID" \
+            --dart-define=PLAY_YEARLY_PRODUCT_ID="$PLAY_YEARLY_PRODUCT_ID"
+
+      - name: Package release artifacts
+        run: |
+          set -euo pipefail
+          mkdir -p dist/release
+          cp build/app/outputs/bundle/release/app-release.aab dist/release/FTR-release-4.0.0-25.aab
+          cp build/app/outputs/flutter-apk/app-release.apk dist/release/FTR-release-4.0.0-25.apk
+          cp pubspec.lock dist/release/pubspec.lock
+          sha256sum dist/release/FTR-release-4.0.0-25.aab > dist/release/FTR-release-4.0.0-25.aab.sha256
+          sha256sum dist/release/FTR-release-4.0.0-25.apk > dist/release/FTR-release-4.0.0-25.apk.sha256
+          sha256sum dist/release/pubspec.lock > dist/release/pubspec.lock.sha256
+          keytool -list -v -keystore android/app/ftr-upload-keystore.jks \
+            -storepass "${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}" \
+            -alias "${{ secrets.FTR_UPLOAD_KEY_ALIAS }}" \
+            | grep -E 'SHA1:|SHA256:' > dist/release/upload-certificate-fingerprints.txt
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTR-release-4.0.0-25
+          path: |
+            phase_04/ftr_app/dist/release/FTR-release-4.0.0-25.aab
+            phase_04/ftr_app/dist/release/FTR-release-4.0.0-25.aab.sha256
+            phase_04/ftr_app/dist/release/FTR-release-4.0.0-25.apk
+            phase_04/ftr_app/dist/release/FTR-release-4.0.0-25.apk.sha256
+            phase_04/ftr_app/dist/release/pubspec.lock
+            phase_04/ftr_app/dist/release/pubspec.lock.sha256
+            phase_04/ftr_app/dist/release/upload-certificate-fingerprints.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -f android/key.properties android/app/ftr-upload-keystore.jks android_release.env
