@@ -57,7 +57,7 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
           PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
-        run: ./tools/build_android_debug.sh
+        run: bash ./tools/build_android_debug.sh
 
       - name: Upload APK + checksum
         uses: actions/upload-artifact@v4
