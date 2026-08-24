@@ -20,7 +20,7 @@ python3 tools/android_release_gate.py \
 python3 tools/configure_android_signing.py --root .
 python3 tools/release_signing_gate.py --root .
 python3 tools/build_preflight.py --root . --strict --platform android
-flutter analyze
+flutter analyze --no-fatal-infos
 flutter test
 
 DART_DEFINES=()

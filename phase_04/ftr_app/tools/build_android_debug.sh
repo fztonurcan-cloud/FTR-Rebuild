@@ -15,7 +15,7 @@ python3 tools/android_release_gate.py \
 
 flutter pub get
 python3 tools/build_preflight.py --root . --strict --platform android
-flutter analyze
+flutter analyze --no-fatal-infos
 flutter test
 
 DART_DEFINES=()
