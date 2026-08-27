@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import '../core/config/app_config.dart';
 import '../domain/models/ftr_category.dart';
 import '../domain/models/ftr_content.dart';
+import '../domain/models/ftr_quiz.dart';
 import '../domain/models/user_note.dart';
 import 'repositories/ftr_repository.dart';
 import 'repositories/mock_ftr_repository.dart';
@@ -12,6 +13,7 @@ import 'repositories/supabase_ftr_repository.dart';
 import '../services/auth_service.dart';
 import '../services/billing_backend_service.dart';
 import '../services/purchase_service.dart';
+import '../services/quiz_service.dart';
 import '../services/user_library_service.dart';
 
 final ftrRepositoryProvider = Provider<FtrRepository>((ref) {
@@ -27,10 +29,6 @@ final categoriesProvider = FutureProvider<List<FtrCategory>>((ref) {
 
 final featuredContentsProvider = FutureProvider<List<FtrContent>>((ref) {
   return ref.watch(ftrRepositoryProvider).fetchFeaturedContents();
-});
-
-final categoryContentsProvider = FutureProvider.family<List<FtrContent>, String>((ref, categoryName) {
-  return ref.watch(ftrRepositoryProvider).fetchContentsByCategory(categoryName);
 });
 
 final contentDetailProvider = FutureProvider.family<FtrContent?, String>((ref, id) {
@@ -51,6 +49,17 @@ final authUserProvider = StreamProvider<User?>((ref) async* {
   yield* service.userChanges;
 });
 
+final quizServiceProvider = Provider<QuizService?>((ref) {
+  if (!AppConfig.hasSupabaseConfiguration) return null;
+  return QuizService(Supabase.instance.client);
+});
+
+final quizQuestionsProvider = FutureProvider.family<List<FtrQuizQuestion>, String>((ref, contentId) async {
+  ref.watch(authUserProvider);
+  final service = ref.watch(quizServiceProvider);
+  if (service == null) throw StateError('Supabase yapılandırması bulunamadı.');
+  return service.fetchQuestions(contentId);
+});
 
 final userLibraryServiceProvider = Provider<UserLibraryService?>((ref) {
   if (!AppConfig.hasSupabaseConfiguration) return null;
@@ -71,7 +80,6 @@ final favoriteStateProvider = FutureProvider.family<bool, String>((ref, contentI
   return service.isFavorite(contentId);
 });
 
-
 final notesProvider = FutureProvider<List<UserNote>>((ref) async {
   ref.watch(authUserProvider);
   final service = ref.watch(userLibraryServiceProvider);
@@ -79,14 +87,12 @@ final notesProvider = FutureProvider<List<UserNote>>((ref) async {
   return service.fetchNotes();
 });
 
-
 final contentProgressProvider = FutureProvider.family<double, String>((ref, contentId) async {
   ref.watch(authUserProvider);
   final service = ref.watch(userLibraryServiceProvider);
   if (service == null) return 0;
   return service.fetchProgress(contentId);
 });
-
 
 final purchaseServiceProvider = Provider<PurchaseService>((ref) {
   final service = PurchaseService();
@@ -98,7 +104,6 @@ final billingBackendServiceProvider = Provider<BillingBackendService?>((ref) {
   if (!AppConfig.hasSupabaseConfiguration) return null;
   return BillingBackendService(Supabase.instance.client);
 });
-
 
 final billingReadinessProvider = FutureProvider<BillingReadiness>((ref) async {
   final service = ref.watch(billingBackendServiceProvider);

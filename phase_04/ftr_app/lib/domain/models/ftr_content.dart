@@ -9,6 +9,7 @@ class FtrContent {
     required this.summary,
     required this.category,
     required this.premium,
+    this.contentKind = 'article',
     this.bodyHtml,
     this.reviewStatus = 'pending',
     this.hasAccess = true,
@@ -22,11 +23,14 @@ class FtrContent {
   final String summary;
   final String category;
   final bool premium;
+  final String contentKind;
   final String? bodyHtml;
   final String reviewStatus;
   final bool hasAccess;
   final List<FtrSource> sources;
   final List<FtrAsset> assets;
+
+  bool get isQuiz => contentKind == 'quiz';
 
   factory FtrContent.fromMap(Map<String, dynamic> map) {
     final rawSources = map['sources'];
@@ -52,6 +56,7 @@ class FtrContent {
       summary: (map['summary'] as String?) ?? '',
       category: (map['category_name'] as String?) ?? '',
       premium: (map['premium'] as bool?) ?? false,
+      contentKind: (map['content_kind'] as String?) ?? 'article',
       bodyHtml: map['body_html'] as String?,
       reviewStatus: (map['medical_review_status'] as String?) ?? 'pending',
       hasAccess: (map['has_access'] as bool?) ?? true,

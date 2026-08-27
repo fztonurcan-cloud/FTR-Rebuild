@@ -21,13 +21,20 @@ class SupabaseFtrRepository implements FtrRepository {
   }
 
   @override
-  Future<List<FtrContent>> fetchContentsByCategory(String categoryName) async {
+  Future<List<FtrContent>> fetchContentsByCategory(
+    String categoryName, {
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    if (limit <= 0) return const [];
+    final safeOffset = offset < 0 ? 0 : offset;
     final rows = await client
         .from('content_catalog')
         .select()
         .eq('category_name', categoryName)
         .order('title')
-        .limit(100);
+        .order('id')
+        .range(safeOffset, safeOffset + limit - 1);
     return (rows as List)
         .cast<Map<String, dynamic>>()
         .map(FtrContent.fromMap)

@@ -2,15 +2,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ftr_app/domain/models/ftr_content.dart';
 
 void main() {
-  test('FtrContent parses verified sources and protected assets', () {
+  test('FtrContent parses verified sources, protected assets and content kind', () {
     final content = FtrContent.fromMap({
       'id': 'content-1',
       'slug': 'anatomiye-giris',
       'title': 'Anatomiye Giriş',
       'summary': 'Özet',
       'category_name': 'Temel Bilimler',
+      'content_kind': 'quiz',
       'premium': true,
-      'body_html': '<p>İçerik</p>',
+      'body_html': null,
       'medical_review_status': 'reviewed',
       'has_access': true,
       'sources': [
@@ -37,6 +38,8 @@ void main() {
 
     expect(content.id, 'content-1');
     expect(content.premium, isTrue);
+    expect(content.contentKind, 'quiz');
+    expect(content.isQuiz, isTrue);
     expect(content.hasAccess, isTrue);
     expect(content.sources, hasLength(1));
     expect(content.assets, hasLength(1));

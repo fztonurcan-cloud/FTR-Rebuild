@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/navigation/content_route_resolver.dart';
 import '../core/widgets/ftr_shell.dart';
 import '../features/account/presentation/account_privacy_screen.dart';
 import '../features/auth/presentation/auth_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
-import '../features/content/presentation/content_detail_screen.dart';
 import '../features/courses/presentation/courses_screen.dart';
 import '../features/courses/presentation/category_contents_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
@@ -13,6 +13,7 @@ import '../features/home/presentation/home_screen.dart';
 import '../features/notes/presentation/notes_screen.dart';
 import '../features/premium/presentation/premium_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/quiz/presentation/quiz_screen.dart';
 import '../features/search/presentation/search_screen.dart';
 
 final appRouter = GoRouter(
@@ -40,7 +41,11 @@ final appRouter = GoRouter(
     GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
     GoRoute(
       path: '/content/:id',
-      builder: (_, state) => ContentDetailScreen(contentId: state.pathParameters['id']!),
+      builder: (_, state) => ContentRouteResolver(contentId: state.pathParameters['id']!),
+    ),
+    GoRoute(
+      path: '/quiz/:id',
+      builder: (_, state) => QuizScreen(contentId: state.pathParameters['id']!),
     ),
     GoRoute(path: '/premium', builder: (_, __) => const PremiumScreen()),
   ],

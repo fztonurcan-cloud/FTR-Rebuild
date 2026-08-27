@@ -34,8 +34,18 @@ class MockFtrRepository implements FtrRepository {
   Future<List<FtrContent>> fetchFeaturedContents() async => _contents;
 
   @override
-  Future<List<FtrContent>> fetchContentsByCategory(String categoryName) async {
-    return _contents.where((item) => item.category == categoryName).toList();
+  Future<List<FtrContent>> fetchContentsByCategory(
+    String categoryName, {
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    if (limit <= 0) return const [];
+    final safeOffset = offset < 0 ? 0 : offset;
+    return _contents
+        .where((item) => item.category == categoryName)
+        .skip(safeOffset)
+        .take(limit)
+        .toList();
   }
 
   @override
