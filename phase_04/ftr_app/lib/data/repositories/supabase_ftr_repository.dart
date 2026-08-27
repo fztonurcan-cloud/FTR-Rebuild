@@ -11,13 +11,19 @@ class SupabaseFtrRepository implements FtrRepository {
   @override
   Future<List<FtrCategory>> fetchCategories() async {
     final rows = await client.from('category_catalog').select().order('sort_order');
-    return (rows as List).cast<Map<String, dynamic>>().map(FtrCategory.fromMap).toList();
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(FtrCategory.fromMap)
+        .toList();
   }
 
   @override
   Future<List<FtrContent>> fetchFeaturedContents() async {
     final rows = await client.from('content_catalog').select().limit(10);
-    return (rows as List).cast<Map<String, dynamic>>().map(FtrContent.fromMap).toList();
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(FtrContent.fromMap)
+        .toList();
   }
 
   @override
@@ -45,13 +51,22 @@ class SupabaseFtrRepository implements FtrRepository {
   Future<List<FtrContent>> search(String query) async {
     final q = query.trim();
     if (q.isEmpty) return const [];
-    final rows = await client.from('content_catalog').select().ilike('title', '%$q%').limit(30);
-    return (rows as List).cast<Map<String, dynamic>>().map(FtrContent.fromMap).toList();
+    final rows = await client.rpc(
+      'search_published_contents',
+      params: {'p_query': q, 'p_limit': 30},
+    );
+    return (rows as List)
+        .cast<Map<String, dynamic>>()
+        .map(FtrContent.fromMap)
+        .toList();
   }
 
   @override
   Future<FtrContent?> fetchContentDetail(String id) async {
-    final rows = await client.rpc('get_content_detail', params: {'p_content_id': id});
+    final rows = await client.rpc(
+      'get_content_detail',
+      params: {'p_content_id': id},
+    );
     final list = (rows as List).cast<Map<String, dynamic>>();
     if (list.isEmpty) return null;
     return FtrContent.fromMap(list.first);
