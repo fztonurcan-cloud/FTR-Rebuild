@@ -20,17 +20,28 @@ class AccountPrivacyScreen extends ConsumerWidget {
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.shield_outlined),
-                  title: const Text('Veri güvenliği'),
-                  subtitle: const Text('Kişisel kayıtlar kullanıcı hesabına bağlı ve RLS ile korunur.'),
+                const ListTile(
+                  leading: Icon(Icons.shield_outlined),
+                  title: Text('Veri güvenliği'),
+                  subtitle: Text(
+                    'Kişisel kayıtlar kullanıcı hesabına bağlıdır ve sunucu tarafı erişim kontrolleriyle korunur.',
+                  ),
                 ),
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.description_outlined),
-                  title: const Text('Gizlilik politikası'),
-                  subtitle: const Text('Yayın öncesi son metin ve URL eklenecek.'),
-                  onTap: () {},
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const Text('Gizlilik Politikası'),
+                  subtitle: const Text('Hangi verilerin neden işlendiğini incele'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/legal/privacy'),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.gavel_outlined),
+                  title: const Text('Kullanım Koşulları'),
+                  subtitle: const Text('Eğitim amacı, tıbbi bilgilendirme ve kullanım kuralları'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/legal/terms'),
                 ),
               ],
             ),
@@ -50,9 +61,17 @@ class AccountPrivacyScreen extends ConsumerWidget {
           else
             Card(
               child: ListTile(
-                leading: Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
-                title: Text('Hesabımı kalıcı olarak sil', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                subtitle: const Text('Profil, favoriler, notlar, ilerleme ve uygulama hesabına bağlı kayıtlar silinir.'),
+                leading: Icon(
+                  Icons.delete_forever_outlined,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  'Hesabımı kalıcı olarak sil',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+                subtitle: const Text(
+                  'Profil, favoriler, notlar, ilerleme ve uygulama hesabına bağlı kayıtlar silinir.',
+                ),
                 onTap: () => _confirmDelete(context, ref),
               ),
             ),
@@ -90,9 +109,13 @@ class AccountPrivacyScreen extends ConsumerWidget {
                   labelText: 'Mevcut şifre',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    onPressed: () => setDialogState(() => obscurePassword = !obscurePassword),
+                    onPressed: () => setDialogState(
+                      () => obscurePassword = !obscurePassword,
+                    ),
                     icon: Icon(
-                      obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
                     ),
                   ),
                 ),
@@ -175,7 +198,6 @@ class AccountPrivacyScreen extends ConsumerWidget {
       );
     }
   }
-
 }
 
 class _DeleteAccountConfirmation {
@@ -183,4 +205,3 @@ class _DeleteAccountConfirmation {
 
   final String password;
 }
-

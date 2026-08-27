@@ -55,12 +55,6 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/notes'),
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.notifications_outlined),
-                  title: Text('Bildirim tercihleri'),
-                  trailing: Icon(Icons.chevron_right),
-                ),
-                const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
                   title: const Text('Gizlilik ve hesap'),
@@ -68,13 +62,20 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/account'),
                 ),
                 const Divider(height: 1),
-                const ListTile(
-                  leading: Icon(Icons.help_outline),
-                  title: Text('SSS ve iletişim'),
-                  trailing: Icon(Icons.chevron_right),
+                ListTile(
+                  leading: const Icon(Icons.help_outline),
+                  title: const Text('Sık Sorulan Sorular'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/faq'),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'FTR eğitim amaçlıdır; tanı veya kişiye özel tedavi hizmeti sunmaz.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),
@@ -108,7 +109,9 @@ class _SignedOutCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            const Text('Favorilerin, notların, ilerlemen ve Premium erişimin hesabınla senkronize edilir.'),
+            const Text(
+              'Favorilerin, notların, ilerlemen ve Premium erişimin hesabınla senkronize edilir.',
+            ),
             const SizedBox(height: 14),
             FilledButton.icon(
               onPressed: onTap,
@@ -144,8 +147,15 @@ class _SignedInCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('FTR hesabı', style: TextStyle(fontWeight: FontWeight.w700)),
-                      Text(email, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const Text(
+                        'FTR hesabı',
+                        style: TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        email,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/navigation/content_route.dart';
 import '../../../data/providers.dart';
 
 class FavoritesScreen extends ConsumerWidget {
@@ -24,7 +25,9 @@ class FavoritesScreen extends ConsumerWidget {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (_, __) => _LoginRequired(onTap: () => context.push('/auth')),
                 data: (user) {
-                  if (user == null) return _LoginRequired(onTap: () => context.push('/auth'));
+                  if (user == null) {
+                    return _LoginRequired(onTap: () => context.push('/auth'));
+                  }
                   final favorites = ref.watch(favoritesProvider);
                   return favorites.when(
                     loading: () => const Center(child: CircularProgressIndicator()),
@@ -47,11 +50,19 @@ class FavoritesScreen extends ConsumerWidget {
                             final item = items[index];
                             return Card(
                               child: ListTile(
-                                leading: const CircleAvatar(child: Icon(Icons.favorite)),
+                                leading: CircleAvatar(
+                                  child: Icon(
+                                    item.isQuiz ? Icons.quiz_outlined : Icons.favorite,
+                                  ),
+                                ),
                                 title: Text(item.title),
-                                subtitle: Text(item.category.isEmpty ? item.summary : item.category),
+                                subtitle: Text(
+                                  item.category.isEmpty ? item.summary : item.category,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 trailing: const Icon(Icons.chevron_right),
-                                onTap: () => context.push('/content/${item.id}'),
+                                onTap: () => context.push(routeForContent(item)),
                               ),
                             );
                           },
@@ -115,13 +126,27 @@ class _LoginRequired extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.favorite_border, size: 56, color: Theme.of(context).colorScheme.primary),
+            Icon(
+              Icons.favorite_border,
+              size: 56,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(height: 16),
-            Text('Favorilerini hesabında sakla', style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),
+            Text(
+              'Favorilerini hesabında sakla',
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 8),
-            const Text('Cihaz değiştirsen bile kayıtlarının korunması için giriş yap.', textAlign: TextAlign.center),
+            const Text(
+              'Cihaz değiştirsen bile kayıtlarının korunması için giriş yap.',
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 18),
-            FilledButton(onPressed: onTap, child: const Text('Giriş yap / Hesap oluştur')),
+            FilledButton(
+              onPressed: onTap,
+              child: const Text('Giriş yap / Hesap oluştur'),
+            ),
           ],
         ),
       ),

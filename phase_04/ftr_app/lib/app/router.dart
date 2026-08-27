@@ -9,7 +9,9 @@ import '../features/auth/presentation/reset_password_screen.dart';
 import '../features/courses/presentation/courses_screen.dart';
 import '../features/courses/presentation/category_contents_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
+import '../features/help/presentation/faq_screen.dart';
 import '../features/home/presentation/home_screen.dart';
+import '../features/legal/presentation/legal_screen.dart';
 import '../features/notes/presentation/notes_screen.dart';
 import '../features/premium/presentation/premium_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
@@ -49,6 +51,15 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/account',
       builder: (_, __) => const AccountPrivacyScreen(),
+    ),
+    GoRoute(path: '/faq', builder: (_, __) => const FaqScreen()),
+    GoRoute(
+      path: '/legal/privacy',
+      builder: (_, __) => const LegalScreen(document: LegalDocument.privacy),
+    ),
+    GoRoute(
+      path: '/legal/terms',
+      builder: (_, __) => const LegalScreen(document: LegalDocument.terms),
     ),
     GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
     GoRoute(
