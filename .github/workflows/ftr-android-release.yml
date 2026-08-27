@@ -115,7 +115,7 @@ jobs:
         run: python3 tools/release_signing_gate.py --root .
 
       - name: Build signed AAB
-        bash ./tools/build_android_release.sh android_release.env
+        run: bash ./tools/build_android_release.sh android_release.env
 
       - name: Build signed release APK
         env:
