@@ -20,7 +20,8 @@ final appRouter = GoRouter(
   initialLocation: '/',
   routes: [
     ShellRoute(
-      builder: (context, state, child) => FtrShell(location: state.uri.path, child: child),
+      builder: (context, state, child) =>
+          FtrShell(location: state.uri.path, child: child),
       routes: [
         GoRoute(path: '/', builder: (_, __) => const HomeScreen()),
         GoRoute(path: '/courses', builder: (_, __) => const CoursesScreen()),
@@ -28,26 +29,43 @@ final appRouter = GoRouter(
           path: '/courses/:slug',
           builder: (_, state) => CategoryContentsScreen(
             categoryName: state.uri.queryParameters['name'] ?? '',
+            categorySlug: state.pathParameters['slug'] ?? '',
+            yearNo: int.tryParse(state.uri.queryParameters['year'] ?? ''),
           ),
         ),
-        GoRoute(path: '/favorites', builder: (_, __) => const FavoritesScreen()),
+        GoRoute(
+          path: '/favorites',
+          builder: (_, __) => const FavoritesScreen(),
+        ),
         GoRoute(path: '/notes', builder: (_, __) => const NotesScreen()),
         GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       ],
     ),
     GoRoute(path: '/auth', builder: (_, __) => const AuthScreen()),
-    GoRoute(path: '/reset-password', builder: (_, __) => const ResetPasswordScreen()),
-    GoRoute(path: '/account', builder: (_, __) => const AccountPrivacyScreen()),
+    GoRoute(
+      path: '/reset-password',
+      builder: (_, __) => const ResetPasswordScreen(),
+    ),
+    GoRoute(
+      path: '/account',
+      builder: (_, __) => const AccountPrivacyScreen(),
+    ),
     GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
     GoRoute(
       path: '/content/:id',
-      builder: (_, state) => ContentRouteResolver(contentId: state.pathParameters['id']!),
+      builder: (_, state) => ContentRouteResolver(
+        contentId: state.pathParameters['id']!,
+      ),
     ),
     GoRoute(
       path: '/quiz/:id',
-      builder: (_, state) => QuizScreen(contentId: state.pathParameters['id']!),
+      builder: (_, state) => QuizScreen(
+        contentId: state.pathParameters['id']!,
+      ),
     ),
     GoRoute(path: '/premium', builder: (_, __) => const PremiumScreen()),
   ],
-  errorBuilder: (_, state) => Scaffold(body: Center(child: Text('Sayfa bulunamadı: ${state.uri}'))),
+  errorBuilder: (_, state) => Scaffold(
+    body: Center(child: Text('Sayfa bulunamadı: ${state.uri}')),
+  ),
 );

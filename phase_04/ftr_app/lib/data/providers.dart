@@ -6,6 +6,7 @@ import '../core/config/app_config.dart';
 import '../domain/models/ftr_category.dart';
 import '../domain/models/ftr_content.dart';
 import '../domain/models/ftr_quiz.dart';
+import '../domain/models/ftr_study_plan.dart';
 import '../domain/models/user_note.dart';
 import 'repositories/ftr_repository.dart';
 import 'repositories/mock_ftr_repository.dart';
@@ -14,6 +15,7 @@ import '../services/auth_service.dart';
 import '../services/billing_backend_service.dart';
 import '../services/purchase_service.dart';
 import '../services/quiz_service.dart';
+import '../services/study_plan_service.dart';
 import '../services/user_library_service.dart';
 
 final ftrRepositoryProvider = Provider<FtrRepository>((ref) {
@@ -33,6 +35,23 @@ final featuredContentsProvider = FutureProvider<List<FtrContent>>((ref) {
 
 final contentDetailProvider = FutureProvider.family<FtrContent?, String>((ref, id) {
   return ref.watch(ftrRepositoryProvider).fetchContentDetail(id);
+});
+
+final studyPlanServiceProvider = Provider<StudyPlanService?>((ref) {
+  if (!AppConfig.hasSupabaseConfiguration) return null;
+  return StudyPlanService(Supabase.instance.client);
+});
+
+final studyPlanProvider = FutureProvider.family<FtrStudyPlan, int>((ref, yearNo) async {
+  final service = ref.watch(studyPlanServiceProvider);
+  if (service == null) {
+    return FtrStudyPlan(
+      programCode: StudyPlanService.programCode,
+      yearNo: yearNo,
+      categories: const [],
+    );
+  }
+  return service.fetchYear(yearNo);
 });
 
 final authServiceProvider = Provider<AuthService?>((ref) {
