@@ -38,7 +38,9 @@ void main() {
     expect(quiz, isNot(contains('internal_preview_submit_quiz_attempt')));
 
     expect(edgeFunction, contains("@supabase/server@1.4.1"));
-    expect(edgeFunction, contains("withSupabase({ auth: 'user' }"));
+    expect(edgeFunction, contains("withSupabase({ auth: 'none' }"));
+    expect(edgeFunction, contains('ctx.supabaseAdmin.auth.getUser(accessToken)'));
+    expect(edgeFunction, contains("req.headers.get('Authorization')"));
     expect(edgeFunction, contains("service_internal_preview"));
   });
 }
