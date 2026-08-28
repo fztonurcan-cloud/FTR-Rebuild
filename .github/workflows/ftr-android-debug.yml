@@ -5,11 +5,22 @@ on:
   push:
     branches: [main]
     paths:
-      - 'phase_04/ftr_app/**'
+      - 'phase_04/ftr_app/lib/**'
+      - 'phase_04/ftr_app/test/**'
+      - 'phase_04/ftr_app/android/**'
+      - 'phase_04/ftr_app/tools/**'
+      - 'phase_04/ftr_app/supabase/functions/legal-pages/**'
+      - 'phase_04/ftr_app/pubspec.yaml'
+      - 'phase_04/ftr_app/pubspec.lock'
+      - 'phase_04/ftr_app/analysis_options.yaml'
       - '.github/workflows/ftr-android-debug.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: ftr-android-debug-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   android-debug:
