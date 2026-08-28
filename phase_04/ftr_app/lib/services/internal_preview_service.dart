@@ -9,8 +9,17 @@ class InternalPreviewService {
     String action, {
     Map<String, dynamic> payload = const {},
   }) async {
+    final session = _client.auth.currentSession;
+    final accessToken = session?.accessToken.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw StateError('internal_preview_auth_required');
+    }
+
     final response = await _client.functions.invoke(
       'internal-preview',
+      headers: {
+        'Authorization': 'Bearer $accessToken',
+      },
       body: {
         'action': action,
         'payload': payload,
