@@ -33,15 +33,17 @@ if [[ "${FTR_DEBUG_INTERNAL_REVIEW_PREVIEW:-NO}" == "YES" ]]; then
   DART_DEFINES+=("--dart-define=INTERNAL_REVIEW_PREVIEW=true")
 fi
 
+# QA-only version name makes it obvious on-device which sideloaded build is installed.
+# Store/release versionCode planning remains unchanged at 25.
 flutter build apk --debug \
-  --build-name=4.0.0 \
+  --build-name=4.0.0-QA26 \
   --build-number=25 \
   "${DART_DEFINES[@]}"
 
 mkdir -p dist
-cp build/app/outputs/flutter-apk/app-debug.apk dist/FTR-debug-4.0.0-25.apk
-sha256sum dist/FTR-debug-4.0.0-25.apk > dist/FTR-debug-4.0.0-25.apk.sha256
+cp build/app/outputs/flutter-apk/app-debug.apk dist/FTR-QA26-debug.apk
+sha256sum dist/FTR-QA26-debug.apk > dist/FTR-QA26-debug.apk.sha256
 cp pubspec.lock dist/pubspec.lock
 sha256sum dist/pubspec.lock > dist/pubspec.lock.sha256
 
-echo "Debug APK ready: dist/FTR-debug-4.0.0-25.apk"
+echo "Debug APK ready: dist/FTR-QA26-debug.apk"
