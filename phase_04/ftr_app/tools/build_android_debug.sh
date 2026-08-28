@@ -28,6 +28,9 @@ DART_DEFINES=()
 if [[ "${FTR_DEBUG_USE_MOCK_CONTENT:-NO}" == "YES" ]]; then
   DART_DEFINES+=("--dart-define=USE_MOCK_CONTENT=true")
 fi
+if [[ "${FTR_DEBUG_INTERNAL_REVIEW_PREVIEW:-NO}" == "YES" ]]; then
+  DART_DEFINES+=("--dart-define=INTERNAL_REVIEW_PREVIEW=true")
+fi
 
 flutter build apk --debug \
   --build-name=4.0.0 \
