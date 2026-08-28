@@ -15,6 +15,7 @@ files={
 text={k:p.read_text(encoding='utf-8') for k,p in files.items()}
 checks={
  'redirect_constant': "com.mobiroller.mobi743032079412://login-callback/" in text['config'],
+ 'signup_email_redirect': 'emailRedirectTo: AppConfig.authRedirectUrl' in text['service'],
  'reset_email_api': 'resetPasswordForEmail' in text['service'] and 'redirectTo: AppConfig.authRedirectUrl' in text['service'],
  'password_update_api': 'updateUser(UserAttributes(password: password))' in text['service'],
  'auth_state_stream': 'Stream<AuthState> get authStates' in text['service'],
