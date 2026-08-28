@@ -3,9 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../domain/models/ftr_quiz.dart';
 
 class QuizService {
-  const QuizService(this._client);
+  const QuizService(
+    this._client, {
+    this.internalReviewPreview = false,
+  });
 
   final SupabaseClient _client;
+  final bool internalReviewPreview;
 
   Future<List<FtrQuizQuestion>> fetchQuestions(String contentId) async {
     if (_client.auth.currentUser == null) {
@@ -13,7 +17,9 @@ class QuizService {
     }
 
     final raw = await _client.rpc(
-      'get_quiz_questions',
+      internalReviewPreview
+          ? 'internal_preview_get_quiz_questions'
+          : 'get_quiz_questions',
       params: {'p_content_id': contentId},
     );
     final payload = _asMap(raw);
@@ -45,7 +51,9 @@ class QuizService {
         .toList(growable: false);
 
     final raw = await _client.rpc(
-      'submit_quiz_attempt',
+      internalReviewPreview
+          ? 'internal_preview_submit_quiz_attempt'
+          : 'submit_quiz_attempt',
       params: {
         'p_content_id': contentId,
         'p_answers': payload,
