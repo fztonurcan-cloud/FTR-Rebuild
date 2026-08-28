@@ -36,27 +36,16 @@ class ContentDetailScreen extends ConsumerWidget {
               ),
             ),
             error: (_, __) => IconButton(
+              tooltip: 'Favori durumunu yenile',
               onPressed: () => ref.invalidate(favoriteStateProvider(contentId)),
-              icon: const Icon(Icons.bookmark_border_rounded),
+              icon: const Icon(Icons.favorite_border_rounded),
             ),
             data: (isFavorite) => IconButton(
               tooltip: isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle',
               onPressed: () => _toggleFavorite(context, ref, user != null, isFavorite),
               icon: Icon(
-                isFavorite ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
               ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Beğen',
-            onPressed: () => _toggleFavorite(
-              context,
-              ref,
-              user != null,
-              favorite.value ?? false,
-            ),
-            icon: Icon(
-              (favorite.value ?? false) ? Icons.favorite_rounded : Icons.favorite_border_rounded,
             ),
           ),
           IconButton(
@@ -160,7 +149,11 @@ class _DetailBody extends ConsumerWidget {
                         SizedBox(width: 4),
                         Text(
                           'Premium',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF9E6A00)),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF9E6A00),
+                          ),
                         ),
                       ],
                     ),
@@ -250,11 +243,20 @@ class _BodyTab extends ConsumerWidget {
     final progress = userSignedIn
         ? ref.watch(contentProgressProvider(item.id))
         : const AsyncData(0.0);
+    final hasFreePreview = !item.hasAccess &&
+        item.premium &&
+        item.bodyHtml != null &&
+        item.bodyHtml!.trim().isNotEmpty;
+    final canRenderBody = item.hasAccess || hasFreePreview;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
       children: [
-        if (item.hasAccess)
+        if (hasFreePreview) ...[
+          const _FreePreviewNotice(),
+          const SizedBox(height: 12),
+        ],
+        if (canRenderBody)
           Card(
             child: Padding(
               padding: const EdgeInsets.all(17),
@@ -284,6 +286,32 @@ class _BodyTab extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _FreePreviewNotice extends StatelessWidget {
+  const _FreePreviewNotice();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primary50,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primary100),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.visibility_outlined, color: AppColors.primary600),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Ücretsiz örnek: Bu bölüm, insan tıbbi/editoryal incelemesinden geçmiş Premium içeriğin sınırlı önizlemesidir.',
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _ProgressCard extends ConsumerWidget {
@@ -343,7 +371,7 @@ class _LockedContentCard extends StatelessWidget {
               ),
               const SizedBox(height: 7),
               const Text(
-                'İçerik gövdesi yalnızca sunucuda doğrulanmış aktif abonelik olduğunda gönderilir.',
+                'Tam içerik yalnızca sunucuda doğrulanmış aktif abonelik olduğunda gönderilir.',
                 textAlign: TextAlign.center,
               ),
             ],
