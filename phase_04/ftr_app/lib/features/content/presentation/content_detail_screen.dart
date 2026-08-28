@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/config/app_config.dart';
+import '../../../core/navigation/content_route.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/providers.dart';
 import '../../../domain/models/ftr_asset.dart';
@@ -19,47 +20,28 @@ class ContentDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(contentDetailProvider(contentId));
     final user = ref.watch(authUserProvider).value;
-    final favorite = user == null
-        ? const AsyncData(false)
-        : ref.watch(favoriteStateProvider(contentId));
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1040;
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 8,
-        actions: [
-          favorite.when(
-            loading: () => const Padding(
-              padding: EdgeInsets.all(14),
-              child: SizedBox(
-                width: 19,
-                height: 19,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+      backgroundColor: AppColors.background,
+      appBar: isDesktop
+          ? null
+          : AppBar(
+              title: const Text('Ders'),
+              actions: [
+                _FavoriteIconButton(
+                  contentId: contentId,
+                  signedIn: user != null,
+                ),
+                IconButton(
+                  tooltip: 'Notlarım',
+                  onPressed: () => user == null
+                      ? context.push('/auth')
+                      : context.push('/notes'),
+                  icon: const Icon(Icons.sticky_note_2_outlined),
+                ),
+              ],
             ),
-            error: (_, __) => IconButton(
-              tooltip: 'Favori durumunu yenile',
-              onPressed: () => ref.invalidate(favoriteStateProvider(contentId)),
-              icon: const Icon(Icons.favorite_border_rounded),
-            ),
-            data: (isFavorite) => IconButton(
-              tooltip: isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle',
-              onPressed: () =>
-                  _toggleFavorite(context, ref, user != null, isFavorite),
-              icon: Icon(
-                isFavorite
-                    ? Icons.favorite_rounded
-                    : Icons.favorite_border_rounded,
-              ),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Notlarım',
-            onPressed: () =>
-                user == null ? context.push('/auth') : context.push('/notes'),
-            icon: const Icon(Icons.note_alt_outlined),
-          ),
-        ],
-      ),
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (_, __) =>
@@ -78,34 +60,68 @@ class ContentDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Future<void> _toggleFavorite(
-    BuildContext context,
-    WidgetRef ref,
-    bool signedIn,
-    bool isFavorite,
-  ) async {
-    if (!signedIn) {
-      await context.push('/auth');
-      return;
-    }
-    final service = ref.read(userLibraryServiceProvider);
-    if (service == null) return;
-    try {
-      if (isFavorite) {
-        await service.removeFavorite(contentId);
-      } else {
-        await service.addFavorite(contentId);
-      }
-      ref.invalidate(favoriteStateProvider(contentId));
-      ref.invalidate(favoritesProvider);
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Favori işlemi tamamlanamadı.')),
-        );
-      }
-    }
+class _FavoriteIconButton extends ConsumerWidget {
+  const _FavoriteIconButton({
+    required this.contentId,
+    required this.signedIn,
+  });
+
+  final String contentId;
+  final bool signedIn;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final favorite = signedIn
+        ? ref.watch(favoriteStateProvider(contentId))
+        : const AsyncData(false);
+
+    return favorite.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.all(13),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => IconButton(
+        tooltip: 'Favori durumunu yenile',
+        onPressed: () => ref.invalidate(favoriteStateProvider(contentId)),
+        icon: const Icon(Icons.bookmark_border_rounded),
+      ),
+      data: (isFavorite) => IconButton(
+        tooltip: isFavorite ? 'Favorilerden çıkar' : 'Favorilere ekle',
+        onPressed: () async {
+          if (!signedIn) {
+            await context.push('/auth');
+            return;
+          }
+          final service = ref.read(userLibraryServiceProvider);
+          if (service == null) return;
+          try {
+            if (isFavorite) {
+              await service.removeFavorite(contentId);
+            } else {
+              await service.addFavorite(contentId);
+            }
+            ref.invalidate(favoriteStateProvider(contentId));
+            ref.invalidate(favoritesProvider);
+          } catch (_) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Favori işlemi tamamlanamadı.')),
+              );
+            }
+          }
+        },
+        icon: Icon(
+          isFavorite ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+          color: isFavorite ? AppColors.primary500 : null,
+        ),
+      ),
+    );
   }
 }
 
@@ -126,15 +142,64 @@ class _DetailBody extends ConsumerWidget {
     final canRenderBody = item.hasAccess || hasFreePreview;
     final images = item.assets.where((asset) => asset.isImage).toList()
       ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1040;
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 36),
+    int? yearNo;
+    if (item.categorySlug.trim().isNotEmpty) {
+      for (var year = 1; year <= 4; year++) {
+        final plan = ref.watch(studyPlanProvider(year)).value;
+        if (plan == null) continue;
+        if (plan.categories.any((category) => category.slug == item.categorySlug)) {
+          yearNo = year;
+          break;
+        }
+      }
+    }
+
+    AsyncValue<List<FtrContent>> siblings = const AsyncData(<FtrContent>[]);
+    if (yearNo != null && item.categorySlug.trim().isNotEmpty) {
+      siblings = ref.watch(
+        curriculumCategoryContentsProvider(
+          (yearNo: yearNo, categorySlug: item.categorySlug),
+        ),
+      );
+    }
+
+    FtrContent? previous;
+    FtrContent? next;
+    FtrContent? quizTarget;
+    final siblingItems = siblings.value ?? const <FtrContent>[];
+    final lessonItems = siblingItems.where((content) => !content.isQuiz).toList();
+    final currentIndex = lessonItems.indexWhere((content) => content.id == item.id);
+    if (currentIndex > 0) previous = lessonItems[currentIndex - 1];
+    if (currentIndex >= 0 && currentIndex + 1 < lessonItems.length) {
+      next = lessonItems[currentIndex + 1];
+    }
+    for (final content in siblingItems) {
+      if (content.isQuiz) {
+        quizTarget = content;
+        break;
+      }
+    }
+
+    final page = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _LessonHeader(item: item),
-        const SizedBox(height: 20),
+        _LessonHeader(
+          item: item,
+          userSignedIn: userSignedIn,
+          isDesktop: isDesktop,
+        ),
+        const SizedBox(height: 14),
+        _LessonTabs(
+          item: item,
+          userSignedIn: userSignedIn,
+          quizTarget: quizTarget,
+        ),
+        const SizedBox(height: 28),
         if (hasFreePreview) ...[
           const _FreePreviewNotice(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
         ],
         if (canRenderBody)
           _LessonReader(
@@ -144,7 +209,7 @@ class _DetailBody extends ConsumerWidget {
         else
           _LockedContentCard(item: item),
         if (item.sources.isNotEmpty) ...[
-          const SizedBox(height: 28),
+          const SizedBox(height: 34),
           const _SectionTitle(
             icon: Icons.menu_book_outlined,
             title: 'Kaynaklar',
@@ -153,7 +218,7 @@ class _DetailBody extends ConsumerWidget {
           _SourcesSection(sources: item.sources),
         ],
         if (userSignedIn && item.hasAccess) ...[
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           progress.when(
             loading: () => const LinearProgressIndicator(),
             error: (_, __) => const SizedBox.shrink(),
@@ -161,20 +226,83 @@ class _DetailBody extends ConsumerWidget {
                 _ProgressCard(contentId: item.id, value: value),
           ),
         ],
-        if (item.premium) ...[
-          const SizedBox(height: 18),
+        if (item.premium && !item.hasAccess) ...[
+          const SizedBox(height: 20),
           FilledButton.icon(
             onPressed: () => context.push('/premium'),
-            icon: Icon(
-              item.hasAccess
-                  ? Icons.workspace_premium_rounded
-                  : Icons.lock_open_rounded,
-            ),
-            label: Text(
-              item.hasAccess
-                  ? 'Premium üyeliği yönet'
-                  : 'İçeriğin devamını aç',
-            ),
+            icon: const Icon(Icons.workspace_premium_rounded),
+            label: const Text('Premium ile dersin tamamını aç'),
+          ),
+        ],
+        const SizedBox(height: 28),
+        _LessonFooterNavigation(previous: previous, next: next),
+      ],
+    );
+
+    return ListView(
+      padding: EdgeInsets.fromLTRB(
+        isDesktop ? 36 : 18,
+        isDesktop ? 34 : 12,
+        isDesktop ? 36 : 18,
+        36,
+      ),
+      children: [
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1240),
+            child: page,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _LessonHeader extends StatelessWidget {
+  const _LessonHeader({
+    required this.item,
+    required this.userSignedIn,
+    required this.isDesktop,
+  });
+
+  final FtrContent item;
+  final bool userSignedIn;
+  final bool isDesktop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.title,
+                style: isDesktop
+                    ? Theme.of(context).textTheme.headlineLarge
+                    : Theme.of(context).textTheme.headlineMedium,
+              ),
+              if (item.premium) ...[
+                const SizedBox(height: 10),
+                const _PremiumBadge(),
+              ],
+            ],
+          ),
+        ),
+        if (isDesktop) ...[
+          const SizedBox(width: 16),
+          _FavoriteIconButton(
+            contentId: item.id,
+            signedIn: userSignedIn,
+          ),
+          IconButton(
+            tooltip: 'Notlarım',
+            onPressed: () => userSignedIn
+                ? context.push('/notes')
+                : context.push('/auth'),
+            icon: const Icon(Icons.sticky_note_2_outlined),
           ),
         ],
       ],
@@ -182,82 +310,175 @@ class _DetailBody extends ConsumerWidget {
   }
 }
 
-class _LessonHeader extends StatelessWidget {
-  const _LessonHeader({required this.item});
+class _PremiumBadge extends StatelessWidget {
+  const _PremiumBadge();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.primary100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.primary700),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.workspace_premium_rounded,
+              size: 14,
+              color: AppColors.premium,
+            ),
+            SizedBox(width: 5),
+            Text(
+              'Premium Ders',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _LessonTabs extends StatelessWidget {
+  const _LessonTabs({
+    required this.item,
+    required this.userSignedIn,
+    required this.quizTarget,
+  });
+
   final FtrContent item;
+  final bool userSignedIn;
+  final FtrContent? quizTarget;
+
+  String get primaryLabel {
+    final category = item.category.trim();
+    if (category.isEmpty || category.length > 18) return 'Anlatım';
+    return category;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (item.category.trim().isNotEmpty)
-            Text(
-              item.category.toUpperCase(),
-              style: const TextStyle(
-                color: AppColors.primary600,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .7,
-              ),
-            ),
-          if (item.category.trim().isNotEmpty) const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 10,
+      runSpacing: 9,
+      children: [
+        _LessonTabButton(label: primaryLabel, selected: true),
+        _LessonTabButton(
+          label: 'Notlarım',
+          icon: Icons.edit_note_rounded,
+          onTap: () => userSignedIn
+              ? context.push('/notes')
+              : context.push('/auth'),
+        ),
+        _LessonTabButton(
+          label: 'Kaynaklar',
+          icon: Icons.menu_book_outlined,
+          enabled: item.sources.isNotEmpty,
+          onTap: item.sources.isEmpty
+              ? null
+              : () => _showSources(context, item.sources),
+        ),
+        _LessonTabButton(
+          label: 'Quiz',
+          icon: Icons.quiz_outlined,
+          enabled: quizTarget != null,
+          onTap: quizTarget == null
+              ? null
+              : () => context.push(routeForContent(quizTarget!)),
+        ),
+      ],
+    );
+  }
+
+  void _showSources(BuildContext context, List<FtrSource> sources) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: AppColors.surfaceRaised,
+      builder: (context) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 6, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: Text(
-                  item.title,
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-              ),
-              if (item.premium) ...[
-                const SizedBox(width: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary100,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.workspace_premium_rounded,
-                        size: 14,
-                        color: AppColors.premium,
-                      ),
-                      SizedBox(width: 5),
-                      Text(
-                        'Premium',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              Text('Kaynaklar', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 14),
+              _SourcesSection(sources: sources),
             ],
           ),
-          if (item.summary.trim().isNotEmpty) ...[
-            const SizedBox(height: 14),
-            Text(
-              item.summary,
-              style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      ),
+    );
+  }
+}
+
+class _LessonTabButton extends StatelessWidget {
+  const _LessonTabButton({
+    required this.label,
+    this.icon,
+    this.selected = false,
+    this.enabled = true,
+    this.onTap,
+  });
+
+  final String label;
+  final IconData? icon;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = selected
+        ? Colors.white
+        : enabled
+            ? AppColors.textPrimary
+            : AppColors.textMuted;
+
+    return Material(
+      color: selected ? AppColors.primary700 : AppColors.surfaceSoft,
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(9),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 42),
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: selected ? AppColors.primary600 : AppColors.borderStrong,
             ),
-          ],
-        ],
+            gradient: selected
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary600, AppColors.primary700],
+                  )
+                : null,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 17, color: foreground),
+                const SizedBox(width: 7),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: foreground,
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -275,7 +496,7 @@ class _LessonReader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = _splitHtmlIntoLearningSections(bodyHtml);
-    final isWide = MediaQuery.sizeOf(context).width >= 900;
+    final isWide = MediaQuery.sizeOf(context).width >= 1040;
 
     if (sections.isEmpty && images.isEmpty) {
       return const Card(
@@ -286,11 +507,18 @@ class _LessonReader extends StatelessWidget {
       );
     }
 
+    FtrAsset? heroImage;
     if (isWide && sections.isNotEmpty && images.isNotEmpty) {
+      final firstPlacement = _placementIndexForAsset(sections, images.first);
+      if (firstPlacement == null || firstPlacement == 0) {
+        heroImage = images.first;
+      }
+    }
+
+    if (isWide && sections.isNotEmpty && heroImage != null) {
       final restSections =
           sections.length > 1 ? sections.sublist(1) : <String>[];
-      final restImages =
-          images.length > 1 ? images.sublist(1) : <FtrAsset>[];
+      final restImages = images.where((asset) => asset.id != heroImage!.id).toList();
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -300,17 +528,27 @@ class _LessonReader extends StatelessWidget {
             children: [
               Expanded(
                 flex: 5,
-                child: _HtmlSection(html: sections.first),
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: _HtmlSection(html: sections.first),
+                ),
               ),
-              const SizedBox(width: 24),
+              const SizedBox(width: 28),
               Expanded(
                 flex: 6,
-                child: _InlineLessonImage(asset: images.first),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _InlineLessonImage(asset: heroImage),
+                    const SizedBox(height: 18),
+                    const _LearningTipCard(),
+                  ],
+                ),
               ),
             ],
           ),
           if (restSections.isNotEmpty || restImages.isNotEmpty) ...[
-            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             ..._buildInterleavedSections(restSections, restImages),
           ],
         ],
@@ -319,7 +557,13 @@ class _LessonReader extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: _buildInterleavedSections(sections, images),
+      children: [
+        ..._buildInterleavedSections(sections, images),
+        if (images.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          const _LearningTipCard(),
+        ],
+      ],
     );
   }
 }
@@ -331,7 +575,7 @@ class _HtmlSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
+      padding: const EdgeInsets.fromLTRB(0, 0, 4, 2),
       child: Html(data: html),
     );
   }
@@ -346,9 +590,16 @@ class _InlineLessonImage extends StatelessWidget {
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        color: AppColors.imagePanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFD9DCE2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: .18),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -357,15 +608,103 @@ class _InlineLessonImage extends StatelessWidget {
           if ((asset.caption ?? '').trim().isNotEmpty ||
               (asset.altText ?? '').trim().isNotEmpty)
             Container(
-              color: AppColors.surface,
-              padding: const EdgeInsets.fromLTRB(14, 11, 14, 12),
+              color: AppColors.imagePanel,
+              padding: const EdgeInsets.fromLTRB(15, 10, 15, 13),
               child: Text(
                 (asset.caption ?? asset.altText ?? '').trim(),
-                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF585E69),
+                  fontSize: 12,
+                  height: 1.35,
+                ),
               ),
             ),
         ],
       ),
+    );
+  }
+}
+
+class _LearningTipCard extends StatelessWidget {
+  const _LearningTipCard();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(16, 15, 18, 15),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSoft,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary700),
+        ),
+        child: const Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _TipIcon(),
+            SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                'Öğrenme ipucu: Görseldeki yapıları metindeki başlıklarla eşleştirerek ilerle; böylece konu anlatımı ve görsel hafıza aynı akışta kalır.',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 13.5,
+                  height: 1.55,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _TipIcon extends StatelessWidget {
+  const _TipIcon();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 42,
+        height: 42,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.primary600, AppColors.primary700],
+          ),
+        ),
+        child: const Icon(
+          Icons.lightbulb_outline_rounded,
+          color: Colors.white,
+          size: 22,
+        ),
+      );
+}
+
+class _LessonFooterNavigation extends StatelessWidget {
+  const _LessonFooterNavigation({required this.previous, required this.next});
+
+  final FtrContent? previous;
+  final FtrContent? next;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        OutlinedButton.icon(
+          onPressed: previous == null
+              ? null
+              : () => context.go(routeForContent(previous!)),
+          icon: const Icon(Icons.arrow_back_rounded, size: 18),
+          label: const Text('Önceki'),
+        ),
+        const Spacer(),
+        FilledButton.icon(
+          onPressed: next == null ? null : () => context.go(routeForContent(next!)),
+          iconAlignment: IconAlignment.end,
+          icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+          label: const Text('Sonraki'),
+        ),
+      ],
     );
   }
 }
@@ -378,7 +717,7 @@ class _SectionTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          Icon(icon, color: AppColors.primary600),
+          Icon(icon, color: AppColors.primary500),
           const SizedBox(width: 9),
           Text(title, style: Theme.of(context).textTheme.titleLarge),
         ],
@@ -393,13 +732,13 @@ class _FreePreviewNotice extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.primary50,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.primary100),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary700),
         ),
         child: const Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.visibility_outlined, color: AppColors.primary600),
+            Icon(Icons.visibility_outlined, color: AppColors.primary500),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -417,35 +756,41 @@ class _ProgressCard extends ConsumerWidget {
   final double value;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(15),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      'Çalışma ilerlemesi',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
+  Widget build(BuildContext context, WidgetRef ref) => Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSoft,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Çalışma ilerlemesi',
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  Text('%${(value * 100).round()}'),
-                ],
-              ),
-              const SizedBox(height: 9),
-              LinearProgressIndicator(
-                value: value.clamp(0.0, 1.0),
-                minHeight: 6,
-              ),
-              const SizedBox(height: 10),
-              OutlinedButton.icon(
+                ),
+                Text('%${(value * 100).round()}'),
+              ],
+            ),
+            const SizedBox(height: 9),
+            LinearProgressIndicator(
+              value: value.clamp(0.0, 1.0),
+              minHeight: 5,
+            ),
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
                 onPressed: () async {
-                  final next = value >= 1 ? 0.0 : 1.0;
+                  final nextValue = value >= 1 ? 0.0 : 1.0;
                   await ref
                       .read(userLibraryServiceProvider)
-                      ?.setProgress(contentId, next);
+                      ?.setProgress(contentId, nextValue);
                   ref.invalidate(contentProgressProvider(contentId));
                 },
                 icon: Icon(
@@ -459,8 +804,8 @@ class _ProgressCard extends ConsumerWidget {
                       : 'Tamamlandı olarak işaretle',
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
 }
@@ -470,29 +815,32 @@ class _LockedContentCard extends StatelessWidget {
   final FtrContent item;
 
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const Icon(
-                Icons.lock_outline_rounded,
-                size: 38,
-                color: AppColors.premium,
-              ),
-              const SizedBox(height: 11),
-              Text(
-                'Bu ders Premium içeriğe dahildir',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 7),
-              const Text(
-                'Tam içerik yalnızca sunucuda doğrulanmış aktif abonelik olduğunda gönderilir.',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.lock_outline_rounded,
+              size: 40,
+              color: AppColors.premium,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Bu ders Premium içeriğe dahildir',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 7),
+            const Text(
+              'Tam içerik yalnızca sunucuda doğrulanmış aktif abonelik olduğunda gönderilir.',
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       );
 }
@@ -506,49 +854,50 @@ class _SourcesSection extends StatelessWidget {
     return Column(
       children: [
         for (var index = 0; index < sources.length; index++) ...[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(15),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    sources[index].verificationStatus == 'verified'
-                        ? Icons.verified_outlined
-                        : Icons.menu_book_outlined,
-                    color: sources[index].verificationStatus == 'verified'
-                        ? AppColors.success
-                        : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceSoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  sources[index].verificationStatus == 'verified'
+                      ? Icons.verified_outlined
+                      : Icons.menu_book_outlined,
+                  color: sources[index].verificationStatus == 'verified'
+                      ? AppColors.success
+                      : AppColors.textSecondary,
+                ),
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        sources[index].title,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      if (sources[index].publisher != null ||
+                          sources[index].publicationYear != null) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          sources[index].title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w700,
-                          ),
+                          [
+                            if (sources[index].publisher != null)
+                              sources[index].publisher!,
+                            if (sources[index].publicationYear != null)
+                              sources[index].publicationYear.toString(),
+                          ].join(' · '),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        if (sources[index].publisher != null ||
-                            sources[index].publicationYear != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            [
-                              if (sources[index].publisher != null)
-                                sources[index].publisher!,
-                              if (sources[index].publicationYear != null)
-                                sources[index].publicationYear.toString(),
-                            ].join(' · '),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
           if (index != sources.length - 1) const SizedBox(height: 9),
@@ -596,8 +945,8 @@ class _SignedAssetImageState extends State<_SignedAssetImage> {
         future: _signedUrlFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const AspectRatio(
-              aspectRatio: 4 / 3,
+            return const SizedBox(
+              height: 360,
               child: Center(child: CircularProgressIndicator()),
             );
           }
@@ -610,24 +959,76 @@ class _SignedAssetImageState extends State<_SignedAssetImage> {
                 widget.asset.caption ??
                 'Ders görseli',
             image: true,
-            child: Container(
-              color: Colors.white,
-              constraints: const BoxConstraints(minHeight: 180),
-              child: InteractiveViewer(
-                minScale: 1,
-                maxScale: 4,
-                child: Image.network(
-                  url,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) =>
-                      const _AssetUnavailable(),
+            child: Stack(
+              children: [
+                Container(
+                  color: AppColors.imagePanel,
+                  constraints: const BoxConstraints(minHeight: 280, maxHeight: 650),
+                  alignment: Alignment.center,
+                  child: InteractiveViewer(
+                    minScale: 1,
+                    maxScale: 4,
+                    child: Image.network(
+                      url,
+                      width: double.infinity,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const _AssetUnavailable(),
+                    ),
+                  ),
                 ),
-              ),
+                Positioned(
+                  right: 14,
+                  bottom: 14,
+                  child: Material(
+                    color: AppColors.background,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      tooltip: 'Görseli büyüt',
+                      onPressed: () => _openViewer(context, url),
+                      icon: const Icon(
+                        Icons.zoom_in_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },
       );
+
+  void _openViewer(BuildContext context, String url) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.background,
+        insetPadding: const EdgeInsets.all(22),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: InteractiveViewer(
+                minScale: .8,
+                maxScale: 6,
+                child: Center(
+                  child: Image.network(url, fit: BoxFit.contain),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton.filled(
+                tooltip: 'Kapat',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close_rounded),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _AssetUnavailable extends StatelessWidget {
@@ -636,17 +1037,20 @@ class _AssetUnavailable extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
         width: double.infinity,
-        height: 180,
-        color: AppColors.primary50,
+        height: 220,
+        color: const Color(0xFFEDEEF1),
         child: const Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               Icons.image_not_supported_outlined,
-              color: AppColors.textSecondary,
+              color: Color(0xFF666D78),
             ),
             SizedBox(height: 7),
-            Text('Görsel şu anda yüklenemiyor.'),
+            Text(
+              'Görsel şu anda yüklenemiyor.',
+              style: TextStyle(color: Color(0xFF555C67)),
+            ),
           ],
         ),
       );
@@ -660,35 +1064,68 @@ List<Widget> _buildInterleavedSections(
     return [
       for (var i = 0; i < images.length; i++) ...[
         _InlineLessonImage(asset: images[i]),
-        if (i != images.length - 1) const SizedBox(height: 18),
+        if (i != images.length - 1) const SizedBox(height: 22),
       ],
     ];
   }
 
   final placements = <int, List<FtrAsset>>{};
-  if (images.isNotEmpty) {
-    for (var i = 0; i < images.length; i++) {
-      var target = (i * sections.length) ~/ images.length;
+  final unplaced = <FtrAsset>[];
+
+  for (final image in images) {
+    final exactIndex = _placementIndexForAsset(sections, image);
+    if (exactIndex == null) {
+      unplaced.add(image);
+    } else {
+      placements.putIfAbsent(exactIndex, () => <FtrAsset>[]).add(image);
+    }
+  }
+
+  if (unplaced.isNotEmpty) {
+    for (var i = 0; i < unplaced.length; i++) {
+      var target = (i * sections.length) ~/ unplaced.length;
       if (target >= sections.length) target = sections.length - 1;
-      placements.putIfAbsent(target, () => <FtrAsset>[]).add(images[i]);
+      placements.putIfAbsent(target, () => <FtrAsset>[]).add(unplaced[i]);
     }
   }
 
   final widgets = <Widget>[];
-  for (var sectionIndex = 0;
-      sectionIndex < sections.length;
-      sectionIndex++) {
+  for (var sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
     widgets.add(_HtmlSection(html: sections[sectionIndex]));
     final sectionImages = placements[sectionIndex] ?? const <FtrAsset>[];
     for (final image in sectionImages) {
-      widgets.add(const SizedBox(height: 14));
+      widgets.add(const SizedBox(height: 16));
       widgets.add(_InlineLessonImage(asset: image));
     }
     if (sectionIndex != sections.length - 1) {
-      widgets.add(const SizedBox(height: 18));
+      widgets.add(const SizedBox(height: 24));
     }
   }
   return widgets;
+}
+
+int? _placementIndexForAsset(List<String> sections, FtrAsset asset) {
+  final placement = _normalizeText(asset.placementAfterHeading ?? '');
+  if (placement.isEmpty) return null;
+  for (var index = 0; index < sections.length; index++) {
+    final sectionText = _normalizeText(_stripHtml(sections[index]));
+    if (sectionText.contains(placement)) return index;
+  }
+  return null;
+}
+
+String _stripHtml(String value) {
+  return value
+      .replaceAll(RegExp(r'<[^>]*>', multiLine: true), ' ')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&');
+}
+
+String _normalizeText(String value) {
+  return value
+      .toLowerCase()
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 }
 
 List<String> _splitHtmlIntoLearningSections(String html) {
