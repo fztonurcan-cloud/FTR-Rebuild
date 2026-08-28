@@ -17,6 +17,9 @@ foreach ($name in $requiredValues) {
 if ($env:PLAY_MONTHLY_PRODUCT_ID -eq $env:PLAY_YEARLY_PRODUCT_ID) {
   throw 'Monthly and yearly Play product IDs must be different.'
 }
+if ($env:FTR_DEBUG_INTERNAL_REVIEW_PREVIEW -eq 'YES') {
+  throw 'Internal review preview must never be enabled for a release build.'
+}
 
 $gateArgs = @(
   'tools/android_release_gate.py', '--root', '.',
@@ -38,6 +41,8 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/release_signing_gate.py --root .
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/build_preflight.py --root . --strict --platform android
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+python tools/auth_recovery_gate.py .
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/test_play_policy_gate.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
