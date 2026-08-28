@@ -27,9 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
-      # Public client configuration. Authorization is enforced by Supabase RLS.
+      # Public client configuration. Authorization is enforced by Supabase RLS
+      # and the dedicated internal preview tester allow-list.
       SUPABASE_URL: https://dkawrwinmyjvkzioruki.supabase.co
       SUPABASE_PUBLISHABLE_KEY: sb_publishable_fQrP8FQtglit057xrYngtQ_M_ZoZQEl
+      FTR_DEBUG_INTERNAL_REVIEW_PREVIEW: YES
 
     defaults:
       run:
