@@ -12,14 +12,27 @@ const allowedActions = new Set([
 ]);
 
 export default {
-  fetch: withSupabase({ auth: 'user' }, async (req, ctx) => {
+  fetch: withSupabase({ auth: 'none' }, async (req, ctx) => {
     if (req.method !== 'POST') {
       return Response.json({ error: 'method_not_allowed' }, { status: 405 });
     }
 
-    const userId = ctx.userClaims?.sub;
-    if (!userId) {
-      console.error('internal-preview missing authenticated user claims');
+    const authHeader = req.headers.get('Authorization')?.trim() ?? '';
+    if (!authHeader.toLowerCase().startsWith('bearer ')) {
+      console.error('internal-preview missing bearer token');
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    const accessToken = authHeader.slice(7).trim();
+    if (!accessToken) {
+      return Response.json({ error: 'unauthorized' }, { status: 401 });
+    }
+
+    const { data: authData, error: authError } =
+      await ctx.supabaseAdmin.auth.getUser(accessToken);
+    const userId = authData?.user?.id;
+    if (authError || !userId) {
+      console.error('internal-preview bearer validation failed');
       return Response.json({ error: 'unauthorized' }, { status: 401 });
     }
 
