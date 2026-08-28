@@ -2,6 +2,10 @@ name: FTR Android Release Candidate
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ftr-android-release.yml'
 
 permissions:
   contents: read
@@ -40,7 +44,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Validate required secrets
+      - name: Validate required release secrets
         env:
           FTR_UPLOAD_KEYSTORE_B64: ${{ secrets.FTR_UPLOAD_KEYSTORE_B64 }}
           FTR_UPLOAD_STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
@@ -48,11 +52,9 @@ jobs:
           FTR_UPLOAD_KEY_PASSWORD: ${{ secrets.FTR_UPLOAD_KEY_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-          PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
-          PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
         run: |
           set -euo pipefail
-          for v in FTR_UPLOAD_KEYSTORE_B64 FTR_UPLOAD_STORE_PASSWORD FTR_UPLOAD_KEY_ALIAS FTR_UPLOAD_KEY_PASSWORD SUPABASE_URL SUPABASE_PUBLISHABLE_KEY PLAY_MONTHLY_PRODUCT_ID PLAY_YEARLY_PRODUCT_ID; do
+          for v in FTR_UPLOAD_KEYSTORE_B64 FTR_UPLOAD_STORE_PASSWORD FTR_UPLOAD_KEY_ALIAS FTR_UPLOAD_KEY_PASSWORD SUPABASE_URL SUPABASE_PUBLISHABLE_KEY; do
             test -n "${!v:-}" || { echo "Missing required secret: $v"; exit 2; }
           done
 
