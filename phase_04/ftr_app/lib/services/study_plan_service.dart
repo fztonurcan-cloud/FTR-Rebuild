@@ -4,9 +4,13 @@ import '../domain/models/ftr_content.dart';
 import '../domain/models/ftr_study_plan.dart';
 
 class StudyPlanService {
-  const StudyPlanService(this._client);
+  const StudyPlanService(
+    this._client, {
+    this.internalReviewPreview = false,
+  });
 
   final SupabaseClient _client;
+  final bool internalReviewPreview;
 
   static const programCode = 'ftr_lisans_4y';
 
@@ -43,7 +47,9 @@ class StudyPlanService {
     }
 
     final raw = await _client.rpc(
-      'get_curriculum_category_contents',
+      internalReviewPreview
+          ? 'internal_preview_curriculum_category_contents'
+          : 'get_curriculum_category_contents',
       params: {
         'p_program_code': programCode,
         'p_year_no': yearNo,
