@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/models/ftr_content.dart';
 import '../domain/models/ftr_study_plan.dart';
+import 'internal_preview_service.dart';
 
 class StudyPlanService {
   const StudyPlanService(
@@ -46,18 +47,30 @@ class StudyPlanService {
       throw ArgumentError('Geçersiz sayfalama parametreleri.');
     }
 
-    final raw = await _client.rpc(
-      internalReviewPreview
-          ? 'internal_preview_curriculum_category_contents'
-          : 'get_curriculum_category_contents',
-      params: {
-        'p_program_code': programCode,
-        'p_year_no': yearNo,
-        'p_category_slug': categorySlug.trim(),
-        'p_offset': offset,
-        'p_limit': limit,
-      },
-    );
+    final dynamic raw;
+    if (internalReviewPreview) {
+      raw = await InternalPreviewService(_client).invoke(
+        'curriculum',
+        payload: {
+          'program_code': programCode,
+          'year_no': yearNo,
+          'category_slug': categorySlug.trim(),
+          'offset': offset,
+          'limit': limit,
+        },
+      );
+    } else {
+      raw = await _client.rpc(
+        'get_curriculum_category_contents',
+        params: {
+          'p_program_code': programCode,
+          'p_year_no': yearNo,
+          'p_category_slug': categorySlug.trim(),
+          'p_offset': offset,
+          'p_limit': limit,
+        },
+      );
+    }
 
     if (raw is! List) return const [];
     return raw
