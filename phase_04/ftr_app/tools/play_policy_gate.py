@@ -136,6 +136,15 @@ def main() -> int:
             "hesapla birlikte silinir",
         )
     )
+    health_data_scope_disclosed = (
+        "health connect" in legal_norm
+        and contains_any(
+            legal_norm,
+            "hasta kayıt sistemi değildir",
+            "hasta kayıt sistemi veya tıbbi cihaz değildir",
+            "hasta kayıt sistemi, tıbbi cihaz veya uzaktan tanı/tedavi hizmeti değildir",
+        )
+    )
 
     legal_checks = {
         "privacy_policy_named": contains_any(legal_norm, "Gizlilik Politikası"),
@@ -146,8 +155,7 @@ def main() -> int:
         "service_providers_disclosed": "supabase" in legal_norm and "google play" in legal_norm,
         "security_disclosed": security_disclosed,
         "retention_deletion_disclosed": retention_deletion_disclosed,
-        "health_data_scope_disclosed": "health connect" in legal_norm
-        and contains_any(legal_norm, "hasta kayıt sistemi değildir"),
+        "health_data_scope_disclosed": health_data_scope_disclosed,
         "medical_device_disclaimer": contains_any(legal_norm, "tıbbi cihaz değildir"),
         "diagnosis_treatment_disclaimer": all(
             normalized(token) in legal_norm for token in ("teşhis", "tedavi", "iyileştirme", "önleme")
