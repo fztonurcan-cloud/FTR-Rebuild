@@ -4,6 +4,13 @@ set -a
 source "${1:-android_release.env}"
 set +a
 
+for v in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY PLAY_MONTHLY_PRODUCT_ID PLAY_YEARLY_PRODUCT_ID; do
+  [[ -n "${!v:-}" ]] || { echo "Missing required release value: $v"; exit 2; }
+done
+[[ "$PLAY_MONTHLY_PRODUCT_ID" != "$PLAY_YEARLY_PRODUCT_ID" ]] || {
+  echo "Monthly and yearly Play product IDs must be different."; exit 2;
+}
+
 python3 tools/android_release_gate.py \
   --root . \
   --identity-confirmed "$FTR_PACKAGE_IDENTITY_CONFIRMED" \
@@ -25,11 +32,12 @@ python3 tools/play_policy_gate.py
 flutter analyze --no-fatal-infos
 flutter test
 
-DART_DEFINES=()
-[[ -n "${SUPABASE_URL:-}" ]] && DART_DEFINES+=("--dart-define=SUPABASE_URL=${SUPABASE_URL}")
-[[ -n "${SUPABASE_PUBLISHABLE_KEY:-}" ]] && DART_DEFINES+=("--dart-define=SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}")
-[[ -n "${PLAY_MONTHLY_PRODUCT_ID:-}" ]] && DART_DEFINES+=("--dart-define=PLAY_MONTHLY_PRODUCT_ID=${PLAY_MONTHLY_PRODUCT_ID}")
-[[ -n "${PLAY_YEARLY_PRODUCT_ID:-}" ]] && DART_DEFINES+=("--dart-define=PLAY_YEARLY_PRODUCT_ID=${PLAY_YEARLY_PRODUCT_ID}")
+DART_DEFINES=(
+  "--dart-define=SUPABASE_URL=${SUPABASE_URL}"
+  "--dart-define=SUPABASE_PUBLISHABLE_KEY=${SUPABASE_PUBLISHABLE_KEY}"
+  "--dart-define=PLAY_MONTHLY_PRODUCT_ID=${PLAY_MONTHLY_PRODUCT_ID}"
+  "--dart-define=PLAY_YEARLY_PRODUCT_ID=${PLAY_YEARLY_PRODUCT_ID}"
+)
 
 flutter build appbundle --release \
   --build-name="$FTR_ANDROID_VERSION_NAME" \
