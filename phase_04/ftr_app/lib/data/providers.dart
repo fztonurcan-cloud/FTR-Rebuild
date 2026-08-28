@@ -22,24 +22,33 @@ final ftrRepositoryProvider = Provider<FtrRepository>((ref) {
   if (AppConfig.useMockContent || !AppConfig.hasSupabaseConfiguration) {
     return const MockFtrRepository();
   }
-  return SupabaseFtrRepository(Supabase.instance.client);
+  return SupabaseFtrRepository(
+    Supabase.instance.client,
+    internalReviewPreview: AppConfig.internalReviewPreview,
+  );
 });
 
 final categoriesProvider = FutureProvider<List<FtrCategory>>((ref) {
+  if (AppConfig.internalReviewPreview) ref.watch(authUserProvider);
   return ref.watch(ftrRepositoryProvider).fetchCategories();
 });
 
 final featuredContentsProvider = FutureProvider<List<FtrContent>>((ref) {
+  if (AppConfig.internalReviewPreview) ref.watch(authUserProvider);
   return ref.watch(ftrRepositoryProvider).fetchFeaturedContents();
 });
 
 final contentDetailProvider = FutureProvider.family<FtrContent?, String>((ref, id) {
+  if (AppConfig.internalReviewPreview) ref.watch(authUserProvider);
   return ref.watch(ftrRepositoryProvider).fetchContentDetail(id);
 });
 
 final studyPlanServiceProvider = Provider<StudyPlanService?>((ref) {
   if (!AppConfig.hasSupabaseConfiguration) return null;
-  return StudyPlanService(Supabase.instance.client);
+  return StudyPlanService(
+    Supabase.instance.client,
+    internalReviewPreview: AppConfig.internalReviewPreview,
+  );
 });
 
 final studyPlanProvider = FutureProvider.family<FtrStudyPlan, int>((ref, yearNo) async {
@@ -70,7 +79,10 @@ final authUserProvider = StreamProvider<User?>((ref) async* {
 
 final quizServiceProvider = Provider<QuizService?>((ref) {
   if (!AppConfig.hasSupabaseConfiguration) return null;
-  return QuizService(Supabase.instance.client);
+  return QuizService(
+    Supabase.instance.client,
+    internalReviewPreview: AppConfig.internalReviewPreview,
+  );
 });
 
 final quizQuestionsProvider = FutureProvider.family<List<FtrQuizQuestion>, String>((ref, contentId) async {
