@@ -6,8 +6,8 @@ import '../core/widgets/ftr_shell.dart';
 import '../features/account/presentation/account_privacy_screen.dart';
 import '../features/auth/presentation/auth_screen.dart';
 import '../features/auth/presentation/reset_password_screen.dart';
-import '../features/courses/presentation/courses_screen.dart';
 import '../features/courses/presentation/category_contents_screen.dart';
+import '../features/courses/presentation/courses_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/help/presentation/faq_screen.dart';
 import '../features/home/presentation/home_screen.dart';
@@ -36,6 +36,19 @@ final appRouter = GoRouter(
           ),
         ),
         GoRoute(
+          path: '/content/:id',
+          builder: (_, state) => ContentRouteResolver(
+            contentId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(
+          path: '/quiz/:id',
+          builder: (_, state) => QuizScreen(
+            contentId: state.pathParameters['id']!,
+          ),
+        ),
+        GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
+        GoRoute(
           path: '/favorites',
           builder: (_, __) => const FavoritesScreen(),
         ),
@@ -60,19 +73,6 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/legal/terms',
       builder: (_, __) => const LegalScreen(document: LegalDocument.terms),
-    ),
-    GoRoute(path: '/search', builder: (_, __) => const SearchScreen()),
-    GoRoute(
-      path: '/content/:id',
-      builder: (_, state) => ContentRouteResolver(
-        contentId: state.pathParameters['id']!,
-      ),
-    ),
-    GoRoute(
-      path: '/quiz/:id',
-      builder: (_, state) => QuizScreen(
-        contentId: state.pathParameters['id']!,
-      ),
     ),
     GoRoute(path: '/premium', builder: (_, __) => const PremiumScreen()),
   ],
