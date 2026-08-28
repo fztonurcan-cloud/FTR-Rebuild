@@ -9,6 +9,7 @@ class FtrContent {
     required this.summary,
     required this.category,
     required this.premium,
+    this.categorySlug = '',
     this.contentKind = 'article',
     this.bodyHtml,
     this.reviewStatus = 'pending',
@@ -22,6 +23,7 @@ class FtrContent {
   final String title;
   final String summary;
   final String category;
+  final String categorySlug;
   final bool premium;
   final String contentKind;
   final String? bodyHtml;
@@ -55,6 +57,7 @@ class FtrContent {
       title: map['title'] as String,
       summary: (map['summary'] as String?) ?? '',
       category: (map['category_name'] as String?) ?? '',
+      categorySlug: (map['category_slug'] as String?) ?? '',
       premium: (map['premium'] as bool?) ?? false,
       contentKind: (map['content_kind'] as String?) ?? 'article',
       bodyHtml: map['body_html'] as String?,
