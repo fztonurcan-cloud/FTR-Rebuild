@@ -5,8 +5,9 @@ abstract final class AppConfig {
   static const useMockContent =
       bool.fromEnvironment('USE_MOCK_CONTENT', defaultValue: false);
 
-  // Internal QA only. Server-side preview RPCs still require an authenticated,
-  // explicitly allow-listed preview tester. Release builds must never enable it.
+  // Internal device QA only. Preview reads are routed through the authenticated
+  // internal-preview Edge Function and a server-side tester allowlist. Release
+  // builds must never enable this compile-time switch.
   static const internalReviewPreview = bool.fromEnvironment(
     'INTERNAL_REVIEW_PREVIEW',
     defaultValue: false,
