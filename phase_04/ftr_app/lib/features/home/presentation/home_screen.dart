@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/navigation/content_route.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/category_visuals.dart';
 import '../../../data/providers.dart';
@@ -16,53 +17,78 @@ class HomeScreen extends ConsumerWidget {
     final categories = ref.watch(categoriesProvider);
     final featured = ref.watch(featuredContentsProvider);
     final user = ref.watch(authUserProvider).value;
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1040;
 
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
+        padding: EdgeInsets.fromLTRB(
+          isDesktop ? 36 : 18,
+          isDesktop ? 34 : 16,
+          isDesktop ? 36 : 18,
+          32,
+        ),
         children: [
-          _GreetingHeader(
-            signedIn: user != null,
-            onBell: () => context.go('/profile'),
+          Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1240),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _GreetingHeader(
+                    signedIn: user != null,
+                    isDesktop: isDesktop,
+                    onProfile: () => context.go('/profile'),
+                  ),
+                  if (!isDesktop) ...[
+                    const SizedBox(height: 18),
+                    _SearchBar(onTap: () => context.go('/search')),
+                  ],
+                  const SizedBox(height: 28),
+                  _SectionTitle(
+                    title: user != null ? 'Çalışmaya devam et' : 'Müfredatı keşfet',
+                    action: 'Tüm dersler',
+                    onAction: () => context.go('/courses'),
+                  ),
+                  const SizedBox(height: 12),
+                  featured.when(
+                    data: (items) => items.isEmpty
+                        ? const _EmptyCard(text: 'Henüz gösterilecek bir ders yok.')
+                        : _ContinueCard(item: items.first, signedIn: user != null),
+                    loading: () => const _LoadingCard(height: 132),
+                    error: (_, __) =>
+                        const _EmptyCard(text: 'Dersler şu anda yüklenemedi.'),
+                  ),
+                  const SizedBox(height: 30),
+                  const _SectionTitle(title: 'Ders Alanları'),
+                  const SizedBox(height: 12),
+                  categories.when(
+                    data: (items) =>
+                        _CategoryGrid(items: items.take(12).toList(growable: false)),
+                    loading: () => const _LoadingCard(height: 280),
+                    error: (_, __) => const _EmptyCard(
+                      text: 'Ders alanları şu anda yüklenemedi.',
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  _SectionTitle(
+                    title: 'Öne çıkan konular',
+                    action: 'Tümünü gör',
+                    onAction: () => context.go('/courses'),
+                  ),
+                  const SizedBox(height: 12),
+                  featured.when(
+                    data: (items) => _PopularTopics(items: items),
+                    loading: () => const _LoadingCard(height: 154),
+                    error: (_, __) => const _EmptyCard(
+                      text: 'Öne çıkan içerikler yüklenemedi.',
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                  _PremiumStrip(onTap: () => context.push('/premium')),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 18),
-          _SearchBar(onTap: () => context.go('/search')),
-          const SizedBox(height: 22),
-          _SectionTitle(
-            title: 'Çalışmaya devam et',
-            action: 'Tümünü gör',
-            onAction: () => context.go('/courses'),
-          ),
-          const SizedBox(height: 10),
-          featured.when(
-            data: (items) => items.isEmpty
-                ? const _EmptyCard(text: 'Henüz devam edilecek bir ders yok.')
-                : _ContinueCard(item: items.first, signedIn: user != null),
-            loading: () => const _LoadingCard(height: 126),
-            error: (_, __) => const _EmptyCard(text: 'Dersler şu anda yüklenemedi.'),
-          ),
-          const SizedBox(height: 24),
-          const _SectionTitle(title: 'Kategoriler'),
-          const SizedBox(height: 10),
-          categories.when(
-            data: (items) => _CategoryGrid(items: items.take(9).toList(growable: false)),
-            loading: () => const _LoadingCard(height: 280),
-            error: (_, __) => const _EmptyCard(text: 'Kategoriler şu anda yüklenemedi.'),
-          ),
-          const SizedBox(height: 24),
-          _SectionTitle(
-            title: 'Popüler Konular',
-            action: 'Tümünü gör',
-            onAction: () => context.go('/courses'),
-          ),
-          const SizedBox(height: 10),
-          featured.when(
-            data: (items) => _PopularTopics(items: items),
-            loading: () => const _LoadingCard(height: 130),
-            error: (_, __) => const _EmptyCard(text: 'Popüler içerikler yüklenemedi.'),
-          ),
-          const SizedBox(height: 20),
-          _PremiumStrip(onTap: () => context.push('/premium')),
         ],
       ),
     );
@@ -70,9 +96,15 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader({required this.signedIn, required this.onBell});
+  const _GreetingHeader({
+    required this.signedIn,
+    required this.isDesktop,
+    required this.onProfile,
+  });
+
   final bool signedIn;
-  final VoidCallback onBell;
+  final bool isDesktop;
+  final VoidCallback onProfile;
 
   @override
   Widget build(BuildContext context) => Row(
@@ -82,20 +114,30 @@ class _GreetingHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Merhaba 👋', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 2),
                 Text(
-                  signedIn ? 'Kaldığın yerden devam edelim.' : 'Bugün ne öğrenmek istersin?',
+                  isDesktop ? 'FTR Akademi' : 'Merhaba 👋',
+                  style: isDesktop
+                      ? Theme.of(context).textTheme.headlineLarge
+                      : Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  signedIn
+                      ? 'Dört yıllık FTR öğrenme yolunda kaldığın yerden devam et.'
+                      : 'Dört yıllık FTR müfredatını ders ders keşfet.',
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ],
             ),
           ),
-          IconButton(
-            tooltip: signedIn ? 'Hesap ve bildirimler' : 'Giriş yap',
-            onPressed: onBell,
-            icon: Icon(signedIn ? Icons.notifications_none_rounded : Icons.person_outline_rounded),
-          ),
+          if (!isDesktop)
+            IconButton(
+              tooltip: signedIn ? 'Profil' : 'Giriş yap',
+              onPressed: onProfile,
+              icon: Icon(
+                signedIn ? Icons.person_outline_rounded : Icons.login_rounded,
+              ),
+            ),
         ],
       );
 }
@@ -106,22 +148,34 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-        color: const Color(0xFFF4F6F7),
-        borderRadius: BorderRadius.circular(14),
+        color: AppColors.surfaceSoft,
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           onTap: onTap,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: const Row(
               children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 21,
+                  color: AppColors.textSecondary,
+                ),
+                SizedBox(width: 11),
                 Expanded(
                   child: Text(
                     'Ders, hastalık veya egzersiz ara...',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
-                Icon(Icons.search_rounded, size: 22, color: AppColors.textPrimary),
               ],
             ),
           ),
@@ -141,18 +195,13 @@ class _SectionTitle extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
           ),
           if (action != null)
             TextButton(
               onPressed: onAction,
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-              ),
-              child: Text('$action ›'),
+              child: Text('$action  →'),
             ),
         ],
       );
@@ -165,77 +214,115 @@ class _ContinueCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final progress = signedIn ? ref.watch(contentProgressProvider(item.id)) : const AsyncData(0.0);
+    final progress = signedIn
+        ? ref.watch(contentProgressProvider(item.id))
+        : const AsyncData(0.0);
     final value = progress.value ?? 0.0;
-    return Card(
-      clipBehavior: Clip.antiAlias,
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
       child: InkWell(
-        onTap: () => context.push('/content/${item.id}'),
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => context.push(routeForContent(item)),
         child: Padding(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               Container(
-                width: 92,
-                height: 92,
+                width: 94,
+                height: 94,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(13),
+                  borderRadius: BorderRadius.circular(14),
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF173C45), Color(0xFF4A6D74)],
+                    colors: [AppColors.primary700, Color(0xFF34225D)],
                   ),
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    const Icon(Icons.accessibility_new_rounded, color: Colors.white70, size: 42),
-                    Positioned(
-                      right: 7,
-                      bottom: 7,
-                      child: Container(
-                        width: 29,
-                        height: 29,
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                        child: const Icon(Icons.play_arrow_rounded, color: AppColors.primary700, size: 20),
-                      ),
-                    ),
-                  ],
+                child: const Icon(
+                  Icons.accessibility_new_rounded,
+                  color: Colors.white,
+                  size: 42,
                 ),
               ),
-              const SizedBox(width: 13),
+              const SizedBox(width: 15),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (item.category.trim().isNotEmpty)
+                      Text(
+                        item.category.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.primary500,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: .5,
+                        ),
+                      ),
+                    if (item.category.trim().isNotEmpty) const SizedBox(height: 5),
                     Text(
                       item.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                      ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 7),
                     Text(
                       signedIn ? 'Kaldığın yerden devam et' : 'Dersi incele',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    const SizedBox(height: 13),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: LinearProgressIndicator(
-                              value: value.clamp(0.0, 1.0),
-                              minHeight: 6,
-                              backgroundColor: AppColors.primary100,
+                    if (signedIn) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(
+                                value: value.clamp(0.0, 1.0),
+                                minHeight: 5,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 9),
-                        Text('%${(value * 100).round()}', style: const TextStyle(fontSize: 11)),
-                      ],
-                    ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '%${(value * 100).round()}',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 11),
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Müfredatı keşfet',
+                            style: TextStyle(
+                              color: AppColors.primary500,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(width: 5),
+                          Icon(
+                            Icons.arrow_forward_rounded,
+                            size: 16,
+                            color: AppColors.primary500,
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -254,54 +341,74 @@ class _CategoryGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const _EmptyCard(text: 'Henüz kategori bulunmuyor.');
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 1.02,
-      ),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final visual = categoryVisualFor(item.name);
-        return Material(
-          color: AppColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-            side: const BorderSide(color: AppColors.border),
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 980
+            ? 4
+            : constraints.maxWidth >= 620
+                ? 3
+                : 2;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: columns,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: columns >= 4 ? 1.8 : 1.25,
           ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => context.push('/courses/${item.slug}?name=${Uri.encodeQueryComponent(item.name)}'),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 11, 8, 9),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: visual.tint.withValues(alpha: .10),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(visual.icon, color: visual.tint, size: 21),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    item.name,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 10.5, height: 1.2, fontWeight: FontWeight.w700),
-                  ),
-                ],
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final visual = categoryVisualFor(item.name);
+            return Material(
+              color: AppColors.surfaceRaised,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: const BorderSide(color: AppColors.border),
               ),
-            ),
-          ),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => context.push(
+                  '/courses/${item.slug}?name=${Uri.encodeQueryComponent(item.name)}',
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(13),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary100,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          visual.icon,
+                          color: AppColors.primary500,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Text(
+                          item.name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.25,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -315,45 +422,54 @@ class _PopularTopics extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) return const _EmptyCard(text: 'Henüz öne çıkan içerik yok.');
+    final visible = items.take(6).toList(growable: false);
     return SizedBox(
-      height: 150,
+      height: 156,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: items.take(6).length,
+        itemCount: visible.length,
         separatorBuilder: (_, __) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          final item = items[index];
+          final item = visible[index];
           return SizedBox(
-            width: 132,
-            child: Card(
-              clipBehavior: Clip.antiAlias,
+            width: 190,
+            child: Material(
+              color: AppColors.surfaceRaised,
+              borderRadius: BorderRadius.circular(14),
               child: InkWell(
-                onTap: () => context.push('/content/${item.id}'),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      height: 72,
-                      color: AppColors.primary50,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        item.premium ? Icons.workspace_premium_outlined : Icons.health_and_safety_outlined,
-                        color: item.premium ? AppColors.premium : AppColors.primary600,
-                        size: 31,
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => context.push(routeForContent(item)),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        item.isQuiz
+                            ? Icons.quiz_outlined
+                            : Icons.menu_book_outlined,
+                        color: item.premium
+                            ? AppColors.premium
+                            : AppColors.primary500,
+                        size: 26,
                       ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.all(9),
-                        child: Text(
-                          item.title,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 10.5, height: 1.2, fontWeight: FontWeight.w700),
+                      const Spacer(),
+                      Text(
+                        item.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          height: 1.3,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -370,27 +486,44 @@ class _PremiumStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(18, 17, 16, 17),
         decoration: BoxDecoration(
-          color: AppColors.primary50,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.primary100),
+          gradient: const LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [Color(0xFF17132B), Color(0xFF211842)],
+          ),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: AppColors.primary700),
         ),
         child: Row(
           children: [
-            const Icon(Icons.workspace_premium_rounded, color: AppColors.premium, size: 31),
-            const SizedBox(width: 12),
+            const Icon(
+              Icons.workspace_premium_rounded,
+              color: AppColors.premium,
+              size: 30,
+            ),
+            const SizedBox(width: 13),
             const Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Premium ile tüm içeriklere eriş', style: TextStyle(fontWeight: FontWeight.w800)),
+                  Text(
+                    'FTR Akademi Premium',
+                    style: TextStyle(fontWeight: FontWeight.w800),
+                  ),
                   SizedBox(height: 3),
-                  Text('Sınavlara hazırlan, bilgini bir adım öne taşı.', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                  Text(
+                    'Dört yıllık ders içeriği, görsel öğrenme ve sınav hazırlığı tek yerde.',
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
-            TextButton(onPressed: onTap, child: const Text('Keşfet')),
+            TextButton(onPressed: onTap, child: const Text('İncele')),
           ],
         ),
       );
@@ -399,6 +532,7 @@ class _PremiumStrip extends StatelessWidget {
 class _LoadingCard extends StatelessWidget {
   const _LoadingCard({required this.height});
   final double height;
+
   @override
   Widget build(BuildContext context) => SizedBox(
         height: height,
@@ -409,11 +543,15 @@ class _LoadingCard extends StatelessWidget {
 class _EmptyCard extends StatelessWidget {
   const _EmptyCard({required this.text});
   final String text;
+
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
         ),
+        child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
       );
 }
