@@ -18,7 +18,6 @@ class FtrAsset {
   final String? altText;
 
   bool get isImage => assetType == 'image';
-  bool get isVideo => assetType == 'video';
 
   factory FtrAsset.fromMap(Map<String, dynamic> map) {
     return FtrAsset(
