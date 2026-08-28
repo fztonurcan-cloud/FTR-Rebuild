@@ -15,6 +15,7 @@ python3 tools/android_release_gate.py \
 
 flutter pub get
 python3 tools/build_preflight.py --root . --strict --platform android
+python3 tools/auth_recovery_gate.py .
 python3 tools/test_play_policy_gate.py
 python3 tools/play_policy_gate.py
 flutter analyze --no-fatal-infos
