@@ -15,6 +15,10 @@ jobs:
   android-debug:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    env:
+      # Public client configuration. Authorization is enforced by Supabase RLS.
+      SUPABASE_URL: https://dkawrwinmyjvkzioruki.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_fQrP8FQtglit057xrYngtQ_M_ZoZQEl
 
     defaults:
       run:
@@ -25,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -53,8 +57,6 @@ jobs:
 
       - name: Build verified debug APK
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
           PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
         run: bash ./tools/build_android_debug.sh
