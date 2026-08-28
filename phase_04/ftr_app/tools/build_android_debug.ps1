@@ -14,6 +14,8 @@ flutter pub get
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/build_preflight.py --root . --strict --platform android
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+python tools/auth_recovery_gate.py .
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/play_policy_gate.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 flutter analyze --no-fatal-infos
