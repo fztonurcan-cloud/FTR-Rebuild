@@ -62,42 +62,55 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Ara', style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                textInputAction: TextInputAction.search,
-                onSubmitted: runSearch,
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Örn. skolyoz, TENS, ACL...',
-                  suffixIcon: controller.text.isEmpty
-                      ? null
-                      : IconButton(
-                          tooltip: 'Temizle',
-                          onPressed: () {
-                            controller.clear();
-                            setState(() {
-                              results = const [];
-                              searched = false;
-                              errorMessage = null;
-                            });
-                          },
-                          icon: const Icon(Icons.close),
-                        ),
+  Widget build(BuildContext context) => Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Geri',
+                      onPressed: () => context.canPop() ? context.pop() : context.go('/courses'),
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                    const SizedBox(width: 4),
+                    Text('Ara', style: Theme.of(context).textTheme.headlineMedium),
+                  ],
                 ),
-              ),
-              if (loading) const LinearProgressIndicator(),
-              const SizedBox(height: 16),
-              Expanded(child: _buildResults(context)),
-            ],
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  textInputAction: TextInputAction.search,
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: runSearch,
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Örn. skolyoz, TENS, ACL...',
+                    suffixIcon: controller.text.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Temizle',
+                            onPressed: () {
+                              controller.clear();
+                              setState(() {
+                                results = const [];
+                                searched = false;
+                                errorMessage = null;
+                              });
+                            },
+                            icon: const Icon(Icons.close),
+                          ),
+                  ),
+                ),
+                if (loading) const LinearProgressIndicator(),
+                const SizedBox(height: 16),
+                Expanded(child: _buildResults(context)),
+              ],
+            ),
           ),
         ),
       );
