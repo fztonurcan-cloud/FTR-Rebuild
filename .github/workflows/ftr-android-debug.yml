@@ -10,6 +10,7 @@ on:
       - 'phase_04/ftr_app/android/**'
       - 'phase_04/ftr_app/tools/**'
       - 'phase_04/ftr_app/supabase/functions/legal-pages/**'
+      - 'phase_04/ftr_app/supabase/functions/internal-preview/**'
       - 'phase_04/ftr_app/pubspec.yaml'
       - 'phase_04/ftr_app/pubspec.lock'
       - 'phase_04/ftr_app/analysis_options.yaml'
@@ -77,10 +78,10 @@ jobs:
       - name: Upload APK + checksum
         uses: actions/upload-artifact@v4
         with:
-          name: FTR-debug-4.0.0-25
+          name: FTR-QA26-debug
           path: |
-            phase_04/ftr_app/dist/FTR-debug-4.0.0-25.apk
-            phase_04/ftr_app/dist/FTR-debug-4.0.0-25.apk.sha256
+            phase_04/ftr_app/dist/FTR-QA26-debug.apk
+            phase_04/ftr_app/dist/FTR-QA26-debug.apk.sha256
             phase_04/ftr_app/dist/pubspec.lock
             phase_04/ftr_app/dist/pubspec.lock.sha256
           if-no-files-found: error
