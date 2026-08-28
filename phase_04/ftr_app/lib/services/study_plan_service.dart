@@ -28,7 +28,20 @@ class StudyPlanService {
       },
     );
     if (raw is Map) {
-      return FtrStudyPlan.fromMap(Map<String, dynamic>.from(raw));
+      final map = Map<String, dynamic>.from(raw);
+      if (internalReviewPreview) {
+        final rawCategories = map['categories'];
+        if (rawCategories is List) {
+          map['categories'] = rawCategories.map((item) {
+            if (item is! Map) return item;
+            final category = Map<String, dynamic>.from(item);
+            category['published_content_count'] =
+                category['planned_content_count'] ?? 0;
+            return category;
+          }).toList(growable: false);
+        }
+      }
+      return FtrStudyPlan.fromMap(map);
     }
     throw const FormatException('Müfredat yanıtı beklenen biçimde değil.');
   }
