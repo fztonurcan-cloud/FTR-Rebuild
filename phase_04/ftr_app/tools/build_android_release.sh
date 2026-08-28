@@ -10,6 +10,9 @@ done
 [[ "$PLAY_MONTHLY_PRODUCT_ID" != "$PLAY_YEARLY_PRODUCT_ID" ]] || {
   echo "Monthly and yearly Play product IDs must be different."; exit 2;
 }
+[[ "${FTR_DEBUG_INTERNAL_REVIEW_PREVIEW:-NO}" != "YES" ]] || {
+  echo "Internal review preview must never be enabled for a release build."; exit 2;
+}
 
 python3 tools/android_release_gate.py \
   --root . \
@@ -27,6 +30,7 @@ python3 tools/android_release_gate.py \
 python3 tools/configure_android_signing.py --root .
 python3 tools/release_signing_gate.py --root .
 python3 tools/build_preflight.py --root . --strict --platform android
+python3 tools/auth_recovery_gate.py .
 python3 tools/test_play_policy_gate.py
 python3 tools/play_policy_gate.py
 flutter analyze --no-fatal-infos
