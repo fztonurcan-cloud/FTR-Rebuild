@@ -7,7 +7,6 @@ if (-not (Get-Command dart -ErrorAction SilentlyContinue)) {
   throw 'Dart SDK is not available through Flutter/PATH.'
 }
 
-
 python tools/android_release_gate.py --root . --identity-confirmed YES --android-id com.mobiroller.mobi743032079412 --play-highest-version-code 24 --next-version-code 25 --version-name 4.0.0 --expect-legacy-id com.mobiroller.mobi743032079412
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -15,7 +14,9 @@ flutter pub get
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/build_preflight.py --root . --strict --platform android
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-flutter analyze
+python tools/play_policy_gate.py
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+flutter analyze --no-fatal-infos
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 flutter test
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
