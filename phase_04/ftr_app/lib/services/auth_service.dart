@@ -45,12 +45,12 @@ class AuthService {
     return _client.auth.signUp(
       email: email.trim(),
       password: password,
+      emailRedirectTo: AppConfig.authRedirectUrl,
       data: name == null || name.isEmpty ? null : {'display_name': name},
     );
   }
 
   Future<void> signOut() => _client.auth.signOut();
-
 
   Future<void> requestPasswordReset(String email) {
     final normalizedEmail = email.trim();
@@ -69,7 +69,6 @@ class AuthService {
     }
     return _client.auth.updateUser(UserAttributes(password: password));
   }
-
 
   Future<void> deleteAccount({required String password}) async {
     final user = _client.auth.currentUser;
