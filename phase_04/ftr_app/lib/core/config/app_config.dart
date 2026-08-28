@@ -4,6 +4,14 @@ abstract final class AppConfig {
       String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
   static const useMockContent =
       bool.fromEnvironment('USE_MOCK_CONTENT', defaultValue: false);
+
+  // Internal QA only. Server-side preview RPCs still require an authenticated,
+  // explicitly allow-listed preview tester. Release builds must never enable it.
+  static const internalReviewPreview = bool.fromEnvironment(
+    'INTERNAL_REVIEW_PREVIEW',
+    defaultValue: false,
+  );
+
   static const contentMediaBucket =
       String.fromEnvironment('CONTENT_MEDIA_BUCKET', defaultValue: 'content-assets');
   static const authRedirectUrl = String.fromEnvironment(
