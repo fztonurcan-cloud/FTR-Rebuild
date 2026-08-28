@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -38,9 +39,10 @@ BLOCKED_PERMISSIONS = {
 }
 
 
-def fail(errors: list[str], details: dict) -> int:
-    print(json.dumps({"ok": False, "errors": errors, **details}, ensure_ascii=False, indent=2))
-    return 2
+def normalized(text: str) -> str:
+    """Case-fold text and remove combining marks so Turkish İ matches i."""
+    decomposed = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
 
 
 def main() -> int:
@@ -84,21 +86,23 @@ def main() -> int:
     else:
         legal = LEGAL.read_text(encoding="utf-8")
 
-    legal_lower = legal.lower()
+    legal_norm = normalized(legal)
     legal_checks = {
-        "privacy_policy_named": "gizlilik politikası" in legal_lower,
-        "app_identity_present": "ftr – fizik tedavi ve rehabilitasyon" in legal_lower
-        or "ftr - fizik tedavi ve rehabilitasyon" in legal_lower,
-        "privacy_contact_mechanism": "doğrulanmış geliştirici iletişim kanalını" in legal_lower,
+        "privacy_policy_named": normalized("Gizlilik Politikası") in legal_norm,
+        "app_identity_present": normalized("FTR – Fizik Tedavi ve Rehabilitasyon") in legal_norm
+        or normalized("FTR - Fizik Tedavi ve Rehabilitasyon") in legal_norm,
+        "privacy_contact_mechanism": normalized("doğrulanmış geliştirici iletişim kanalını") in legal_norm,
         "external_account_deletion_link": "/functions/v1/account-deletion" in legal,
-        "data_categories_disclosed": "işlenen veriler" in legal_lower,
-        "service_providers_disclosed": "supabase" in legal_lower and "google play" in legal_lower,
-        "security_disclosed": "satır düzeyi güvenlik" in legal_lower and "https" in legal_lower,
-        "retention_deletion_disclosed": "saklama ve silme" in legal_lower and "hesapla birlikte silinir" in legal_lower,
-        "health_data_scope_disclosed": "health connect" in legal_lower and "hasta kayıt sistemi değildir" in legal_lower,
-        "medical_device_disclaimer": "tıbbi cihaz değildir" in legal_lower,
+        "data_categories_disclosed": normalized("İşlenen veriler") in legal_norm,
+        "service_providers_disclosed": "supabase" in legal_norm and "google play" in legal_norm,
+        "security_disclosed": normalized("satır düzeyi güvenlik") in legal_norm and "https" in legal_norm,
+        "retention_deletion_disclosed": normalized("Saklama ve silme") in legal_norm
+        and normalized("hesapla birlikte silinir") in legal_norm,
+        "health_data_scope_disclosed": "health connect" in legal_norm
+        and normalized("hasta kayıt sistemi değildir") in legal_norm,
+        "medical_device_disclaimer": normalized("tıbbi cihaz değildir") in legal_norm,
         "diagnosis_treatment_disclaimer": all(
-            token in legal_lower for token in ("teşhis", "tedavi", "iyileştirme", "önleme")
+            normalized(token) in legal_norm for token in ("teşhis", "tedavi", "iyileştirme", "önleme")
         ),
     }
     details["legal_checks"] = legal_checks
