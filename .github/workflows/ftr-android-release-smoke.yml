@@ -1,0 +1,129 @@
+name: FTR Android Release Smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/ftr-android-release-smoke.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    env:
+      SUPABASE_URL: https://dkawrwinmyjvkzioruki.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_fQrP8FQtglit057xrYngtQ_M_ZoZQEl
+
+    defaults:
+      run:
+        working-directory: phase_04/ftr_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android 36 platform
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platform-tools' 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Flutter 3.47.0
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Generate ephemeral smoke signing key
+        run: |
+          set -euo pipefail
+          SMOKE_PASS="$(openssl rand -hex 32)"
+          echo "::add-mask::$SMOKE_PASS"
+          keytool -genkeypair \
+            -keystore android/app/ftr-upload-keystore.jks \
+            -storetype JKS \
+            -storepass "$SMOKE_PASS" \
+            -keypass "$SMOKE_PASS" \
+            -alias smoke-upload \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 30 \
+            -dname 'CN=FTR Release Smoke, O=CI Smoke, C=TR'
+          cat > android/key.properties <<EOF
+          storeFile=ftr-upload-keystore.jks
+          storePassword=$SMOKE_PASS
+          keyAlias=smoke-upload
+          keyPassword=$SMOKE_PASS
+          EOF
+          chmod 600 android/key.properties android/app/ftr-upload-keystore.jks
+
+      - name: Materialize smoke release environment
+        run: |
+          cat > android_release.env <<EOF
+          FTR_PACKAGE_IDENTITY_CONFIRMED=YES
+          FTR_ANDROID_APPLICATION_ID=com.mobiroller.mobi743032079412
+          FTR_PLAY_HIGHEST_VERSION_CODE=24
+          FTR_ANDROID_VERSION_CODE=25
+          FTR_ANDROID_VERSION_NAME=4.0.0
+          FTR_EXPECT_LEGACY_ANDROID_ID=com.mobiroller.mobi743032079412
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE_KEY
+          PLAY_MONTHLY_PRODUCT_ID=
+          PLAY_YEARLY_PRODUCT_ID=
+          EOF
+          chmod 600 android_release.env
+
+      - name: Flutter environment
+        run: flutter doctor -v
+
+      - name: Identity regression gate
+        run: python3 tools/test_android_release_gate.py
+
+      - name: Release dart-define regression gate
+        run: python3 tools/release_dart_define_gate.py
+
+      - name: Auth, billing, premium and account-deletion gates
+        run: |
+          python3 tools/phase45_auth_billing_gate.py
+          python3 tools/account_deletion_gate.py
+          python3 tools/phase47_premium_access_gate.py
+          python3 tools/auth_recovery_gate.py
+
+      - name: Build smoke-signed AAB
+        run: bash ./tools/build_android_release.sh android_release.env
+
+      - name: Verify smoke AAB
+        run: |
+          set -euo pipefail
+          test -s build/app/outputs/bundle/release/app-release.aab
+          mkdir -p dist/release-smoke
+          cp build/app/outputs/bundle/release/app-release.aab dist/release-smoke/FTR-release-smoke-NOT-FOR-PLAY.aab
+          sha256sum dist/release-smoke/FTR-release-smoke-NOT-FOR-PLAY.aab > dist/release-smoke/FTR-release-smoke-NOT-FOR-PLAY.aab.sha256
+
+      - name: Upload smoke artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FTR-release-smoke-NOT-FOR-PLAY
+          path: |
+            phase_04/ftr_app/dist/release-smoke/FTR-release-smoke-NOT-FOR-PLAY.aab
+            phase_04/ftr_app/dist/release-smoke/FTR-release-smoke-NOT-FOR-PLAY.aab.sha256
+          if-no-files-found: error
+          retention-days: 3
+
+      - name: Remove ephemeral signing material
+        if: always()
+        run: |
+          rm -f android/key.properties android/app/ftr-upload-keystore.jks android_release.env
