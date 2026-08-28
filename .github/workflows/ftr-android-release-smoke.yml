@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/ftr-android-release-smoke.yml'
+      - 'phase_04/ftr_app/tools/phase47_premium_access_gate.py'
 
 permissions:
   contents: read
