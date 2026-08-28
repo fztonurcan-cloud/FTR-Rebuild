@@ -9,6 +9,15 @@ Get-Content $envFile | ForEach-Object {
   }
 }
 
+$requiredValues = @('SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'PLAY_MONTHLY_PRODUCT_ID', 'PLAY_YEARLY_PRODUCT_ID')
+foreach ($name in $requiredValues) {
+  $value = [Environment]::GetEnvironmentVariable($name, 'Process')
+  if ([string]::IsNullOrWhiteSpace($value)) { throw "Missing required release value: $name" }
+}
+if ($env:PLAY_MONTHLY_PRODUCT_ID -eq $env:PLAY_YEARLY_PRODUCT_ID) {
+  throw 'Monthly and yearly Play product IDs must be different.'
+}
+
 $gateArgs = @(
   'tools/android_release_gate.py', '--root', '.',
   '--identity-confirmed', $env:FTR_PACKAGE_IDENTITY_CONFIRMED,
@@ -30,6 +39,8 @@ python tools/release_signing_gate.py --root .
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/build_preflight.py --root . --strict --platform android
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+python tools/test_play_policy_gate.py
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/play_policy_gate.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 flutter analyze --no-fatal-infos
@@ -37,11 +48,12 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 flutter test
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-$defines = @()
-if ($env:SUPABASE_URL) { $defines += "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)" }
-if ($env:SUPABASE_PUBLISHABLE_KEY) { $defines += "--dart-define=SUPABASE_PUBLISHABLE_KEY=$($env:SUPABASE_PUBLISHABLE_KEY)" }
-if ($env:PLAY_MONTHLY_PRODUCT_ID) { $defines += "--dart-define=PLAY_MONTHLY_PRODUCT_ID=$($env:PLAY_MONTHLY_PRODUCT_ID)" }
-if ($env:PLAY_YEARLY_PRODUCT_ID) { $defines += "--dart-define=PLAY_YEARLY_PRODUCT_ID=$($env:PLAY_YEARLY_PRODUCT_ID)" }
+$defines = @(
+  "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)",
+  "--dart-define=SUPABASE_PUBLISHABLE_KEY=$($env:SUPABASE_PUBLISHABLE_KEY)",
+  "--dart-define=PLAY_MONTHLY_PRODUCT_ID=$($env:PLAY_MONTHLY_PRODUCT_ID)",
+  "--dart-define=PLAY_YEARLY_PRODUCT_ID=$($env:PLAY_YEARLY_PRODUCT_ID)"
+)
 
 flutter build appbundle --release --build-name=$env:FTR_ANDROID_VERSION_NAME --build-number=$env:FTR_ANDROID_VERSION_CODE @defines
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
