@@ -1,25 +1,35 @@
-# Pending Security Hardening
+# Security Status — 2026-08-28
 
-## Supabase RLS advisory on three legacy private tables
+## Supabase RLS status
 
-Supabase's table advisory flags Row Level Security as disabled on:
+The previously pending legacy-table RLS hardening is now verified as complete in the live Supabase project.
 
-- `private.content_import_staging`
-- `private.editorial_events`
-- `private.legacy_import_archives`
+Verified live state:
 
-Current explicit privilege checks show `anon` and `authenticated` have no SELECT/INSERT/UPDATE/DELETE privileges on these tables. The `private` schema is also not intended for mobile Data API access.
+- `private.content_import_staging` — RLS enabled
+- `private.editorial_events` — RLS enabled
+- `private.legacy_import_archives` — RLS enabled
+- `anon` has no direct DML privileges on these tables
+- `authenticated` has no direct DML privileges on these tables
 
-Supabase nevertheless recommends RLS as defense in depth. The suggested SQL is:
+The broader `private` schema tables are likewise RLS-enabled and direct mobile-role DML access is denied.
 
-```sql
-ALTER TABLE private.content_import_staging ENABLE ROW LEVEL SECURITY;
-ALTER TABLE private.editorial_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE private.legacy_import_archives ENABLE ROW LEVEL SECURITY;
-```
+The Supabase security advisor currently reports only `RLS Enabled No Policy` informational notices for service/private tables. No permissive policies are added intentionally: for these tables, the absence of a policy preserves deny-by-default behavior rather than exposing rows to mobile roles.
 
-This has intentionally NOT been applied automatically. Enabling RLS without defining the intended backend/service access path can block legitimate administrative/editorial operations. Before applying, define and test the service-only access model, then run the security advisor again.
+`public.purchase_events` is also RLS-enabled; `anon` and `authenticated` have no direct DML privileges, while `service_role` retains the required backend access.
 
-## Billing secrets
+Reference for the informational advisor rule:
+https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
 
-No production Google service-account JSON, Supabase secret/service-role key, or Pub/Sub verification token is stored in the Flutter repository. The application must remain fail-closed until the Play package/signing decision and Play Console subscription products are finalized.
+## Billing / production secrets still pending
+
+No production Google service-account JSON, Supabase service-role/secret key, upload keystore, or private signing password is stored in the Flutter repository.
+
+Production release remains fail-closed until these external Play steps are completed:
+
+1. Google Play upload-key continuity is restored or the prepared replacement upload certificate is accepted by Play Console.
+2. The accepted upload keystore values are installed as GitHub Actions repository secrets.
+3. Play monthly/yearly subscription product IDs are finalized and configured.
+4. Google Play purchase, restore, server verification, and RTDN behavior are validated on a real Play test track.
+
+Do not add public/mobile RLS policies to private billing or editorial tables merely to remove INFO advisor notices; doing so would widen the attack surface without an application requirement.
