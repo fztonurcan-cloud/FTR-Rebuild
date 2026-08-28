@@ -7,6 +7,7 @@ class FtrAsset {
     required this.sortOrder,
     this.caption,
     this.altText,
+    this.placementAfterHeading,
   });
 
   final String id;
@@ -16,6 +17,7 @@ class FtrAsset {
   final int sortOrder;
   final String? caption;
   final String? altText;
+  final String? placementAfterHeading;
 
   bool get isImage => assetType == 'image';
 
@@ -28,6 +30,7 @@ class FtrAsset {
       sortOrder: (map['sort_order'] as num?)?.toInt() ?? 0,
       caption: map['caption'] as String?,
       altText: map['alt_text'] as String?,
+      placementAfterHeading: map['placement_after_heading'] as String?,
     );
   }
 }
