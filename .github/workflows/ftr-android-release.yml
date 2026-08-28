@@ -55,11 +55,22 @@ jobs:
           FTR_UPLOAD_STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
           FTR_UPLOAD_KEY_ALIAS: ${{ secrets.FTR_UPLOAD_KEY_ALIAS }}
           FTR_UPLOAD_KEY_PASSWORD: ${{ secrets.FTR_UPLOAD_KEY_PASSWORD }}
+          PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
+          PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
         run: |
           set -euo pipefail
-          for v in FTR_UPLOAD_KEYSTORE_B64 FTR_UPLOAD_STORE_PASSWORD FTR_UPLOAD_KEY_ALIAS FTR_UPLOAD_KEY_PASSWORD; do
-            test -n "${!v:-}" || { echo "Missing required secret: $v"; exit 2; }
+          for v in \
+            FTR_UPLOAD_KEYSTORE_B64 \
+            FTR_UPLOAD_STORE_PASSWORD \
+            FTR_UPLOAD_KEY_ALIAS \
+            FTR_UPLOAD_KEY_PASSWORD \
+            PLAY_MONTHLY_PRODUCT_ID \
+            PLAY_YEARLY_PRODUCT_ID; do
+            test -n "${!v:-}" || { echo "Missing required release value: $v"; exit 2; }
           done
+          test "$PLAY_MONTHLY_PRODUCT_ID" != "$PLAY_YEARLY_PRODUCT_ID" || {
+            echo "Monthly and yearly Play product IDs must be different."; exit 2;
+          }
 
       - name: Materialize signing files
         env:
