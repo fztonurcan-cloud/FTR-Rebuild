@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../domain/models/ftr_quiz.dart';
+import 'internal_preview_service.dart';
 
 class QuizService {
   const QuizService(
@@ -16,12 +17,19 @@ class QuizService {
       throw AuthException('Sınava erişmek için giriş yapmalısın.');
     }
 
-    final raw = await _client.rpc(
-      internalReviewPreview
-          ? 'internal_preview_get_quiz_questions'
-          : 'get_quiz_questions',
-      params: {'p_content_id': contentId},
-    );
+    final dynamic raw;
+    if (internalReviewPreview) {
+      raw = await InternalPreviewService(_client).invoke(
+        'quiz_questions',
+        payload: {'content_id': contentId},
+      );
+    } else {
+      raw = await _client.rpc(
+        'get_quiz_questions',
+        params: {'p_content_id': contentId},
+      );
+    }
+
     final payload = _asMap(raw);
     if (payload['ok'] != true) {
       throw StateError(payload['reason']?.toString() ?? 'Sınava erişilemiyor.');
@@ -50,15 +58,25 @@ class QuizService {
             })
         .toList(growable: false);
 
-    final raw = await _client.rpc(
-      internalReviewPreview
-          ? 'internal_preview_submit_quiz_attempt'
-          : 'submit_quiz_attempt',
-      params: {
-        'p_content_id': contentId,
-        'p_answers': payload,
-      },
-    );
+    final dynamic raw;
+    if (internalReviewPreview) {
+      raw = await InternalPreviewService(_client).invoke(
+        'quiz_submit',
+        payload: {
+          'content_id': contentId,
+          'answers': payload,
+        },
+      );
+    } else {
+      raw = await _client.rpc(
+        'submit_quiz_attempt',
+        params: {
+          'p_content_id': contentId,
+          'p_answers': payload,
+        },
+      );
+    }
+
     final result = _asMap(raw);
     if (result['ok'] != true) {
       throw StateError('Sınav sonucu alınamadı.');
