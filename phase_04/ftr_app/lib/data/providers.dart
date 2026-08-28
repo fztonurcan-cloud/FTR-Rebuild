@@ -18,6 +18,8 @@ import '../services/quiz_service.dart';
 import '../services/study_plan_service.dart';
 import '../services/user_library_service.dart';
 
+typedef CurriculumCategoryKey = ({int yearNo, String categorySlug});
+
 final ftrRepositoryProvider = Provider<FtrRepository>((ref) {
   if (AppConfig.useMockContent || !AppConfig.hasSupabaseConfiguration) {
     return const MockFtrRepository();
@@ -61,6 +63,19 @@ final studyPlanProvider = FutureProvider.family<FtrStudyPlan, int>((ref, yearNo)
     );
   }
   return service.fetchYear(yearNo);
+});
+
+final curriculumCategoryContentsProvider = FutureProvider.family<
+    List<FtrContent>, CurriculumCategoryKey>((ref, key) async {
+  if (AppConfig.internalReviewPreview) ref.watch(authUserProvider);
+  final service = ref.watch(studyPlanServiceProvider);
+  if (service == null || key.categorySlug.trim().isEmpty) return const [];
+  return service.fetchCategoryContents(
+    yearNo: key.yearNo,
+    categorySlug: key.categorySlug,
+    offset: 0,
+    limit: 100,
+  );
 });
 
 final authServiceProvider = Provider<AuthService?>((ref) {
