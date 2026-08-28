@@ -4,6 +4,7 @@ supabase/functions/.env
 supabase/functions/.env.local
 supabase/functions/.env.production
 *.service-account.json
+android_release.env
 
 # Android signing secrets — never commit
 android/key.properties
