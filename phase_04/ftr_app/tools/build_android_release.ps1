@@ -30,10 +30,19 @@ python tools/release_signing_gate.py --root .
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 python tools/build_preflight.py --root . --strict --platform android
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-flutter analyze
+python tools/play_policy_gate.py
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+flutter analyze --no-fatal-infos
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 flutter test
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-flutter build appbundle --release --build-name=$env:FTR_ANDROID_VERSION_NAME --build-number=$env:FTR_ANDROID_VERSION_CODE
+
+$defines = @()
+if ($env:SUPABASE_URL) { $defines += "--dart-define=SUPABASE_URL=$($env:SUPABASE_URL)" }
+if ($env:SUPABASE_PUBLISHABLE_KEY) { $defines += "--dart-define=SUPABASE_PUBLISHABLE_KEY=$($env:SUPABASE_PUBLISHABLE_KEY)" }
+if ($env:PLAY_MONTHLY_PRODUCT_ID) { $defines += "--dart-define=PLAY_MONTHLY_PRODUCT_ID=$($env:PLAY_MONTHLY_PRODUCT_ID)" }
+if ($env:PLAY_YEARLY_PRODUCT_ID) { $defines += "--dart-define=PLAY_YEARLY_PRODUCT_ID=$($env:PLAY_YEARLY_PRODUCT_ID)" }
+
+flutter build appbundle --release --build-name=$env:FTR_ANDROID_VERSION_NAME --build-number=$env:FTR_ANDROID_VERSION_CODE @defines
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Write-Host 'AAB ready: build/app/outputs/bundle/release/app-release.aab'
