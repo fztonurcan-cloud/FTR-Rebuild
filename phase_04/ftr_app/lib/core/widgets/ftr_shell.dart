@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../data/providers.dart';
 import '../../domain/models/ftr_study_plan.dart';
 import '../theme/app_colors.dart';
+import 'category_visuals.dart';
 
 class FtrShell extends ConsumerWidget {
   const FtrShell({
@@ -34,13 +35,52 @@ class FtrShell extends ConsumerWidget {
     return match?.group(1);
   }
 
+  String? get routedContentId {
+    final contentMatch = RegExp(r'^/content/([^/?]+)').firstMatch(location);
+    if (contentMatch != null) return contentMatch.group(1);
+    final quizMatch = RegExp(r'^/quiz/([^/?]+)').firstMatch(location);
+    return quizMatch?.group(1);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     const paths = ['/', '/courses', '/favorites', '/notes', '/profile'];
+    final routedId = routedContentId;
+    final routedContent = routedId == null
+        ? null
+        : ref.watch(contentDetailProvider(routedId)).value;
+
+    final effectiveCategorySlug = (selectedCategorySlug ??
+            routedContent?.categorySlug.trim())
+        ?.trim();
+
+    int? activeYear;
+    FtrStudyPlanCategory? activeCategory;
+    if (effectiveCategorySlug != null && effectiveCategorySlug.isNotEmpty) {
+      for (var year = 1; year <= 4; year++) {
+        final plan = ref.watch(studyPlanProvider(year)).value;
+        if (plan == null) continue;
+        for (final category in plan.categories) {
+          if (category.slug == effectiveCategorySlug) {
+            activeYear = year;
+            activeCategory = category;
+            break;
+          }
+        }
+        if (activeCategory != null) break;
+      }
+    }
+
+    final user = ref.watch(authUserProvider).value;
+    final breadcrumb = _buildBreadcrumb(
+      activeYear: activeYear,
+      activeCategory: activeCategory,
+      routedTitle: routedContent?.title,
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final useDesktopShell = constraints.maxWidth >= 900;
+        final useDesktopShell = constraints.maxWidth >= 1040;
 
         if (!useDesktopShell) {
           return Scaffold(
@@ -51,27 +91,27 @@ class FtrShell extends ConsumerWidget {
               destinations: const [
                 NavigationDestination(
                   icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home),
+                  selectedIcon: Icon(Icons.home_rounded),
                   label: 'Ana Sayfa',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.menu_book_outlined),
-                  selectedIcon: Icon(Icons.menu_book),
+                  selectedIcon: Icon(Icons.menu_book_rounded),
                   label: 'Dersler',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.favorite_border),
-                  selectedIcon: Icon(Icons.favorite),
+                  icon: Icon(Icons.favorite_border_rounded),
+                  selectedIcon: Icon(Icons.favorite_rounded),
                   label: 'Favoriler',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.note_alt_outlined),
-                  selectedIcon: Icon(Icons.note_alt),
+                  selectedIcon: Icon(Icons.note_alt_rounded),
                   label: 'Notlar',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.person_outline),
-                  selectedIcon: Icon(Icons.person),
+                  icon: Icon(Icons.person_outline_rounded),
+                  selectedIcon: Icon(Icons.person_rounded),
                   label: 'Profil',
                 ),
               ],
@@ -85,23 +125,35 @@ class FtrShell extends ConsumerWidget {
               SizedBox(
                 width: 280,
                 child: ColoredBox(
-                  color: AppColors.surface,
+                  color: AppColors.sidebar,
                   child: SafeArea(
                     child: _DesktopSidebar(
                       location: location,
-                      selectedCategorySlug: selectedCategorySlug,
+                      selectedCategorySlug: effectiveCategorySlug,
                     ),
                   ),
                 ),
               ),
-              const VerticalDivider(width: 1),
+              Container(width: 1, color: AppColors.border),
               Expanded(
-                child: Column(
-                  children: [
-                    _DesktopTopBar(onSearch: () => context.go('/search')),
-                    const Divider(height: 1),
-                    Expanded(child: child),
-                  ],
+                child: ColoredBox(
+                  color: AppColors.background,
+                  child: Column(
+                    children: [
+                      _DesktopTopBar(
+                        breadcrumb: breadcrumb,
+                        avatarLabel: _avatarLabel(user?.email),
+                        onSearch: () => context.go('/search'),
+                        onNotifications: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Yeni bildirimin yok.')),
+                          );
+                        },
+                      ),
+                      Container(height: 1, color: AppColors.border),
+                      Expanded(child: child),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -110,12 +162,57 @@ class FtrShell extends ConsumerWidget {
       },
     );
   }
+
+  List<String> _buildBreadcrumb({
+    required int? activeYear,
+    required FtrStudyPlanCategory? activeCategory,
+    required String? routedTitle,
+  }) {
+    if (location == '/') return const ['Ana Sayfa'];
+    if (location.startsWith('/favorites')) return const ['Favorilerim'];
+    if (location.startsWith('/notes')) return const ['Notlarım'];
+    if (location.startsWith('/profile')) return const ['Ayarlar'];
+    if (location.startsWith('/search')) return const ['Derslerde Ara'];
+
+    final parts = <String>[];
+    if (activeYear != null) parts.add('$activeYear. SINIF');
+    if (activeCategory != null) parts.add(activeCategory.name);
+    if (routedTitle != null && routedTitle.trim().isNotEmpty) {
+      parts.add(routedTitle.trim());
+    }
+    if (parts.isNotEmpty) return parts;
+    if (location.startsWith('/quiz')) return const ['Sınavlar'];
+    return const ['Dersler'];
+  }
+
+  String _avatarLabel(String? email) {
+    final value = email?.trim();
+    if (value == null || value.isEmpty) return 'FTR';
+    final local = value.split('@').first.trim();
+    if (local.isEmpty) return 'FTR';
+    final chunks = local
+        .split(RegExp(r'[._\-\s]+'))
+        .where((part) => part.isNotEmpty)
+        .toList(growable: false);
+    if (chunks.length >= 2) {
+      return '${chunks.first[0]}${chunks[1][0]}'.toUpperCase();
+    }
+    return local.substring(0, local.length >= 2 ? 2 : 1).toUpperCase();
+  }
 }
 
 class _DesktopTopBar extends StatelessWidget {
-  const _DesktopTopBar({required this.onSearch});
+  const _DesktopTopBar({
+    required this.breadcrumb,
+    required this.avatarLabel,
+    required this.onSearch,
+    required this.onNotifications,
+  });
 
+  final List<String> breadcrumb;
+  final String avatarLabel;
   final VoidCallback onSearch;
+  final VoidCallback onNotifications;
 
   @override
   Widget build(BuildContext context) {
@@ -124,50 +221,131 @@ class _DesktopTopBar extends StatelessWidget {
       child: SizedBox(
         height: 72,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 11),
           child: Row(
             children: [
-              const Expanded(child: SizedBox()),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(14),
-                  onTap: onSearch,
-                  child: IgnorePointer(
-                    child: TextField(
-                      readOnly: true,
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search_rounded),
-                        hintText: 'Derslerde ara...',
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 11,
+              Expanded(
+                flex: 5,
+                child: _Breadcrumb(parts: breadcrumb),
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                flex: 6,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: Material(
+                      color: AppColors.surfaceSoft,
+                      borderRadius: BorderRadius.circular(11),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(11),
+                        onTap: onSearch,
+                        child: Container(
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(
+                                Icons.search_rounded,
+                                size: 22,
+                                color: AppColors.textPrimary,
+                              ),
+                              SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Derslerde ara...',
+                                  style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 22),
+              const SizedBox(width: 18),
               IconButton(
-                tooltip: 'Notlarım',
-                onPressed: () => context.go('/notes'),
+                tooltip: 'Bildirimler',
+                onPressed: onNotifications,
                 icon: const Icon(Icons.notifications_none_rounded),
               ),
               const SizedBox(width: 8),
-              const CircleAvatar(
-                radius: 19,
-                backgroundColor: AppColors.primary700,
-                foregroundColor: Colors.white,
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary600, AppColors.primary700],
+                  ),
+                ),
                 child: Text(
-                  'FTR',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                  avatarLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _Breadcrumb extends StatelessWidget {
+  const _Breadcrumb({required this.parts});
+
+  final List<String> parts;
+
+  @override
+  Widget build(BuildContext context) {
+    if (parts.isEmpty) return const SizedBox.shrink();
+    return Row(
+      children: [
+        for (var index = 0; index < parts.length; index++) ...[
+          if (index > 0)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              child: Text(
+                '/',
+                style: TextStyle(color: AppColors.textMuted),
+              ),
+            ),
+          Flexible(
+            child: Text(
+              parts[index],
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: index == 0
+                    ? AppColors.primary500
+                    : index == parts.length - 1
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: index == 0 ? FontWeight.w800 : FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
@@ -191,49 +369,11 @@ class _DesktopSidebar extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 18, 16, 18),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.primary100,
-                child: Icon(
-                  Icons.local_hospital_outlined,
-                  color: AppColors.primary600,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'FTR Akademi',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Fizyoterapi & Rehabilitasyon',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
+        const _BrandHeader(),
+        Container(height: 1, color: AppColors.border),
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(8, 10, 8, 18),
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 20),
             children: [
               _SideNavTile(
                 icon: Icons.home_outlined,
@@ -241,47 +381,117 @@ class _DesktopSidebar extends ConsumerWidget {
                 selected: _active('/'),
                 onTap: () => context.go('/'),
               ),
-              const SizedBox(height: 7),
+              const SizedBox(height: 5),
               for (var year = 1; year <= 4; year++)
                 _YearCurriculumSection(
                   key: ValueKey('year-$year-$selectedCategorySlug'),
                   yearNo: year,
                   selectedCategorySlug: selectedCategorySlug,
                 ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                child: Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: Container(height: 1, color: AppColors.border),
               ),
               _SideNavTile(
-                icon: Icons.quiz_outlined,
-                label: 'Dersler & Sınavlar',
-                selected: _active('/courses') ||
-                    _active('/content') ||
-                    _active('/quiz'),
+                icon: Icons.ballot_outlined,
+                label: 'Sınavlar',
+                selected: _active('/quiz'),
                 onTap: () => context.go('/courses'),
               ),
               _SideNavTile(
-                icon: Icons.favorite_border_rounded,
+                icon: Icons.bookmark_border_rounded,
                 label: 'Favorilerim',
                 selected: _active('/favorites'),
                 onTap: () => context.go('/favorites'),
               ),
               _SideNavTile(
-                icon: Icons.note_alt_outlined,
+                icon: Icons.sticky_note_2_outlined,
                 label: 'Notlarım',
                 selected: _active('/notes'),
                 onTap: () => context.go('/notes'),
               ),
               _SideNavTile(
-                icon: Icons.person_outline_rounded,
-                label: 'Profil & Ayarlar',
+                icon: Icons.settings_outlined,
+                label: 'Ayarlar',
                 selected: _active('/profile'),
                 onTap: () => context.go('/profile'),
+              ),
+              _SideNavTile(
+                icon: Icons.help_outline_rounded,
+                label: 'Yardım',
+                selected: false,
+                onTap: () => context.push('/faq'),
               ),
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BrandHeader extends StatelessWidget {
+  const _BrandHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 18, 14, 18),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 46,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary500, AppColors.primary700],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary600.withValues(alpha: .22),
+                  blurRadius: 18,
+                  offset: const Offset(0, 7),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.accessibility_new_rounded,
+              color: Colors.white,
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 11),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'FTR Akademi',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.2,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Fizyoterapi & Rehabilitasyon',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -302,18 +512,19 @@ class _YearCurriculumSection extends ConsumerWidget {
 
     return plan.when(
       loading: () => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
         child: Row(
           children: [
             Text(
               '$yearNo. SINIF',
               style: const TextStyle(
-                color: AppColors.primary600,
+                color: AppColors.primary500,
+                fontSize: 13,
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(width: 10),
-            const Expanded(child: LinearProgressIndicator(minHeight: 2)),
+            const SizedBox(width: 12),
+            const Expanded(child: LinearProgressIndicator(minHeight: 1.5)),
           ],
         ),
       ),
@@ -330,16 +541,18 @@ class _YearCurriculumSection extends ConsumerWidget {
           child: ExpansionTile(
             initiallyExpanded: activeYear ||
                 (selectedCategorySlug == null && yearNo == 1),
-            tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+            minTileHeight: 44,
+            tilePadding: const EdgeInsets.symmetric(horizontal: 11),
             childrenPadding: const EdgeInsets.only(bottom: 5),
-            iconColor: AppColors.primary600,
+            iconColor: AppColors.textPrimary,
             collapsedIconColor: AppColors.textSecondary,
+            dense: true,
             title: Text(
               '$yearNo. SINIF',
               style: const TextStyle(
-                color: AppColors.primary600,
+                color: AppColors.primary500,
                 fontWeight: FontWeight.w800,
-                fontSize: 14,
+                fontSize: 13.5,
               ),
             ),
             children: [
@@ -364,13 +577,13 @@ class _YearLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
         child: Text(
           '$yearNo. SINIF',
           style: const TextStyle(
-            color: AppColors.primary600,
+            color: AppColors.primary500,
             fontWeight: FontWeight.w800,
-            fontSize: 14,
+            fontSize: 13.5,
           ),
         ),
       );
@@ -389,48 +602,58 @@ class _CourseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final visual = categoryVisualFor(category.name);
+    final child = InkWell(
+      borderRadius: BorderRadius.circular(7),
+      onTap: () {
+        final name = Uri.encodeQueryComponent(category.name);
+        context.go('/courses/${category.slug}?name=$name&year=$yearNo');
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(13, 9, 10, 9),
+        child: Row(
+          children: [
+            Icon(
+              visual.icon,
+              size: 18,
+              color: selected ? Colors.white : AppColors.textSecondary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                category.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.white : AppColors.textPrimary,
+                  fontSize: 13,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 3),
       child: Material(
-        color: selected ? AppColors.primary700 : Colors.transparent,
-        borderRadius: BorderRadius.circular(9),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(9),
-          onTap: () {
-            final name = Uri.encodeQueryComponent(category.name);
-            context.go('/courses/${category.slug}?name=$name&year=$yearNo');
-          },
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 9, 10, 9),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.school_outlined,
-                  size: 17,
-                  color: selected
-                      ? Colors.white
-                      : AppColors.textSecondary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    category.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: selected
-                          ? Colors.white
-                          : AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight:
-                          selected ? FontWeight.w700 : FontWeight.w500,
-                    ),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(7),
+        clipBehavior: Clip.antiAlias,
+        child: selected
+            ? DecoratedBox(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [AppColors.primary700, AppColors.primary600],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+                child: child,
+              )
+            : child,
       ),
     );
   }
@@ -455,19 +678,19 @@ class _SideNavTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 3),
       child: Material(
         color: selected ? AppColors.primary100 : Colors.transparent,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
             child: Row(
               children: [
                 Icon(
                   icon,
-                  size: 20,
+                  size: 19,
                   color: selected
-                      ? AppColors.primary600
+                      ? AppColors.primary500
                       : AppColors.textSecondary,
                 ),
                 const SizedBox(width: 11),
@@ -476,8 +699,8 @@ class _SideNavTile extends StatelessWidget {
                     label,
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontWeight:
-                          selected ? FontWeight.w800 : FontWeight.w600,
+                      fontSize: 13.5,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
