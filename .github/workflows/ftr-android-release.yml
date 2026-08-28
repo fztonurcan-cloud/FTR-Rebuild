@@ -2,10 +2,6 @@ name: FTR Android Release Candidate
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/ftr-android-release.yml'
 
 permissions:
   contents: read
@@ -14,6 +10,11 @@ jobs:
   android-release:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      # Supabase publishable keys are public client credentials by design.
+      # Authorization remains enforced by RLS and the authenticated user's JWT.
+      SUPABASE_URL: https://dkawrwinmyjvkzioruki.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_fQrP8FQtglit057xrYngtQ_M_ZoZQEl
 
     defaults:
       run:
@@ -50,11 +51,9 @@ jobs:
           FTR_UPLOAD_STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
           FTR_UPLOAD_KEY_ALIAS: ${{ secrets.FTR_UPLOAD_KEY_ALIAS }}
           FTR_UPLOAD_KEY_PASSWORD: ${{ secrets.FTR_UPLOAD_KEY_PASSWORD }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
         run: |
           set -euo pipefail
-          for v in FTR_UPLOAD_KEYSTORE_B64 FTR_UPLOAD_STORE_PASSWORD FTR_UPLOAD_KEY_ALIAS FTR_UPLOAD_KEY_PASSWORD SUPABASE_URL SUPABASE_PUBLISHABLE_KEY; do
+          for v in FTR_UPLOAD_KEYSTORE_B64 FTR_UPLOAD_STORE_PASSWORD FTR_UPLOAD_KEY_ALIAS FTR_UPLOAD_KEY_PASSWORD; do
             test -n "${!v:-}" || { echo "Missing required secret: $v"; exit 2; }
           done
 
@@ -78,8 +77,6 @@ jobs:
 
       - name: Materialize release environment
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
           PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
         run: |
@@ -121,8 +118,6 @@ jobs:
 
       - name: Build signed release APK
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
           PLAY_MONTHLY_PRODUCT_ID: ${{ secrets.PLAY_MONTHLY_PRODUCT_ID }}
           PLAY_YEARLY_PRODUCT_ID: ${{ secrets.PLAY_YEARLY_PRODUCT_ID }}
         run: |
