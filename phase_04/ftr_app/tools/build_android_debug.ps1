@@ -27,6 +27,7 @@ if ($env:SUPABASE_PUBLISHABLE_KEY) { $defines += "--dart-define=SUPABASE_PUBLISH
 if ($env:PLAY_MONTHLY_PRODUCT_ID) { $defines += "--dart-define=PLAY_MONTHLY_PRODUCT_ID=$($env:PLAY_MONTHLY_PRODUCT_ID)" }
 if ($env:PLAY_YEARLY_PRODUCT_ID) { $defines += "--dart-define=PLAY_YEARLY_PRODUCT_ID=$($env:PLAY_YEARLY_PRODUCT_ID)" }
 if ($env:FTR_DEBUG_USE_MOCK_CONTENT -eq 'YES') { $defines += '--dart-define=USE_MOCK_CONTENT=true' }
+if ($env:FTR_DEBUG_INTERNAL_REVIEW_PREVIEW -eq 'YES') { $defines += '--dart-define=INTERNAL_REVIEW_PREVIEW=true' }
 
 flutter build apk --debug --build-name=4.0.0 --build-number=25 @defines
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
