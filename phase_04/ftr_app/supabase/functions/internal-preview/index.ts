@@ -1,4 +1,4 @@
-import { withSupabase } from 'npm:@supabase/server';
+import { withSupabase } from 'npm:@supabase/server@1.4.1';
 
 const allowedActions = new Set([
   'categories',
@@ -19,6 +19,7 @@ export default {
 
     const userId = ctx.userClaims?.sub;
     if (!userId) {
+      console.error('internal-preview missing authenticated user claims');
       return Response.json({ error: 'unauthorized' }, { status: 401 });
     }
 
