@@ -144,15 +144,55 @@ class _CategoryContentsScreenState
     final title = widget.categoryName.trim().isEmpty
         ? 'Ders İçerikleri'
         : widget.categoryName;
+    final isDesktop = MediaQuery.sizeOf(context).width >= 1040;
+
+    final content = RefreshIndicator(
+      onRefresh: _reload,
+      child: _buildBody(context),
+    );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-      ),
-      body: RefreshIndicator(
-        onRefresh: _reload,
-        child: _buildBody(context),
-      ),
+      backgroundColor: AppColors.background,
+      appBar: isDesktop ? null : AppBar(title: Text(title)),
+      body: isDesktop
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(36, 30, 36, 10),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: Theme.of(context).textTheme.headlineLarge,
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              widget.yearNo == null
+                                  ? 'Ders anlatımları ve sınav içerikleri'
+                                  : '${widget.yearNo}. sınıf • Ders anlatımları ve sınav içerikleri',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () => context.go('/search'),
+                        icon: const Icon(Icons.search_rounded, size: 18),
+                        label: const Text('İçerikte ara'),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(child: content),
+              ],
+            )
+          : content,
     );
   }
 
@@ -196,9 +236,14 @@ class _CategoryContentsScreenState
     return ListView.separated(
       controller: _controller,
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 30),
+      padding: EdgeInsets.fromLTRB(
+        MediaQuery.sizeOf(context).width >= 1040 ? 36 : 16,
+        14,
+        MediaQuery.sizeOf(context).width >= 1040 ? 36 : 16,
+        30,
+      ),
       itemCount: _items.length + 2,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, __) => const SizedBox(height: 9),
       itemBuilder: (context, index) {
         if (index == 0) {
           return _ListHeader(
@@ -216,45 +261,77 @@ class _CategoryContentsScreenState
         }
 
         final item = _items[index - 1];
-        return Card(
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 7,
-            ),
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.primary50,
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: Icon(
-                item.isQuiz
-                    ? Icons.quiz_outlined
-                    : item.premium
-                        ? Icons.workspace_premium_outlined
-                        : Icons.menu_book_outlined,
-                color: item.premium
-                    ? AppColors.premium
-                    : AppColors.primary600,
-              ),
-            ),
-            title: Text(
-              item.title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-            subtitle: item.summary.trim().isEmpty
-                ? Text(item.isQuiz ? 'Sınav' : 'Ders içeriği')
-                : Text(
-                    item.summary,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-            trailing: const Icon(Icons.chevron_right_rounded),
+        return Material(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
             onTap: () => context.push(routeForContent(item)),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(14, 13, 14, 13),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 46,
+                    height: 46,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      item.isQuiz
+                          ? Icons.quiz_outlined
+                          : Icons.menu_book_outlined,
+                      color: item.premium
+                          ? AppColors.premium
+                          : AppColors.primary500,
+                    ),
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          item.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.summary.trim().isEmpty
+                              ? (item.isQuiz ? 'Quiz' : 'Ders anlatımı')
+                              : item.summary,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  if (item.premium)
+                    const Icon(
+                      Icons.workspace_premium_rounded,
+                      size: 18,
+                      color: AppColors.premium,
+                    ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -272,18 +349,18 @@ class _ListHeader extends StatelessWidget {
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: AppColors.primary50,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.primary100),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.primary700),
         ),
         child: Row(
           children: [
-            const Icon(Icons.school_outlined, color: AppColors.primary700),
+            const Icon(Icons.school_outlined, color: AppColors.primary500),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 yearNo == null
-                    ? '$itemCount yayınlanmış içerik yüklendi.'
-                    : '$yearNo. sınıf • $itemCount yayınlanmış içerik yüklendi.',
+                    ? '$itemCount içerik'
+                    : '$yearNo. sınıf • $itemCount içerik',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -303,17 +380,21 @@ class _EmptyState extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.fact_check_outlined, size: 56),
+              const Icon(
+                Icons.menu_book_outlined,
+                size: 54,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(height: 14),
               Text(
                 yearNo == null
-                    ? 'Bu kategoride yayınlanmış içerik henüz bulunmuyor.'
-                    : '$yearNo. sınıfta bu kategori için yayın kapısını geçen içerik henüz bulunmuyor.',
+                    ? 'Bu derste yayına alınmış içerik henüz bulunmuyor.'
+                    : '$yearNo. sınıfta bu ders için yayına alınmış içerik henüz bulunmuyor.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Tıbbi, editoryal ve güvenlik incelemesi tamamlanan içerikler burada otomatik görünür.',
+                'Hazır olan ders içerikleri burada görüntülenecek.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -378,7 +459,7 @@ class _Footer extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Text(
-          'Tüm yayınlanmış içerikler yüklendi.',
+          'Tüm içerikler yüklendi.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
