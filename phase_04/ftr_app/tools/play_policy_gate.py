@@ -13,10 +13,10 @@ LEGAL = ROOT / "supabase/functions/legal-pages/index.ts"
 
 ANDROID_NS = "{http://schemas.android.com/apk/res/android}"
 
-# FTR is an education app and currently requires network access only. If one of
-# these permissions is ever intentionally introduced, the Play declaration,
-# privacy policy and in-app disclosure flow must be redesigned first rather
-# than silently expanding the data surface in a routine build.
+# FTR Akademi is an education app and currently requires network access only.
+# If one of these permissions is intentionally introduced later, the Play
+# declaration, privacy policy and in-app disclosure flow must be redesigned
+# first rather than silently expanding the data surface in a routine build.
 BLOCKED_PERMISSIONS = {
     "android.permission.BODY_SENSORS",
     "android.permission.BODY_SENSORS_BACKGROUND",
@@ -43,6 +43,10 @@ def normalized(text: str) -> str:
     """Case-fold text and remove combining marks so Turkish İ matches i."""
     decomposed = unicodedata.normalize("NFKD", text.casefold())
     return "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+
+
+def contains_any(haystack: str, *phrases: str) -> bool:
+    return any(normalized(phrase) in haystack for phrase in phrases)
 
 
 def main() -> int:
@@ -87,20 +91,64 @@ def main() -> int:
         legal = LEGAL.read_text(encoding="utf-8")
 
     legal_norm = normalized(legal)
+
+    # These checks intentionally validate disclosure meaning rather than one
+    # frozen sentence. Copy can be improved without weakening the release gate,
+    # while removal of the required disclosure still fails the build.
+    app_identity_present = contains_any(
+        legal_norm,
+        "FTR Akademi – Fizik Tedavi ve Rehabilitasyon",
+        "FTR Akademi - Fizik Tedavi ve Rehabilitasyon",
+        "FTR – Fizik Tedavi ve Rehabilitasyon",
+        "FTR - Fizik Tedavi ve Rehabilitasyon",
+    )
+    privacy_contact_mechanism = (
+        "fiziktedaviverehabilitasyon00@gmail.com" in legal.casefold()
+        and "mailto:${SUPPORT}" in legal
+    ) or contains_any(legal_norm, "doğrulanmış geliştirici iletişim kanalını")
+    data_categories_disclosed = contains_any(
+        legal_norm,
+        "İşlenen veri kategorileri",
+        "İşlenen veriler",
+    )
+    security_disclosed = (
+        "https" in legal_norm
+        and (
+            "rls" in legal_norm
+            or contains_any(legal_norm, "satır düzeyi güvenlik")
+        )
+    )
+    retention_deletion_disclosed = (
+        contains_any(
+            legal_norm,
+            "Veri saklama ve silme politikası",
+            "Saklama ve silme",
+        )
+        and contains_any(
+            legal_norm,
+            "Hesap kalıcı olarak silindiğinde",
+            "hesapla birlikte silinir",
+        )
+        and contains_any(
+            legal_norm,
+            "uygulama verileri silinir",
+            "hesaba bağlı veriler silinir",
+            "hesapla birlikte silinir",
+        )
+    )
+
     legal_checks = {
-        "privacy_policy_named": normalized("Gizlilik Politikası") in legal_norm,
-        "app_identity_present": normalized("FTR – Fizik Tedavi ve Rehabilitasyon") in legal_norm
-        or normalized("FTR - Fizik Tedavi ve Rehabilitasyon") in legal_norm,
-        "privacy_contact_mechanism": normalized("doğrulanmış geliştirici iletişim kanalını") in legal_norm,
+        "privacy_policy_named": contains_any(legal_norm, "Gizlilik Politikası"),
+        "app_identity_present": app_identity_present,
+        "privacy_contact_mechanism": privacy_contact_mechanism,
         "external_account_deletion_link": "/functions/v1/account-deletion" in legal,
-        "data_categories_disclosed": normalized("İşlenen veriler") in legal_norm,
+        "data_categories_disclosed": data_categories_disclosed,
         "service_providers_disclosed": "supabase" in legal_norm and "google play" in legal_norm,
-        "security_disclosed": normalized("satır düzeyi güvenlik") in legal_norm and "https" in legal_norm,
-        "retention_deletion_disclosed": normalized("Saklama ve silme") in legal_norm
-        and normalized("hesapla birlikte silinir") in legal_norm,
+        "security_disclosed": security_disclosed,
+        "retention_deletion_disclosed": retention_deletion_disclosed,
         "health_data_scope_disclosed": "health connect" in legal_norm
-        and normalized("hasta kayıt sistemi değildir") in legal_norm,
-        "medical_device_disclaimer": normalized("tıbbi cihaz değildir") in legal_norm,
+        and contains_any(legal_norm, "hasta kayıt sistemi değildir"),
+        "medical_device_disclaimer": contains_any(legal_norm, "tıbbi cihaz değildir"),
         "diagnosis_treatment_disclaimer": all(
             normalized(token) in legal_norm for token in ("teşhis", "tedavi", "iyileştirme", "önleme")
         ),
