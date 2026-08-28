@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../domain/models/ftr_category.dart';
 import '../../domain/models/ftr_content.dart';
+import '../../services/internal_preview_service.dart';
 import 'ftr_repository.dart';
 
 class SupabaseFtrRepository implements FtrRepository {
@@ -12,6 +13,8 @@ class SupabaseFtrRepository implements FtrRepository {
 
   final SupabaseClient client;
   final bool internalReviewPreview;
+
+  InternalPreviewService get _preview => InternalPreviewService(client);
 
   List<Map<String, dynamic>> _rows(dynamic value) {
     if (value is! List) return const [];
@@ -25,7 +28,7 @@ class SupabaseFtrRepository implements FtrRepository {
   Future<List<FtrCategory>> fetchCategories() async {
     final dynamic raw;
     if (internalReviewPreview) {
-      raw = await client.rpc('internal_preview_categories');
+      raw = await _preview.invoke('categories');
     } else {
       raw = await client.from('category_catalog').select().order('sort_order');
     }
@@ -36,10 +39,7 @@ class SupabaseFtrRepository implements FtrRepository {
   Future<List<FtrContent>> fetchFeaturedContents() async {
     final dynamic raw;
     if (internalReviewPreview) {
-      raw = await client.rpc(
-        'internal_preview_featured_contents',
-        params: {'p_limit': 10},
-      );
+      raw = await _preview.invoke('featured', payload: {'limit': 10});
     } else {
       raw = await client.from('content_catalog').select().limit(10);
     }
@@ -57,12 +57,12 @@ class SupabaseFtrRepository implements FtrRepository {
 
     final dynamic raw;
     if (internalReviewPreview) {
-      raw = await client.rpc(
-        'internal_preview_category_contents',
-        params: {
-          'p_category_name': categoryName,
-          'p_offset': safeOffset,
-          'p_limit': limit,
+      raw = await _preview.invoke(
+        'category',
+        payload: {
+          'category_name': categoryName,
+          'offset': safeOffset,
+          'limit': limit,
         },
       );
     } else {
@@ -82,21 +82,29 @@ class SupabaseFtrRepository implements FtrRepository {
   Future<List<FtrContent>> search(String query) async {
     final q = query.trim();
     if (q.isEmpty) return const [];
-    final raw = await client.rpc(
-      internalReviewPreview
-          ? 'internal_preview_search_contents'
-          : 'search_published_contents',
-      params: {'p_query': q, 'p_limit': 30},
-    );
+
+    final dynamic raw;
+    if (internalReviewPreview) {
+      raw = await _preview.invoke('search', payload: {'query': q, 'limit': 30});
+    } else {
+      raw = await client.rpc(
+        'search_published_contents',
+        params: {'p_query': q, 'p_limit': 30},
+      );
+    }
     return _rows(raw).map(FtrContent.fromMap).toList(growable: false);
   }
 
   @override
   Future<FtrContent?> fetchContentDetail(String id) async {
+    if (internalReviewPreview) {
+      final raw = await _preview.invoke('detail', payload: {'content_id': id});
+      if (raw is! Map) return null;
+      return FtrContent.fromMap(Map<String, dynamic>.from(raw));
+    }
+
     final raw = await client.rpc(
-      internalReviewPreview
-          ? 'internal_preview_content_detail'
-          : 'get_content_detail',
+      'get_content_detail',
       params: {'p_content_id': id},
     );
     final rows = _rows(raw);
