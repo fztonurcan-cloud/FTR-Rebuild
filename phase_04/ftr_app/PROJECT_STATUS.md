@@ -1,54 +1,86 @@
 # FTR Rebuild — Project Status
 
-Checkpoint: 2026-08-24
+Checkpoint: 2026-08-28
 
-## Completed
+## Current state
 
-### Legacy APK recovery
-- Legacy package analyzed and content/navigation/premium mapping recovered.
-- 321 education content records identified as legacy Premium content.
-- 13-category replacement information architecture defined.
-- 78 local legacy HTML bodies are preserved in the migration seed; 243 items depend on legacy external sources and require migration/review.
+The project is no longer source-only. Android debug APK and release-mode AAB compilation have both been executed successfully in GitHub Actions with Flutter 3.47.0 / Dart 3.13.0 / Java 17.
 
-### Live Supabase
-- Existing project `Fizik Tedavi Ve Rehabilitasyon` is used.
-- Core tables, RLS policies, grants, views, indexes, auth profile trigger, and private staging schema are installed.
-- 13 categories are live.
-- 321/321 content metadata rows are live.
-- 321/321 have a primary category.
-- 0 legacy health contents are published automatically.
-- All 321 are `review` + `needs_update` for clinical/content review safety.
-- `get_content_detail`, `get_my_favorites`, and `get_my_notes` RPCs are live with security-invoker design.
-- `delete-account` Edge Function is deployed with JWT verification.
-- Temporary `legacy-content-import` Edge Function is disabled (JWT required + HTTP 410 behavior).
+### Android identity and release baseline
 
-### Flutter source layer
-- Material 3 design system and primary navigation.
-- Home, Courses, Search, Content Detail, Premium, Favorites, Profile, Auth, Notes, and Account/Privacy screens.
-- Supabase initialization with publishable key only.
-- Email/password sign-up, sign-in, auth-state tracking, and sign-out.
-- Favorites live service and UI.
-- Notes CRUD live service and UI.
-- Per-content user progress service and UI.
-- Account deletion UI + trusted Edge Function.
-- Premium screen intentionally does not grant or start paid entitlement until trusted store verification is implemented.
+- Package/application ID: `com.mobiroller.mobi743032079412`
+- Version: `4.0.0`
+- Version code: `25`
+- Confirmed previous Play highest version code: `24`
+- compileSdk/targetSdk: 36
+- minSdk: 24
+- `pubspec.lock` is committed and strict preflight checks the locked dependency graph.
+- Release signing is separated from debug signing and production CI fails closed without required signing material.
 
-## Safety / security decisions
-- No Supabase secret/service-role key is shipped in Flutter.
-- Premium authorization is database-backed, not user-editable metadata.
-- Old medical content is not auto-published.
-- `purchase_events` has no client policy by design.
-- Legacy body HTML is never copied into reviewed `body_html` without content review.
+### Verified builds
 
-## Known environment limitation
-This build container does not contain a Flutter SDK, so `flutter analyze`, native Android/iOS platform generation, and emulator/device compilation have not yet been executed here. Source code should be treated as implementation-ready but not yet compiler-verified.
+- Live-Supabase debug APK CI: PASS (`33151808285`)
+- Debug artifact SHA-256: `322c54a382ad2e32cf6d9cc363625323ec65605c56ff1749cfe39f5aa46c67b4`
+- Release-mode AAB smoke CI with ephemeral non-Play signing key: PASS (`33151762191`)
+- Smoke AAB was used only to prove the release pipeline and was never designated for Play upload.
+- Temporary smoke workflow was deleted after successful validation.
 
-## Next execution order
-1. Finish the supported import path for the 78 legacy HTML bodies into `legacy_body_html` only.
-2. Enrich all 321 metadata records with original source URL/type/date/clean slug.
-3. Build clinical editorial/review workflow and start converting approved legacy content into new `body_html`.
-4. Generate/compile Android + iOS Flutter platform projects with target Android API 36.
-5. Configure production email delivery and password recovery/deep links.
-6. Configure Google Play/App Store subscription products.
-7. Implement trusted purchase verification Edge Functions and entitlement lifecycle.
-8. Run device tests, security tests, Play/App Store compliance, and release build.
+### Live Supabase / security
+
+- Production Supabase project is connected using public client configuration only.
+- Supabase service-role/secret credentials are not shipped in Flutter.
+- RLS and direct-role privilege review is complete for the reviewed private/editorial/billing tables.
+- `anon`/`authenticated` direct DML remains denied on private service tables and `purchase_events`.
+- Security advisor findings in this area are informational deny-by-default notices rather than unresolved exposure warnings.
+- Historical import/media generator Edge Functions sampled in production are retired with HTTP 410 behavior.
+- Google Play verification and RTDN functions contain server-side ownership, product allowlist and webhook identity checks.
+- Account deletion requires authenticated/fresh-user confirmation and user-owned rows cascade from `auth.users`.
+
+### Auth / billing / premium
+
+- Email/password auth, recovery/deep-link flow, sign-out and auth-state tracking are implemented.
+- Google Play purchase handling is designed to grant entitlement only after server verification.
+- Purchase processing, restore behavior, entitlement refresh, account deletion, premium redaction and auth recovery have automated gates.
+- Production release CI requires distinct monthly/yearly Play product IDs; blank IDs cannot produce a production release candidate.
+- Real Play purchase/restore/cancel/expiry/RTDN validation remains pending until products and Play test track are configured.
+
+### Play policy posture
+
+- Main Android manifest currently requests only `android.permission.INTERNET`.
+- Public privacy/terms Edge Function is deployed and source-controlled.
+- Privacy text documents data categories, providers, security, retention/deletion and external account-deletion access.
+- Terms state that FTR is educational, is not a medical device, and does not diagnose/treat/cure/prevent medical conditions.
+- A Play policy regression gate blocks accidental introduction of sensitive Android permissions or removal of required privacy/deletion/medical-disclaimer text.
+
+## Current device-test phase
+
+The live-Supabase debug APK is under real-device validation. Device testing should cover:
+
+- sign-up/sign-in/password recovery
+- class/course/content navigation
+- content detail/media rendering
+- quiz behavior
+- search
+- favorites
+- notes
+- progress persistence
+- premium locked/unlocked states
+- offline/network-error states
+- account deletion UX
+
+## Remaining production blockers
+
+1. Restore Google Play upload-key continuity or complete the upload-key reset using the prepared replacement certificate.
+2. Confirm the accepted upload certificate fingerprint in Play Console.
+3. Install the accepted upload keystore/password/alias values as GitHub Actions secrets.
+4. Create/finalize monthly and yearly Google Play subscription products and configure their exact product IDs.
+5. Complete Google Play Health Apps Declaration and store-listing medical disclaimer.
+6. Confirm Play developer contact/privacy contact information and Data safety answers against the final app behavior.
+7. Run the real signed release workflow and generate `FTR-release-4.0.0-25.aab`.
+8. Upload the AAB to a Play test track and verify install/upgrade continuity from the existing listing.
+9. Execute real Google Play purchase, restore, renewal, cancellation, expiry, RTDN and account-deletion interaction tests.
+10. Promote only after device and Play-track validation are clean.
+
+## Release rule
+
+Do not upload an AAB to Google Play unless its signing certificate is the Play-accepted upload certificate and its package/version identity gates pass.
