@@ -23,7 +23,6 @@ class _FtrAppState extends ConsumerState<FtrApp> {
   Future<void> _purchaseQueue = Future<void>.value();
   final Set<String> _handledPurchaseKeys = <String>{};
 
-
   @override
   void initState() {
     super.initState();
@@ -53,9 +52,11 @@ class _FtrAppState extends ConsumerState<FtrApp> {
     );
 
     return MaterialApp.router(
-      title: 'FTR',
+      title: 'FTR Akademi',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
+      theme: AppTheme.dark,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.dark,
       routerConfig: appRouter,
     );
   }
@@ -147,7 +148,7 @@ class _FtrAppState extends ConsumerState<FtrApp> {
           } catch (_) {
             purchaseService.publishFlow(
               BillingFlowStage.failed,
-              'Satın alma doğrulanamadı. Premium erişim verilmedi.',
+              'Satın alma sunucuda doğrulanamadı. Premium erişim verilmedi.',
             );
           }
           break;
