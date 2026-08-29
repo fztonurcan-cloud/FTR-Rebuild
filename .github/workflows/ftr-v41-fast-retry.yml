@@ -1,0 +1,35 @@
+name: FTR v41 Fast Retry Images
+
+on:
+  push:
+    branches:
+      - ftr-v41-offline-localization
+    paths:
+      - '.github/workflows/ftr-v41-fast-retry.yml'
+      - 'tools/v41_retry_fast.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  retry-fast:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install requests
+        run: python3 -m pip install --disable-pip-version-check requests
+      - name: Run parallel exact-only retry
+        run: python3 tools/v41_retry_fast.py
+      - name: Show summary
+        if: always()
+        run: cat /tmp/ftr-v41-fast-retry/summary.json || true
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-fast-retry
+          path: /tmp/ftr-v41-fast-retry/
+          if-no-files-found: error
+          retention-days: 1
