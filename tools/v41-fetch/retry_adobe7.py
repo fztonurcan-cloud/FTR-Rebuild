@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-import asyncio, json, re, os, hashlib
+import asyncio, json, hashlib
 from pathlib import Path
-from urllib.parse import unquote
 from playwright.async_api import async_playwright
 
 ITEMS=[
@@ -15,37 +14,54 @@ ITEMS=[
 ]
 OUT=Path('/tmp/ftr-adobe7'); OUT.mkdir(parents=True,exist_ok=True)
 
+def valid(body): return len(body)>2000 and (body.startswith(b'%PDF') or body.startswith(b'PK\x03\x04'))
+
 async def one(browser,item):
-    src,urn,url=item; ctx=await browser.new_context(accept_downloads=True, locale='tr-TR')
+    src,urn,url=item
+    ctx=await browser.new_context(accept_downloads=True,locale='tr-TR')
     page=await ctx.new_page(); candidates=[]; errors=[]
     async def on_response(resp):
-        u=resp.url.lower(); ct=(await resp.all_headers()).get('content-type','').lower()
-        if ('blobstore' in u or 'adobe.io' in u) and ('pdf' in ct or 'officedocument' in ct or 'ms-powerpoint' in ct or 'application/octet-stream' in ct):
-            candidates.append(resp)
+        try:
+            h=await resp.all_headers(); ct=h.get('content-type','').lower(); u=resp.url.lower()
+            if ('blobstore' in u or 'adobe.io' in u) and ('pdf' in ct or 'officedocument' in ct or 'ms-powerpoint' in ct or 'application/octet-stream' in ct):
+                candidates.append({'url':resp.url,'ct':ct,'headers':h})
+        except Exception: pass
     page.on('response',on_response)
+    best=None
     try:
         await page.goto(url,wait_until='domcontentloaded',timeout=90000)
-        await page.wait_for_timeout(12000)
-        # Try obvious download controls; network interception is primary.
-        for sel in ['button[aria-label*="Download" i]','button[title*="Download" i]','[data-testid*="download" i]','text=/download|indir/i']:
+        await page.wait_for_timeout(10000)
+        # First retry captured signed blob URLs through the browser context request client.
+        seen=set()
+        for c in candidates:
+            if c['url'] in seen: continue
+            seen.add(c['url'])
             try:
-                loc=page.locator(sel).first
-                if await loc.count(): await loc.click(timeout=2500); await page.wait_for_timeout(4000); break
-            except Exception as e: errors.append('click:'+str(e)[:120])
-        # Prefer largest captured document response.
-        best=None
-        for resp in candidates:
-            try:
-                body=await resp.body()
-                if len(body)>2000 and (body.startswith(b'%PDF') or body.startswith(b'PK\x03\x04')):
-                    if best is None or len(body)>len(best[1]): best=(resp,body)
-            except Exception as e: errors.append('body:'+str(e)[:120])
+                r=await ctx.request.get(c['url'],headers={'referer':page.url},timeout=90000,fail_on_status_code=False)
+                body=await r.body()
+                if valid(body) and (best is None or len(body)>len(best[1])): best=(c,body,r.headers.get('content-type',''))
+            except Exception as e: errors.append('api:'+type(e).__name__+':'+str(e)[:180])
+        # If needed, trigger download controls and retry any newly observed signed URLs.
+        if best is None:
+            for sel in ['button[aria-label*="Download" i]','button[title*="Download" i]','[data-testid*="download" i]','text=/download|indir/i']:
+                try:
+                    loc=page.locator(sel).first
+                    if await loc.count(): await loc.click(timeout=2500); await page.wait_for_timeout(5000); break
+                except Exception as e: errors.append('click:'+str(e)[:150])
+            for c in candidates:
+                if c['url'] in seen: continue
+                seen.add(c['url'])
+                try:
+                    r=await ctx.request.get(c['url'],headers={'referer':page.url},timeout=90000,fail_on_status_code=False)
+                    body=await r.body()
+                    if valid(body) and (best is None or len(body)>len(best[1])): best=(c,body,r.headers.get('content-type',''))
+                except Exception as e: errors.append('api2:'+type(e).__name__+':'+str(e)[:180])
         if best:
-            resp,body=best; ext='.pdf' if body.startswith(b'%PDF') else '.pptx'
+            c,body,ct=best; ext='.pdf' if body.startswith(b'%PDF') else '.pptx'
             p=OUT/(urn+ext); p.write_bytes(body)
-            rec={'source_json':src,'urn_id':urn,'state':'ok','url':url,'captured_url':resp.url,'content_type':(await resp.all_headers()).get('content-type',''),'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest(),'file':p.name,'errors':errors}
+            rec={'source_json':src,'urn_id':urn,'state':'ok','url':url,'captured_url':c['url'],'content_type':ct,'bytes':len(body),'sha256':hashlib.sha256(body).hexdigest(),'file':p.name,'candidate_count':len(candidates),'errors':errors}
         else:
-            rec={'source_json':src,'urn_id':urn,'state':'miss','url':url,'candidate_count':len(candidates),'errors':errors,'title':await page.title()}
+            rec={'source_json':src,'urn_id':urn,'state':'miss','url':url,'candidate_count':len(candidates),'candidate_urls':[c['url'] for c in candidates[:8]],'errors':errors,'title':await page.title()}
     except Exception as e:
         rec={'source_json':src,'urn_id':urn,'state':'error','url':url,'errors':errors+[repr(e)]}
     await ctx.close(); return rec
