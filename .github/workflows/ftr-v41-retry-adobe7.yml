@@ -1,0 +1,31 @@
+name: FTR v41 Retry Adobe 7
+on:
+  push:
+    branches: [ftr-v41-offline-localization]
+    paths:
+      - '.github/workflows/ftr-v41-retry-adobe7.yml'
+      - 'tools/v41-fetch/retry_adobe7.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  retry-adobe7:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Playwright
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Retry final seven shares
+        run: python3 tools/v41-fetch/retry_adobe7.py
+      - if: always()
+        run: cat /tmp/ftr-adobe7/summary.json || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-adobe7
+          path: /tmp/ftr-adobe7/
+          retention-days: 1
+          if-no-files-found: error
