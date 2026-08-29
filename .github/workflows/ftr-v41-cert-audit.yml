@@ -1,0 +1,43 @@
+name: FTR v41 Signing Certificate Audit
+
+on:
+  push:
+    branches:
+      - ftr-v41-offline-localization
+    paths:
+      - '.github/workflows/ftr-v41-cert-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cert-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate signing secret presence
+        env:
+          KEYSTORE_B64: ${{ secrets.FTR_UPLOAD_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FTR_UPLOAD_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          test -n "${KEYSTORE_B64:-}" || { echo 'keystore-secret-missing'; exit 2; }
+          test -n "${STORE_PASSWORD:-}" || { echo 'store-password-missing'; exit 2; }
+          test -n "${KEY_ALIAS:-}" || { echo 'key-alias-missing'; exit 2; }
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > /tmp/ftr-release.jks
+          chmod 600 /tmp/ftr-release.jks
+
+      - name: Print non-secret certificate fingerprint
+        env:
+          STORE_PASSWORD: ${{ secrets.FTR_UPLOAD_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FTR_UPLOAD_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keytool -list -v -keystore /tmp/ftr-release.jks -storepass "$STORE_PASSWORD" -alias "$KEY_ALIAS" \
+            | grep -E 'Owner:|Issuer:|SHA1:|SHA256:'
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f /tmp/ftr-release.jks
