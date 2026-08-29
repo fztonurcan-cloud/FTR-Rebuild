@@ -29,7 +29,8 @@ jobs:
             cat tools/v41-fetch/manifests.b64.part00
             cat tools/v41-fetch/manifests.b64.part01
             cat tools/v41-fetch/manifests.b64.part02
-            cat tools/v41-fetch/p03.seg0 tools/v41-fetch/p03.seg1 tools/v41-fetch/p03.seg2 tools/v41-fetch/p03.seg3 tools/v41-fetch/p03.seg4 tools/v41-fetch/p03.seg5 tools/v41-fetch/p03.seg6
+            cat tools/v41-fetch/p030.seg0 tools/v41-fetch/p030.seg1 tools/v41-fetch/p030.seg2 tools/v41-fetch/p030.seg3 tools/v41-fetch/p030.seg4
+            cat tools/v41-fetch/p03.seg1 tools/v41-fetch/p03.seg2 tools/v41-fetch/p03.seg3 tools/v41-fetch/p03.seg4 tools/v41-fetch/p03.seg5 tools/v41-fetch/p03.seg6
             cat tools/v41-fetch/manifests.b64.part04
             cat tools/v41-fetch/manifests.b64.part05
             cat tools/v41-fetch/manifests.b64.part06
