@@ -34,11 +34,15 @@ jobs:
           } | base64 --decode > /tmp/manifests.tgz
           echo '799c2a6ce69aae55ce9433d652743a44805e67cb4b65424abd2a57c934d4c2e9  /tmp/manifests.tgz' | sha256sum -c -
           tar -xzf /tmp/manifests.tgz -C /tmp/ftr-v41-manifests
+      - name: Probe Adobe preview API
+        run: |
+          python3 -m pip install --quiet requests
+          python3 tools/v41-adobe/probe_preview_api.py
       - name: Install Chromium automation
         run: |
           python3 -m pip install --quiet playwright
           python3 -m playwright install --with-deps chromium
-      - name: Probe three Adobe shares
+      - name: Probe three Adobe shares in Chromium
         run: python3 tools/v41-adobe/probe_adobe.py
       - name: Upload probe
         if: always()
