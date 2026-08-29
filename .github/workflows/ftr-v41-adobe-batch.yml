@@ -1,0 +1,59 @@
+name: FTR v41 Adobe Original Files
+
+on:
+  push:
+    branches: [ftr-v41-offline-localization]
+    paths:
+      - '.github/workflows/ftr-v41-adobe-batch.yml'
+      - 'tools/v41-adobe/fetch_adobe_batch.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0,1,2,3,4,5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild verified Adobe manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ftr-v41-manifests
+          {
+            cat tools/v41-fetch/manifests.b64.part00
+            cat tools/v41-fetch/manifests.b64.part01
+            cat tools/v41-fetch/manifests.b64.part02
+            cat tools/v41-fetch/p030.seg0 tools/v41-fetch/p030.seg1 tools/v41-fetch/p030.seg2 tools/v41-fetch/p030.seg3 tools/v41-fetch/p030.seg4
+            cat tools/v41-fetch/p03.seg1 tools/v41-fetch/p03.seg2 tools/v41-fetch/p03.seg3 tools/v41-fetch/p03.seg4 tools/v41-fetch/p03.seg5 tools/v41-fetch/p03.seg6
+            cat tools/v41-fetch/manifests.b64.part04
+            cat tools/v41-fetch/manifests.b64.part05
+            cat tools/v41-fetch/manifests.b64.part06
+          } | base64 --decode > /tmp/manifests.tgz
+          echo '799c2a6ce69aae55ce9433d652743a44805e67cb4b65424abd2a57c934d4c2e9  /tmp/manifests.tgz' | sha256sum -c -
+          tar -xzf /tmp/manifests.tgz -C /tmp/ftr-v41-manifests
+      - name: Install Chromium
+        run: |
+          python3 -m pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium
+      - name: Fetch exact originals
+        env:
+          SHARD_INDEX: ${{ matrix.shard }}
+          SHARD_COUNT: '6'
+          CONCURRENCY: '3'
+        run: python3 tools/v41-adobe/fetch_adobe_batch.py
+      - name: Upload shard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-adobe-originals-${{ matrix.shard }}
+          path: /tmp/ftr-v41-adobe-batch/
+          retention-days: 1
+          if-no-files-found: error
+          compression-level: 0
