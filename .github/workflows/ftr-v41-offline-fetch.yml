@@ -1,0 +1,56 @@
+name: FTR v41 Offline Asset Fetch
+
+on:
+  push:
+    branches:
+      - ftr-v41-offline-localization
+    paths:
+      - '.github/workflows/ftr-v41-offline-fetch.yml'
+      - 'tools/v41-fetch/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-assets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout audit branch
+        uses: actions/checkout@v4
+
+      - name: Rebuild and verify audit manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ftr-v41-manifests
+          cat tools/v41-fetch/manifests.b64.part* | base64 --decode > /tmp/manifests.tgz
+          echo '799c2a6ce69aae55ce9433d652743a44805e67cb4b65424abd2a57c934d4c2e9  /tmp/manifests.tgz' | sha256sum -c -
+          tar -xzf /tmp/manifests.tgz -C /tmp/ftr-v41-manifests
+          test "$(wc -l < /tmp/ftr-v41-manifests/external_images.tsv)" -eq 1328
+          test "$(wc -l < /tmp/ftr-v41-manifests/adobe_links.tsv)" -eq 230
+
+      - name: Validate fetcher
+        run: python3 -m py_compile tools/v41-fetch/fetch_assets.py
+
+      - name: Fetch exact external assets and audit Adobe shares
+        env:
+          FTR_FETCH_ROOT: /tmp/ftr-v41-fetch
+          FTR_MANIFEST_DIR: /tmp/ftr-v41-manifests
+        run: python3 tools/v41-fetch/fetch_assets.py
+
+      - name: Show audit summary
+        if: always()
+        run: |
+          if [ -f /tmp/ftr-v41-fetch/summary.json ]; then cat /tmp/ftr-v41-fetch/summary.json; fi
+
+      - name: Upload exact asset audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-offline-fetch
+          path: /tmp/ftr-v41-fetch/
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 6
