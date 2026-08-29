@@ -25,7 +25,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/ftr-v41-manifests
-          cat tools/v41-fetch/manifests.b64.part* | base64 --decode > /tmp/manifests.tgz
+          {
+            cat tools/v41-fetch/manifests.b64.part00
+            cat tools/v41-fetch/manifests.b64.part01
+            cat tools/v41-fetch/manifests.b64.part02
+            cat tools/v41-fetch/p03.seg0 tools/v41-fetch/p03.seg1 tools/v41-fetch/p03.seg2 tools/v41-fetch/p03.seg3 tools/v41-fetch/p03.seg4 tools/v41-fetch/p03.seg5 tools/v41-fetch/p03.seg6
+            cat tools/v41-fetch/manifests.b64.part04
+            cat tools/v41-fetch/manifests.b64.part05
+            cat tools/v41-fetch/manifests.b64.part06
+          } | base64 --decode > /tmp/manifests.tgz
           echo '799c2a6ce69aae55ce9433d652743a44805e67cb4b65424abd2a57c934d4c2e9  /tmp/manifests.tgz' | sha256sum -c -
           tar -xzf /tmp/manifests.tgz -C /tmp/ftr-v41-manifests
           test "$(wc -l < /tmp/ftr-v41-manifests/external_images.tsv)" -eq 1328
