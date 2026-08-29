@@ -1,0 +1,48 @@
+name: FTR v41 Recover Unresolved Legacy Images
+
+on:
+  push:
+    branches: [ftr-v41-offline-localization]
+    paths:
+      - '.github/workflows/ftr-v41-recover-unresolved.yml'
+      - 'tools/v41-recover/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild verified manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ftr-v41-manifests
+          {
+            cat tools/v41-fetch/manifests.b64.part00
+            cat tools/v41-fetch/manifests.b64.part01
+            cat tools/v41-fetch/manifests.b64.part02
+            cat tools/v41-fetch/p030.seg0 tools/v41-fetch/p030.seg1 tools/v41-fetch/p030.seg2 tools/v41-fetch/p030.seg3 tools/v41-fetch/p030.seg4
+            cat tools/v41-fetch/p03.seg1 tools/v41-fetch/p03.seg2 tools/v41-fetch/p03.seg3 tools/v41-fetch/p03.seg4 tools/v41-fetch/p03.seg5 tools/v41-fetch/p03.seg6
+            cat tools/v41-fetch/manifests.b64.part04
+            cat tools/v41-fetch/manifests.b64.part05
+            cat tools/v41-fetch/manifests.b64.part06
+          } | base64 --decode > /tmp/manifests.tgz
+          echo '799c2a6ce69aae55ce9433d652743a44805e67cb4b65424abd2a57c934d4c2e9  /tmp/manifests.tgz' | sha256sum -c -
+          tar -xzf /tmp/manifests.tgz -C /tmp/ftr-v41-manifests
+      - name: Recover exact images
+        run: |
+          python3 -m pip install --quiet requests
+          python3 tools/v41-recover/recover_unresolved.py
+      - name: Upload recovery result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-unresolved-recovery
+          path: /tmp/ftr-v41-recover/
+          retention-days: 1
+          if-no-files-found: error
