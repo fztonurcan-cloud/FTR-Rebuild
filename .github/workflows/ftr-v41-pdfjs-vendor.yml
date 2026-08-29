@@ -1,0 +1,33 @@
+name: FTR v41 PDF.js Vendor
+
+on:
+  push:
+    branches: [ftr-v41-offline-localization]
+    paths: ['.github/workflows/ftr-v41-pdfjs-vendor.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download pinned PDF.js package
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/pdfjs/vendor
+          cd /tmp/pdfjs
+          npm pack pdfjs-dist@3.11.174 >/tmp/pdfjs/pkgname.txt
+          tar -xzf "$(cat /tmp/pdfjs/pkgname.txt)"
+          cp package/build/pdf.min.js vendor/pdf.min.js
+          cp package/build/pdf.worker.min.js vendor/pdf.worker.min.js
+          cp package/LICENSE vendor/PDFJS-LICENSE.txt
+          sha256sum vendor/* > vendor/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-pdfjs-vendor
+          path: /tmp/pdfjs/vendor/
+          retention-days: 1
+          if-no-files-found: error
