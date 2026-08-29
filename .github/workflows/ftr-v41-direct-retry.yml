@@ -1,0 +1,25 @@
+name: FTR v41 Direct Retry Images
+on:
+  push:
+    branches: [ftr-v41-offline-localization]
+    paths: ['.github/workflows/ftr-v41-direct-retry.yml','tools/v41_direct_retry.py']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  retry-direct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check requests
+      - run: python3 tools/v41_direct_retry.py
+      - if: always()
+        run: cat /tmp/ftr-v41-direct-retry/summary.json || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-direct-retry
+          path: /tmp/ftr-v41-direct-retry/
+          if-no-files-found: error
+          retention-days: 1
