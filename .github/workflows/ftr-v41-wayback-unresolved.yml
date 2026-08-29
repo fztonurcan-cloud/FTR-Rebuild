@@ -1,0 +1,26 @@
+name: FTR v41 Wayback Exact Recovery
+on:
+  push:
+    branches: [ftr-v41-offline-localization]
+    paths:
+      - '.github/workflows/ftr-v41-wayback-unresolved.yml'
+      - 'tools/v41-fetch/wayback_unresolved.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/v41-fetch/wayback_unresolved.py
+      - if: always()
+        run: cat /tmp/ftr-wayback/summary.json || true
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ftr-v41-wayback-unresolved
+          path: /tmp/ftr-wayback/
+          retention-days: 1
+          if-no-files-found: error
