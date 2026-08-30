@@ -1,4 +1,4 @@
-name: Deploy FTR Auth Page
+name: Validate FTR Auth Source
 
 on:
   push:
@@ -10,30 +10,18 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - name: Upload auth site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: auth
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Validate auth source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f auth/index.html
+          test -s auth/index.html
+          echo "FTR auth source is present."
+          echo "GitHub Pages deployment is intentionally disabled; production auth UI is hosted outside GitHub Pages."
