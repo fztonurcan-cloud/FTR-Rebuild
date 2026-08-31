@@ -1,0 +1,3 @@
+# Temporary media bridge
+
+[March start](https://dnznrvs05pmza.cloudfront.net/gemini/gemini-3.1-flash-lite-image/images/49204e07-4bd9-4f0b-a835-696409a9e0e7/Photorealistic_premium_fitness_instructional_photograph__sin.jpg?_jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJrZXlIYXNoIjoiYzIzODIyMjI0NGExYTZlYSIsImJ1Y2tldCI6InJ1bndheS10YXNrLWFydGlmYWN0cyIsInN0YWdlIjoicHJvZCIsImV4cCI6MTc4ODM2MjY1OH0.yksZ6a766SCWOuJCTewd2Nwwzr_i2TBvy3zpOtPLckI)
