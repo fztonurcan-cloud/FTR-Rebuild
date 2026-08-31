@@ -1,0 +1,33 @@
+name: tmp-runway-media-download
+on:
+  push:
+    branches: [tmp-runway-media-bridge]
+    paths:
+      - 'tmp-runway-urls.tsv'
+      - '.github/workflows/tmp-runway-download.yml'
+permissions:
+  contents: read
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Runway media
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runway-media
+          while IFS=$'\t' read -r name url; do
+            [ -n "$name" ] || continue
+            echo "Downloading $name"
+            curl --fail --location --retry 3 --silent --show-error "$url" -o "runway-media/$name"
+            test -s "runway-media/$name"
+            file "runway-media/$name"
+          done < tmp-runway-urls.tsv
+      - name: Upload media artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: runway-media
+          path: runway-media/
+          if-no-files-found: error
+          retention-days: 1
