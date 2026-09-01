@@ -583,4 +583,40 @@ async function init() {
   }
 }
 
+if (new URLSearchParams(window.location.search).get('qa') === '1') {
+  window.__FTR_ANATOMY_QA__ = {
+    state() {
+      return {
+        activeSystem,
+        activeMeshCount: activeMeshes.length,
+        selectedStructure: selectedMesh ? prettyName(selectedMesh.name) : '',
+        selectedHighlighted: Boolean(selectedMesh && selectedMesh.material === highlightMaterial),
+        cameraDistance: camera && controls ? camera.position.distanceTo(controls.target) : null,
+        autoRotate,
+        examMode,
+        mixedExamMode
+      };
+    },
+    pickDifferentStructure() {
+      if (!camera || !raycaster || !canvas || !activeMeshes.length) return null;
+      const rect = canvas.getBoundingClientRect();
+      for (const mesh of activeMeshes) {
+        const box = new THREE.Box3().setFromObject(mesh);
+        if (box.isEmpty()) continue;
+        const point = box.getCenter(new THREE.Vector3()).project(camera);
+        if (Math.abs(point.x) > 0.96 || Math.abs(point.y) > 0.96 || point.z < -1 || point.z > 1) continue;
+        raycaster.setFromCamera(new THREE.Vector2(point.x, point.y), camera);
+        const hit = raycaster.intersectObjects(activeMeshes, false)[0]?.object;
+        if (!hit || hit === selectedMesh) continue;
+        handlePick({
+          clientX: rect.left + ((point.x + 1) / 2) * rect.width,
+          clientY: rect.top + ((1 - point.y) / 2) * rect.height
+        });
+        return this.state();
+      }
+      return this.state();
+    }
+  };
+}
+
 init();

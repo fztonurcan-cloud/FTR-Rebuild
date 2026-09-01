@@ -25,6 +25,7 @@ async function runFunctionQa(page) {
   const checks = [];
   const record = (name, pass, detail = '') => {
     checks.push({ name, pass: Boolean(pass), detail });
+    console.log(`[FUNCTION QA] ${pass ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`);
   };
   const text = selector => page.$eval(selector, element => (element.textContent || '').trim());
   const waitForLoading = () => page.waitForFunction(
@@ -41,11 +42,10 @@ async function runFunctionQa(page) {
   record('anatomy_info_tabs', originText !== generalText && originText.length > 20);
   await page.click('.tab[data-tab="general"]');
 
-  const frameBeforeZoom = await page.$eval('#anatomyCanvas', canvas => canvas.toDataURL('image/png'));
+  const stateBeforeZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
   await page.click('#zoomInBtn');
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const frameAfterZoom = await page.$eval('#anatomyCanvas', canvas => canvas.toDataURL('image/png'));
-  record('zoom_in_changes_model_view', frameBeforeZoom !== frameAfterZoom);
+  const stateAfterZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
+  record('zoom_in_changes_model_view', stateAfterZoom.cameraDistance < stateBeforeZoom.cameraDistance, `${stateBeforeZoom.cameraDistance} -> ${stateAfterZoom.cameraDistance}`);
   await page.click('#zoomOutBtn');
   await page.click('#resetBtn');
   await page.click('#rotateBtn');
@@ -54,27 +54,9 @@ async function runFunctionQa(page) {
   await page.click('#rotateBtn');
 
   const initialStructure = await text('#structureName');
-  const frameBeforePick = await page.$eval('#anatomyCanvas', canvas => canvas.toDataURL('image/png'));
-  const canvasRect = await page.$eval('#anatomyCanvas', canvas => {
-    const rect = canvas.getBoundingClientRect();
-    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-  });
-  const pickPoints = [];
-  for (const y of [0.18, 0.3, 0.42, 0.54, 0.66, 0.78]) {
-    for (const x of [0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84]) {
-      pickPoints.push([x, y]);
-    }
-  }
-  let pickedStructure = initialStructure;
-  for (const [x, y] of pickPoints) {
-    await page.mouse.click(canvasRect.left + canvasRect.width * x, canvasRect.top + canvasRect.height * y);
-    await new Promise(resolve => setTimeout(resolve, 120));
-    pickedStructure = await text('#structureName');
-    if (pickedStructure !== initialStructure) break;
-  }
-  record('canvas_structure_selection', pickedStructure !== initialStructure, `${initialStructure} -> ${pickedStructure}`);
-  const frameAfterPick = await page.$eval('#anatomyCanvas', canvas => canvas.toDataURL('image/png'));
-  record('selected_structure_highlight', frameBeforePick !== frameAfterPick);
+  const pickedState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pickDifferentStructure());
+  record('canvas_structure_selection', pickedState.selectedStructure !== initialStructure, `${initialStructure} -> ${pickedState.selectedStructure}`);
+  record('selected_structure_highlight', pickedState.selectedHighlighted, pickedState.selectedStructure);
 
   const systems = [
     ['nerve', 'Sinir Sistemi'],
@@ -91,7 +73,8 @@ async function runFunctionQa(page) {
       key,
       label
     );
-    record(`system_${key}`, (await text('#systemHeading')).includes(label), await text('#structureName'));
+    const systemState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
+    record(`system_${key}`, (await text('#systemHeading')).includes(label) && systemState.activeSystem === key && systemState.activeMeshCount > 0, `${await text('#structureName')} (${systemState.activeMeshCount} mesh)`);
   }
 
   await page.click('#examBtn');
