@@ -30,6 +30,22 @@ jobs:
         with:
           gradle-version: '8.13'
 
+      - name: Generate placeholder launcher PNG resources
+        shell: bash
+        run: |
+          set -euo pipefail
+          RES="$GITHUB_WORKSPACE/tools/notification-helper/app/src/main/res"
+          mkdir -p "$RES/drawable-nodpi" "$RES/mipmap-nodpi"
+          python3 - <<'PY'
+          import base64, pathlib
+          png = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
+          root = pathlib.Path('tools/notification-helper/app/src/main/res')
+          for rel in ['drawable-nodpi/ic_launcher.png','drawable-nodpi/ic_launcher_foreground.png','mipmap-nodpi/ic_launcher.png']:
+              p = root / rel
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_bytes(png)
+          PY
+
       - name: Build Firebase Messaging helper APK
         working-directory: tools/notification-helper
         run: gradle --no-daemon :app:assembleRelease --stacktrace
@@ -60,6 +76,7 @@ jobs:
           chmod +x "$OUT/build-tools/aapt2" "$OUT/build-tools/zipalign" "$OUT/build-tools/apksigner"
 
           "$BT/aapt2" dump xmltree "$APK" --file AndroidManifest.xml > "$OUT/helper-manifest-dump.txt"
+          "$BT/aapt2" dump resources "$APK" > "$OUT/helper-resources-dump.txt"
           unzip -l "$APK" > "$OUT/helper-apk-entries.txt"
           (cd "$OUT" && sha256sum notification-helper-unsigned.apk dex/*.dex build-tools/aapt2 build-tools/zipalign build-tools/lib/apksigner.jar android.jar > SHA256SUMS.txt)
 
