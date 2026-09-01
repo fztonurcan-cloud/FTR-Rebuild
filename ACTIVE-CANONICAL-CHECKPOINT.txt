@@ -1,0 +1,10 @@
+ACTIVE CANONICAL CHECKPOINT
+
+Branch: checkpoint-v29.6
+Commit: cefc7553fa2e23690cc228d3d74ff337f759fa22
+APK: FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk
+SHA-256: abe8b60a338751477d319abdcc2942f61942cd305341e0498243800fc07ed930
+Phone verification: PASS on 2026-09-01
+Rollback: rollback-v29.5
+
+Historical Flutter/v56/v57 branches are not the active canonical APK source and must not be merged into this checkpoint.
