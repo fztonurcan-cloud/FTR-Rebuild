@@ -1,12 +1,14 @@
 FTR Akademi 3D Anatomy model attribution
 
-3D geometry is derived from the libre Z-Anatomy / BodyParts3D human anatomy dataset.
+3D geometry in this module is derived from the libre Z-Anatomy / BodyParts3D human anatomy dataset.
 
 Required attribution:
 - "Z-Anatomy - The libre 3D atlas of anatomy - CC BY-SA 4.0"
 - "BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan"
 
-The model-derived assets distributed inside FTR Akademi remain subject to the applicable Creative Commons Attribution-ShareAlike license terms. FTR Akademi application code and unrelated educational content are not relicensed by this notice.
+FTR Akademi exports only the layers needed by this module: skeleton, muscular system, anatomical nerves, ligaments/retinacula, and anatomical vessels. Unrelated sense-organ and organ submodels credited by Z-Anatomy under non-commercial third-party licences are intentionally excluded from the FTR Akademi export pipeline.
+
+The model-derived assets distributed inside FTR Akademi remain subject to the applicable Creative Commons Attribution-ShareAlike terms. FTR Akademi application code and unrelated educational content are not relicensed by this notice.
 
 Source: https://github.com/Z-Anatomy/Models-of-human-anatomy
-License: https://creativecommons.org/licenses/by-sa/4.0/
+Primary Z-Anatomy licence: https://creativecommons.org/licenses/by-sa/4.0/
