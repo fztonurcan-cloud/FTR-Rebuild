@@ -5,7 +5,40 @@
 
     <application
         android:name="com.ftrakademi.preview3.FtrNotificationApplication"
-        android:label="FTR Notification Helper">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:label="FTR Akademi Preview 3"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+
+        <activity
+            android:name="com.ftrakademi.preview3.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="unspecified">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.ftrakademi.preview3" android:host="auth-callback" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.ftrakademi.preview3.TtsActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:exported="true"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="ftrtts" />
+            </intent-filter>
+        </activity>
 
         <service
             android:name="com.ftrakademi.preview3.FtrMessagingService"
@@ -18,5 +51,8 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="ftr_general" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_launcher" />
     </application>
 </manifest>
