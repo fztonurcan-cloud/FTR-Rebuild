@@ -31,8 +31,9 @@ jobs:
       - name: Install Blender and utilities
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender unzip curl
+          sudo apt-get install -y blender unzip curl python3-numpy
           blender --version | head -n 2
+          blender -b --python-expr "import numpy as np; print('BLENDER_NUMPY', np.__version__)"
 
       - name: Download libre Z-Anatomy source model
         shell: bash
@@ -55,8 +56,10 @@ jobs:
         env:
           FTR_ANATOMY_OUT: ${{ github.workspace }}/tools/anatomy3d/public
         run: |
+          set -euo pipefail
           blender -b "$BLEND_FILE" \
             --python "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/export_z_anatomy.py"
+          test -f "$GITHUB_WORKSPACE/tools/anatomy3d/public/data/export-report.json"
 
       - name: Validate exported anatomy systems
         shell: bash
