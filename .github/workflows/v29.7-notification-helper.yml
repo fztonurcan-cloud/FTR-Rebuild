@@ -55,7 +55,7 @@ jobs:
         run: |
           set -euo pipefail
           OUT="$GITHUB_WORKSPACE/notification-helper-artifact"
-          mkdir -p "$OUT/dex" "$OUT/build-tools/lib"
+          mkdir -p "$OUT/dex" "$OUT/build-tools/lib" "$OUT/build-tools/lib64"
 
           APK="$GITHUB_WORKSPACE/tools/notification-helper/app/build/outputs/apk/release/app-release-unsigned.apk"
           test -f "$APK"
@@ -72,13 +72,14 @@ jobs:
           cp "$BT/zipalign" "$OUT/build-tools/zipalign"
           cp "$BT/apksigner" "$OUT/build-tools/apksigner"
           cp "$BT/lib/apksigner.jar" "$OUT/build-tools/lib/apksigner.jar"
+          cp "$BT/lib64/libc++.so" "$OUT/build-tools/lib64/libc++.so"
           cp "$ANDROID_SDK_ROOT/platforms/android-36/android.jar" "$OUT/android.jar"
           chmod +x "$OUT/build-tools/aapt2" "$OUT/build-tools/zipalign" "$OUT/build-tools/apksigner"
 
           "$BT/aapt2" dump xmltree "$APK" --file AndroidManifest.xml > "$OUT/helper-manifest-dump.txt"
           "$BT/aapt2" dump resources "$APK" > "$OUT/helper-resources-dump.txt"
           unzip -l "$APK" > "$OUT/helper-apk-entries.txt"
-          (cd "$OUT" && sha256sum notification-helper-unsigned.apk dex/*.dex build-tools/aapt2 build-tools/zipalign build-tools/lib/apksigner.jar android.jar > SHA256SUMS.txt)
+          (cd "$OUT" && sha256sum notification-helper-unsigned.apk dex/*.dex build-tools/aapt2 build-tools/zipalign build-tools/lib/apksigner.jar build-tools/lib64/libc++.so android.jar > SHA256SUMS.txt)
 
       - name: Upload isolated helper artifact
         uses: actions/upload-artifact@v4
