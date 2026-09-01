@@ -38,16 +38,27 @@ def select_objects(collection_name, name_filter=None):
         raise RuntimeError(f'Collection not found: {collection_name}')
     bpy.ops.object.select_all(action='DESELECT')
     selected = []
+    skipped_empty = 0
     for obj in coll.all_objects:
+        # Some Z-Anatomy collection links resolve as empty entries in Blender 4.x headless mode.
+        # They are not anatomical meshes and must not abort the export.
+        if obj is None:
+            skipped_empty += 1
+            continue
         if obj.type != 'MESH':
             continue
         if name_filter and not name_filter.search(obj.name):
             continue
-        obj.hide_set(False)
+        try:
+            obj.hide_set(False)
+        except Exception:
+            pass
         obj.hide_viewport = False
         obj.hide_render = False
         obj.select_set(True)
         selected.append(obj)
+    if skipped_empty:
+        print(f'{collection_name}: skipped {skipped_empty} empty object link(s)')
     if not selected:
         raise RuntimeError(f'No mesh objects selected for: {collection_name}')
     bpy.context.view_layer.objects.active = selected[0]
@@ -95,6 +106,8 @@ for system, collection, name_filter, filename in SYSTEMS:
     }
     if system in structures:
         for obj in objects:
+            if obj is None:
+                continue
             label = display_name(obj.name)
             if len(label) < 3:
                 continue
