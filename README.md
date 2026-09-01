@@ -1,27 +1,52 @@
-# FTR Akademi v29.5 — LOCKED ROLLBACK CHECKPOINT
+# FTR Akademi — v29.6 Canonical Checkpoint
 
-Bu branch yalnızca fiziksel telefonda doğrulanmış v29.5 rollback noktasını tanımlar.
+Status: **LOCKED / PHONE-VERIFIED / ACTIVE CANONICAL APK**
+
+This branch is the authoritative checkpoint for the currently verified FTR Akademi application line.
 
 ## Canonical APK
-- Dosya: `FTR-Akademi-v29.5-HAREKET-STUDYOSU-INSTALL-FIX.apk`
-- Boyut: `1130840644` bayt
-- SHA-256: `2518c9b79a69f2fe3c5a60b4b8c2a454bbe6fb2b83daad789374695e2e3fdbb3`
-- Paket: `com.ftrakademi.preview3`
-- Android imza: V1 + V2 doğrulandı
-- Sertifika SHA-256: `8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2`
-- Sertifika subject: `CN=FTR Akademi Preview v41,OU=Preview,O=FTR Akademi,C=TR`
 
-## Koruma kuralı
-Bu branch üzerinde geliştirme yapılmaz. v29.5 dosyaları değiştirilmez, yeniden imzalanmaz ve üzerine yazılmaz. Yeni çalışma sürümleri ayrı branch/sürüm üzerinde ilerler.
+- File: `FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk`
+- Size: `1,130,842,466 bytes`
+- SHA-256: `abe8b60a338751477d319abdcc2942f61942cd305341e0498243800fc07ed930`
+- Android package: `com.ftrakademi.preview3`
+- Signing identity: FTR Akademi Preview v41
+- Signing certificate SHA-256: `8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2`
+- Android V1 signature: PASS
+- Android V2 signature: PASS
 
-## Neden APK repository içine doğrudan konmadı?
-APK yaklaşık 1.13 GB olduğu için normal GitHub repository dosyası olarak tutulmaya uygun değildir. Rollback bütünlüğü SHA-256 manifesti ve deterministik parça birleştirme tarifiyle sabitlenmiştir.
+## Phone verification
 
-## Parça manifesti
-1. `FTR-Akademi-v29.4-HAREKET-STUDYOSU.apk.part00` — `66e4fde1e74959e864dbdfb949e6920d6a1c3a386d18b6999db9dd3c2539329e`
-2. `FTR-Akademi-v29.4-HAREKET-STUDYOSU.apk.part01` — `c7513292164b9b44eafb500d46eb368483df565ed03ea7bc4fafadabf6977e1a`
-3. `FTR-Akademi-v29.4-HAREKET-STUDYOSU.apk.part02` — `28121e6362678e8669ecad520e42e6918e5e54f34caca75ef5fb553271c6d518`
-4. `FTR-Akademi-v29.4-HAREKET-STUDYOSU.apk.part03` — `652d49a5329e39105a37acbddc19f0bb7537fcb45275be4db07657005d0935b7`
-5. `FTR-Akademi-v29.5-HAREKET-STUDYOSU-INSTALL-FIX.apk.part04` — `d72aca72f50ada272caa9d2930d8f9c9628a11ed768d5ea74a3cddb3f5a8e913`
+The APK was physically installed and tested on a phone on 2026-09-01. The following requested changes were confirmed working:
 
-Birleştirilen APK'nın SHA-256 değeri yukarıdaki canonical hash ile birebir eşleşmeden rollback geçerli kabul edilmez.
+1. Hareket Stüdyosu `Programıma Ekle` -> `Programlar` -> `Programım` -> start workout -> remove movement.
+2. The redundant second `Çalışma Alanım` menu row is removed while the primary workspace/favorites/notes remain.
+3. The `Hazırlayanlar` button is present and all three contributor entries are correct.
+
+## Exact v29.6 scope
+
+Only these payload files differ from v29.5:
+
+- `assets/app/index.html`
+- `assets/app/app.js`
+- `assets/app/app.css`
+- `assets/app/movement/studio.js`
+- `assets/app/movement/studio.css`
+
+All other payload entries match v29.5 by size/CRC32 according to QA. Lessons, quizzes, FTR AI, Auth, Supabase integration and 88 movement visuals were not changed.
+
+## Rollback
+
+Safe rollback is `rollback-v29.5` / `FTR-Akademi-v29.5-HAREKET-STUDYOSU-INSTALL-FIX.apk` with SHA-256:
+
+`2518c9b79a69f2fe3c5a60b4b8c2a454bbe6fb2b83daad789374695e2e3fdbb3`
+
+## Rules
+
+- Never overwrite or modify this checkpoint in place.
+- Any future application change must be made as a new version (v29.7+).
+- Do not merge historical Flutter/v56/v57 branches into this checkpoint.
+- Do not relabel an older APK/source tree as v29.6.
+- Reconstruct the APK only from the exact five parts listed in the manifest and verify final SHA-256 before installation.
+
+The 1.13 GB APK itself is not stored as a normal GitHub repository file; this checkpoint stores the canonical identity, reconstruction hashes, QA scope and verification rules.

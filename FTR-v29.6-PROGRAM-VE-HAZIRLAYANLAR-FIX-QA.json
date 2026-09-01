@@ -1,0 +1,62 @@
+{
+  "file": "FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk",
+  "size": 1130842466,
+  "sha256": "abe8b60a338751477d319abdcc2942f61942cd305341e0498243800fc07ed930",
+  "baseline": {
+    "file": "FTR-Akademi-v29.5-HAREKET-STUDYOSU-INSTALL-FIX.apk",
+    "sha256": "2518c9b79a69f2fe3c5a60b4b8c2a454bbe6fb2b83daad789374695e2e3fdbb3",
+    "unchanged": true
+  },
+  "android": {
+    "package": "com.ftrakademi.preview3",
+    "manifest_unchanged_from_v29_5": true,
+    "version_code_unchanged_from_v29_5": true,
+    "zip_test": "PASS",
+    "zip_alignment": "PASS",
+    "duplicate_zip_entries": 0,
+    "v1_signature": "PASS",
+    "v2_signature": "PASS",
+    "v3_signature": false,
+    "signer_cert_sha256": "8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2",
+    "signer_subject": "CN=FTR Akademi Preview v41, OU=Preview, O=FTR Akademi, C=TR",
+    "update_signer_matches_v29_5": true
+  },
+  "requested_fixes": {
+    "program_add": {
+      "status": "PASS",
+      "details": [
+        "Programıma Ekle olayı bağlandı",
+        "seçimler cihazdaki localStorage alanında kalıcı tutuluyor",
+        "aynı hareket çoğaltılmıyor",
+        "Programlar ekranında Programım kartı açılıyor",
+        "kişisel program antrenman olarak başlatılabiliyor",
+        "hareket Programdan Çıkar düğmesiyle kaldırılabiliyor"
+      ],
+      "smoke_test": "PASS: ekle -> kalıcı kayıt -> Programlar -> antrenman akışı"
+    },
+    "duplicate_workspace_row_removed": true,
+    "creators_home_button_added": true,
+    "creators": [
+      {"name": "FZT. ONURCAN SÖNMEZ", "role": "PROJE & İÇERİK & AKADEMİK KATKI"},
+      {"name": "A&R. OZAN SÖNMEZ", "role": "YARATICI ÜRETİM"},
+      {"name": "FZT. ÖZLEM ESRA DEMİRCİ", "role": "YARATICI ÜRETİM"}
+    ]
+  },
+  "scope_diff": {
+    "changed_payload_files": [
+      "assets/app/index.html",
+      "assets/app/app.js",
+      "assets/app/app.css",
+      "assets/app/movement/studio.js",
+      "assets/app/movement/studio.css"
+    ],
+    "changed_payload_file_count": 5,
+    "all_other_payload_entries_match_v29_5_by_size_and_crc32": true,
+    "movement_visual_files_unchanged": true,
+    "lessons_unchanged": true,
+    "quizzes_unchanged": true,
+    "ftr_ai_unchanged": true,
+    "auth_unchanged": true,
+    "supabase_integration_unchanged": true
+  }
+}

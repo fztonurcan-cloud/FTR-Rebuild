@@ -1,0 +1,82 @@
+{
+  "checkpoint": "v29.6",
+  "status": "LOCKED_ACTIVE_CANONICAL_PHONE_VERIFIED",
+  "verified_on": "2026-09-01",
+  "canonical_apk": {
+    "name": "FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk",
+    "size_bytes": 1130842466,
+    "sha256": "abe8b60a338751477d319abdcc2942f61942cd305341e0498243800fc07ed930",
+    "package_id": "com.ftrakademi.preview3"
+  },
+  "signature": {
+    "v1": "PASS",
+    "v2": "PASS",
+    "v3": false,
+    "certificate_sha256": "8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2",
+    "subject": "CN=FTR Akademi Preview v41, OU=Preview, O=FTR Akademi, C=TR",
+    "matches_v29_5": true
+  },
+  "android_qa": {
+    "zip_test": "PASS",
+    "zip_alignment": "PASS",
+    "duplicate_zip_entries": 0,
+    "manifest_unchanged_from_v29_5": true,
+    "version_code_unchanged_from_v29_5": true
+  },
+  "physical_phone_test": {
+    "status": "PASS",
+    "program_flow": "PASS",
+    "duplicate_workspace_removed": "PASS",
+    "creators_screen": "PASS"
+  },
+  "requested_changes": {
+    "program_add": [
+      "movement persists in localStorage",
+      "duplicate movement prevented",
+      "Programim appears under Programlar",
+      "workout can be started",
+      "movement can be removed with Programdan Cikar"
+    ],
+    "duplicate_workspace_row_removed": true,
+    "creators_home_button_added": true,
+    "creators": [
+      {"name":"FZT. ONURCAN SÖNMEZ","role":"PROJE & İÇERİK & AKADEMİK KATKI"},
+      {"name":"A&R. OZAN SÖNMEZ","role":"YARATICI ÜRETİM"},
+      {"name":"FZT. ÖZLEM ESRA DEMİRCİ","role":"YARATICI ÜRETİM"}
+    ]
+  },
+  "scope_diff_vs_v29_5": {
+    "changed_payload_files": [
+      "assets/app/index.html",
+      "assets/app/app.js",
+      "assets/app/app.css",
+      "assets/app/movement/studio.js",
+      "assets/app/movement/studio.css"
+    ],
+    "changed_payload_file_count": 5,
+    "all_other_payload_entries_match_v29_5_by_size_and_crc32": true,
+    "movement_visual_files_unchanged": true,
+    "lessons_unchanged": true,
+    "quizzes_unchanged": true,
+    "ftr_ai_unchanged": true,
+    "auth_unchanged": true,
+    "supabase_integration_unchanged": true
+  },
+  "parts": [
+    {"name":"FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk.part00","size_bytes":262144000,"sha256":"60f7499b4ac3e32f211a480142bcc90263e091fa8c4c1360863b82ac19b85442"},
+    {"name":"FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk.part01","size_bytes":262144000,"sha256":"49b7b8a2b563e08d078e84f9e6284fa8a1d6022480fc975022ae874bc3c34c30"},
+    {"name":"FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk.part02","size_bytes":262144000,"sha256":"7cfca347c5cb10654a20aee38e0970c1c8fbc2d48ad5f5e44bc920df56bca6bc"},
+    {"name":"FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk.part03","size_bytes":262144000,"sha256":"d932561ba62d05b99c8c413907a4550948c2313d0d3347d073e1faf8ca934991"},
+    {"name":"FTR-Akademi-v29.6-PROGRAM-VE-HAZIRLAYANLAR-FIX.apk.part04","size_bytes":82266466,"sha256":"638219fde34c42800e4c886dff5e027735e5f4d483ddb03d07368d602124c90b"}
+  ],
+  "rollback": {
+    "branch": "rollback-v29.5",
+    "file": "FTR-Akademi-v29.5-HAREKET-STUDYOSU-INSTALL-FIX.apk",
+    "sha256": "2518c9b79a69f2fe3c5a60b4b8c2a454bbe6fb2b83daad789374695e2e3fdbb3"
+  },
+  "rules": {
+    "modify_in_place": false,
+    "next_change_version": "v29.7+",
+    "merge_old_flutter_branches": false
+  }
+}
