@@ -1,0 +1,147 @@
+name: v29.8 3D anatomy module
+
+on:
+  push:
+    branches:
+      - v29.8-3d-anatomy
+    paths:
+      - 'tools/anatomy3d/**'
+      - '.github/workflows/v29.8-anatomy3d.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-anatomy3d:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout v29.8 branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Blender and utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender unzip curl
+          blender --version | head -n 2
+
+      - name: Download libre Z-Anatomy source model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/z-anatomy
+          curl -L --retry 3 --fail \
+            -o /tmp/Z-Anatomy.zip \
+            https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/master/Z-Anatomy.zip
+          unzip -q /tmp/Z-Anatomy.zip -d /tmp/z-anatomy
+          BLEND="$(find /tmp/z-anatomy -type f -name Startup.blend | head -n 1)"
+          test -n "$BLEND"
+          echo "BLEND_FILE=$BLEND" >> "$GITHUB_ENV"
+          curl -L --retry 3 --fail \
+            -o tools/anatomy3d/public/licenses/Z-Anatomy-License.txt \
+            https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/master/License.txt
+          ls -lh /tmp/Z-Anatomy.zip "$BLEND"
+
+      - name: Export skeleton muscle nerve ligament vessel GLBs
+        env:
+          FTR_ANATOMY_OUT: ${{ github.workspace }}/tools/anatomy3d/public
+        run: |
+          blender -b "$BLEND_FILE" \
+            --python "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/export_z_anatomy.py"
+
+      - name: Validate exported anatomy systems
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, sys
+          p = pathlib.Path('tools/anatomy3d/public/data/export-report.json')
+          d = json.loads(p.read_text())
+          required = ['skeleton','muscle','nerve','ligament','vessel']
+          for key in required:
+              row = d['systems'].get(key)
+              if not row or row['mesh_count'] < 1 or row['bytes'] < 1000:
+                  raise SystemExit(f'Invalid export for {key}: {row}')
+              print(key, row['mesh_count'], row['bytes'])
+          PY
+          ls -lh tools/anatomy3d/public/models/*.glb
+
+      - name: Install and bundle offline Three.js module
+        working-directory: tools/anatomy3d
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-audit --no-fund
+          mkdir -p public/draco
+          cp node_modules/three/examples/jsm/libs/draco/gltf/* public/draco/
+          npm run build
+
+      - name: Static QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f tools/anatomy3d/dist/index.html
+          test -f tools/anatomy3d/dist/models/skeleton.glb
+          test -f tools/anatomy3d/dist/models/muscular.glb
+          test -f tools/anatomy3d/dist/models/nervous.glb
+          test -f tools/anatomy3d/dist/models/ligaments.glb
+          test -f tools/anatomy3d/dist/models/cardiovascular.glb
+          test -f tools/anatomy3d/dist/licenses/ATTRIBUTION.txt
+          grep -R "3D ANATOM" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Biceps brachii" tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Ligament Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Damar Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          du -sh tools/anatomy3d/dist
+
+      - name: Render phone-size QA screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/anatomy3d/dist
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/ftr-anatomy-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -n "$CHROME" ]; then
+            "$CHROME" --headless --no-sandbox --disable-gpu \
+              --window-size=390,844 --force-device-scale-factor=1 \
+              --virtual-time-budget=20000 \
+              --screenshot="$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" \
+              http://127.0.0.1:4173/ || true
+          fi
+          test -f "$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" || echo 'Chrome screenshot unavailable on runner' > "$GITHUB_WORKSPACE/tools/anatomy3d/qa-screenshot-note.txt"
+
+      - name: Create module manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/anatomy3d
+          python3 - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('dist')
+          rows=[]
+          for p in sorted(root.rglob('*')):
+              if p.is_file():
+                  h=hashlib.sha256(p.read_bytes()).hexdigest()
+                  rows.append({'path':str(p.relative_to(root)).replace('\\','/'),'bytes':p.stat().st_size,'sha256':h})
+          out={'module':'FTR Akademi 3D Anatomi','version':'v29.8-work','locked_reference':'3D anatomy screen approved 2026-09-02','files':rows}
+          pathlib.Path('ANATOMY3D-MANIFEST.json').write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding='utf-8')
+          PY
+
+      - name: Upload 3D anatomy module artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v29.8-anatomy3d-module
+          path: |
+            tools/anatomy3d/dist
+            tools/anatomy3d/ANATOMY3D-MANIFEST.json
+            tools/anatomy3d/qa-phone.png
+            tools/anatomy3d/qa-screenshot-note.txt
+          if-no-files-found: warn
+          retention-days: 7
