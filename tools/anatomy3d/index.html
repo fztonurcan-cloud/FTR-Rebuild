@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#050914" />
+  <title>FTR Akademi - 3D Anatomi</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <main id="anatomy-app" class="anatomy-app">
+    <header class="topbar">
+      <button id="backBtn" class="icon-btn back-btn" type="button" aria-label="Geri">←</button>
+      <h1>3D ANATOMİ</h1>
+      <button id="examBtn" class="top-action" type="button"><span>⌘</span> Sınav Modu</button>
+    </header>
+
+    <section class="workspace">
+      <aside class="rail rail-left" aria-label="Anatomi kontrolleri">
+        <div class="rail-title">SİSTEM SEÇİMİ</div>
+        <div class="panel system-panel">
+          <button class="system-btn active" data-system="muscle" type="button"><span class="sys-icon muscle">◒</span><span>Kas Sistemi</span></button>
+          <button class="system-btn" data-system="nerve" type="button"><span class="sys-icon nerve">✳</span><span>Sinir Sistemi</span></button>
+          <button class="system-btn" data-system="ligament" type="button"><span class="sys-icon ligament">✦</span><span>Ligament Sistemi</span></button>
+          <button class="system-btn" data-system="vessel" type="button"><span class="sys-icon vessel">⌬</span><span>Damar Sistemi</span></button>
+        </div>
+
+        <div class="rail-title view-title">GÖRÜNÜM</div>
+        <div class="panel view-panel">
+          <button class="view-btn active" data-view="all" type="button"><span>◉</span><span>Tümü</span></button>
+          <button class="view-btn" data-view="muscle" type="button"><span>◒</span><span>Kaslar</span></button>
+          <button class="view-btn" data-view="bone" type="button"><span>♙</span><span>Kemikler</span></button>
+          <button class="view-btn" data-view="vessel" type="button"><span>⌬</span><span>Damarlar</span></button>
+          <button class="view-btn" data-view="nerve" type="button"><span>✳</span><span>Sinirler</span></button>
+        </div>
+
+        <div class="rail-title controls-title">KONTROLLER</div>
+        <div class="panel controls-panel">
+          <button id="rotateBtn" type="button"><span>↻</span><span>Döndür</span></button>
+          <button id="zoomInBtn" type="button"><span>⌕+</span><span>Yakınlaştır</span></button>
+          <button id="zoomOutBtn" type="button"><span>⌕−</span><span>Uzaklaştır</span></button>
+          <button id="resetBtn" type="button"><span>⟲</span><span>Sıfırla</span></button>
+        </div>
+      </aside>
+
+      <section class="viewer-column">
+        <div class="viewer-heading">
+          <div>
+            <h2 id="systemHeading">Kas Sistemi</h2>
+            <p>3D modeli döndür, yapıları keşfet ve öğren</p>
+          </div>
+          <div class="learn-chip">💡 <span>Öğrenme Modu</span></div>
+        </div>
+
+        <div id="viewer" class="viewer" aria-label="Etkileşimli 3D anatomi modeli">
+          <canvas id="anatomyCanvas"></canvas>
+          <div id="loading" class="loading-card"><div class="spinner"></div><span>3D anatomi yükleniyor…</span></div>
+          <div class="model-hint">Tek parmakla döndür • İki parmakla yakınlaştır</div>
+        </div>
+      </section>
+
+      <aside class="rail rail-right" aria-label="Anatomi araçları">
+        <div class="panel tool-panel">
+          <button id="labelsBtn" type="button"><span>◇</span><span>Etiketler</span></button>
+          <button id="noteBtn" type="button"><span>□</span><span>Not Ekle</span></button>
+          <button id="shotBtn" type="button"><span>▣</span><span>Ekran<br>Görüntüsü</span></button>
+          <button id="shareBtn" type="button"><span>⌯</span><span>Bilgiyi<br>Paylaş</span></button>
+        </div>
+      </aside>
+
+      <section id="infoCard" class="info-card" aria-live="polite">
+        <div class="info-head">
+          <div>
+            <div class="info-name-row"><h3 id="structureName">Biceps brachii</h3><button id="speakBtn" type="button" aria-label="Sesli oku">🔊</button></div>
+            <p id="structureSubtitle">İki başlı kol kası</p>
+          </div>
+          <button id="favoriteBtn" class="favorite-btn" type="button">Favorilere Ekle ♡</button>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="general" type="button">Genel Bilgi</button>
+          <button class="tab" data-tab="origin" type="button">Origo</button>
+          <button class="tab" data-tab="insertion" type="button">Insertio</button>
+          <button class="tab" data-tab="innervation" type="button">İnnervasyon</button>
+          <button class="tab" data-tab="function" type="button">Fonksiyon</button>
+        </div>
+        <div class="info-body">
+          <p id="structureText">Biceps brachii, ön kolun supinasyonunda ve dirseğin fleksiyonunda görev alan iki başlı bir kastır.</p>
+          <div class="mini-preview"><div class="mini-arm">◢</div></div>
+        </div>
+        <div class="license-line">3D model: Z-Anatomy / BodyParts3D • CC BY-SA 4.0</div>
+      </section>
+
+      <section id="quizCard" class="quiz-card hidden" aria-live="polite">
+        <div class="quiz-top"><div><span id="quizSystem">KAS SİSTEMİ</span><strong id="quizProgress">Soru 1 / 20</strong></div><div id="quizScore">0 doğru</div></div>
+        <h3>İşaretlenen yapı hangisidir?</h3>
+        <div id="quizOptions" class="quiz-options"></div>
+        <div id="quizFeedback" class="quiz-feedback"></div>
+        <button id="nextQuestionBtn" class="primary-btn" type="button">Sonraki Soru →</button>
+      </section>
+    </section>
+
+    <nav class="bottom-nav" aria-label="Ana navigasyon">
+      <button type="button" class="active"><span>⌂</span><small>Ana Sayfa</small></button>
+      <button type="button"><span>▤</span><small>Dersler</small></button>
+      <button type="button"><span>⌕</span><small>Ara</small></button>
+      <button type="button"><span>♙</span><small>Profil</small></button>
+    </nav>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
