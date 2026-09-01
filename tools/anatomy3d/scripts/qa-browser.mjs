@@ -25,7 +25,6 @@ async function runFunctionQa(page) {
   const checks = [];
   const record = (name, pass, detail = '') => {
     checks.push({ name, pass: Boolean(pass), detail });
-    if (!pass) throw new Error(`${name}: ${detail || 'FAILED'}`);
   };
   const text = selector => page.$eval(selector, element => (element.textContent || '').trim());
   const waitForLoading = () => page.waitForFunction(
@@ -60,11 +59,16 @@ async function runFunctionQa(page) {
     const rect = canvas.getBoundingClientRect();
     return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
   });
-  const pickPoints = [[0.5, 0.24], [0.45, 0.42], [0.55, 0.58], [0.5, 0.74]];
+  const pickPoints = [];
+  for (const y of [0.18, 0.3, 0.42, 0.54, 0.66, 0.78]) {
+    for (const x of [0.12, 0.24, 0.36, 0.48, 0.6, 0.72, 0.84]) {
+      pickPoints.push([x, y]);
+    }
+  }
   let pickedStructure = initialStructure;
   for (const [x, y] of pickPoints) {
     await page.mouse.click(canvasRect.left + canvasRect.width * x, canvasRect.top + canvasRect.height * y);
-    await new Promise(resolve => setTimeout(resolve, 250));
+    await new Promise(resolve => setTimeout(resolve, 120));
     pickedStructure = await text('#structureName');
     if (pickedStructure !== initialStructure) break;
   }
