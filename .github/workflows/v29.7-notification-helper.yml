@@ -1,0 +1,72 @@
+name: v29.7 notification helper
+
+on:
+  push:
+    branches:
+      - v29.7-notification-build
+    paths:
+      - 'tools/notification-helper/**'
+      - '.github/workflows/v29.7-notification-helper.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-helper:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout isolated branch
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Build Firebase Messaging helper APK
+        working-directory: tools/notification-helper
+        run: gradle --no-daemon :app:assembleRelease --stacktrace
+
+      - name: Collect helper dex, merged manifest and Android build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$GITHUB_WORKSPACE/notification-helper-artifact"
+          mkdir -p "$OUT/dex" "$OUT/build-tools/lib"
+
+          APK="$GITHUB_WORKSPACE/tools/notification-helper/app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -f "$APK"
+          cp "$APK" "$OUT/notification-helper-unsigned.apk"
+          unzip -j "$APK" 'classes*.dex' -d "$OUT/dex"
+
+          MERGED="$(find "$GITHUB_WORKSPACE/tools/notification-helper/app/build/intermediates" -type f -name AndroidManifest.xml | grep -E '/release/' | head -n 1)"
+          test -n "$MERGED"
+          cp "$MERGED" "$OUT/helper-merged-AndroidManifest.xml"
+
+          BT="$(find "$ANDROID_SDK_ROOT/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -d "$BT"
+          cp "$BT/aapt2" "$OUT/build-tools/aapt2"
+          cp "$BT/zipalign" "$OUT/build-tools/zipalign"
+          cp "$BT/apksigner" "$OUT/build-tools/apksigner"
+          cp "$BT/lib/apksigner.jar" "$OUT/build-tools/lib/apksigner.jar"
+          cp "$ANDROID_SDK_ROOT/platforms/android-36/android.jar" "$OUT/android.jar"
+          chmod +x "$OUT/build-tools/aapt2" "$OUT/build-tools/zipalign" "$OUT/build-tools/apksigner"
+
+          "$BT/aapt2" dump xmltree "$APK" --file AndroidManifest.xml > "$OUT/helper-manifest-dump.txt"
+          unzip -l "$APK" > "$OUT/helper-apk-entries.txt"
+          (cd "$OUT" && sha256sum notification-helper-unsigned.apk dex/*.dex build-tools/aapt2 build-tools/zipalign build-tools/lib/apksigner.jar android.jar > SHA256SUMS.txt)
+
+      - name: Upload isolated helper artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v29.7-notification-helper
+          path: notification-helper-artifact
+          if-no-files-found: error
+          retention-days: 7
