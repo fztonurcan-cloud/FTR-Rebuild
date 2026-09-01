@@ -108,25 +108,6 @@ jobs:
           grep -R "Damar Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           du -sh tools/anatomy3d/dist
 
-      - name: Render phone-size QA screenshot
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd tools/anatomy3d/dist
-          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/ftr-anatomy-http.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill $SERVER_PID || true' EXIT
-          sleep 2
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          if [ -n "$CHROME" ]; then
-            "$CHROME" --headless --no-sandbox --disable-gpu \
-              --window-size=390,844 --force-device-scale-factor=1 \
-              --virtual-time-budget=20000 \
-              --screenshot="$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" \
-              http://127.0.0.1:4173/ || true
-          fi
-          test -f "$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" || echo 'Chrome screenshot unavailable on runner' > "$GITHUB_WORKSPACE/tools/anatomy3d/qa-screenshot-note.txt"
-
       - name: Create module manifest
         shell: bash
         run: |
@@ -144,7 +125,27 @@ jobs:
           pathlib.Path('ANATOMY3D-MANIFEST.json').write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding='utf-8')
           PY
 
+      - name: Render phone-size QA screenshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/anatomy3d/dist
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/ftr-anatomy-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -n "$CHROME" ]; then
+            timeout 120s "$CHROME" --headless --no-sandbox --disable-gpu \
+              --window-size=390,844 --force-device-scale-factor=1 \
+              --virtual-time-budget=20000 \
+              --screenshot="$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" \
+              http://127.0.0.1:4173/ || true
+          fi
+          test -f "$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" || echo 'Chrome screenshot unavailable or timed out on runner' > "$GITHUB_WORKSPACE/tools/anatomy3d/qa-screenshot-note.txt"
+
       - name: Upload 3D anatomy module artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: v29.8-anatomy3d-module
