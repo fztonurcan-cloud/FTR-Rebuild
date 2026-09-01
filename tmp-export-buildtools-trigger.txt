@@ -1,0 +1,1 @@
+export android build-tools 36 for local APK verification
