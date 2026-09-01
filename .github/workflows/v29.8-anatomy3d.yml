@@ -8,6 +8,10 @@ on:
       - 'tools/anatomy3d/**'
       - '.github/workflows/v29.8-anatomy3d.yml'
 
+concurrency:
+  group: v29.8-anatomy3d-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -59,7 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, pathlib, sys
+          import json, pathlib
           p = pathlib.Path('tools/anatomy3d/public/data/export-report.json')
           d = json.loads(p.read_text())
           required = ['skeleton','muscle','nerve','ligament','vessel']
@@ -68,6 +72,8 @@ jobs:
               if not row or row['mesh_count'] < 1 or row['bytes'] < 1000:
                   raise SystemExit(f'Invalid export for {key}: {row}')
               print(key, row['mesh_count'], row['bytes'])
+          if not d.get('policy',{}).get('excluded_unrelated_noncommercial_submodels'):
+              raise SystemExit('Commercial-safe export policy flag missing')
           PY
           ls -lh tools/anatomy3d/public/models/*.glb
 
@@ -92,6 +98,7 @@ jobs:
           test -f tools/anatomy3d/dist/models/ligaments.glb
           test -f tools/anatomy3d/dist/models/cardiovascular.glb
           test -f tools/anatomy3d/dist/licenses/ATTRIBUTION.txt
+          test -f tools/anatomy3d/dist/licenses/Z-Anatomy-License.txt
           grep -R "3D ANATOM" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           grep -R "Biceps brachii" tools/anatomy3d/dist/assets >/dev/null
           grep -R "Ligament Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
@@ -140,6 +147,8 @@ jobs:
           name: v29.8-anatomy3d-module
           path: |
             tools/anatomy3d/dist
+            tools/anatomy3d/integration
+            tools/anatomy3d/DESIGN-LOCK.md
             tools/anatomy3d/ANATOMY3D-MANIFEST.json
             tools/anatomy3d/qa-phone.png
             tools/anatomy3d/qa-screenshot-note.txt
