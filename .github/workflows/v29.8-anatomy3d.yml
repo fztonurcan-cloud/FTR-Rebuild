@@ -135,14 +135,9 @@ jobs:
           trap 'kill $SERVER_PID || true' EXIT
           sleep 2
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          if [ -n "$CHROME" ]; then
-            timeout 120s "$CHROME" --headless --no-sandbox --disable-gpu \
-              --window-size=390,844 --force-device-scale-factor=1 \
-              --virtual-time-budget=20000 \
-              --screenshot="$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" \
-              http://127.0.0.1:4173/ || true
-          fi
-          test -f "$GITHUB_WORKSPACE/tools/anatomy3d/qa-phone.png" || echo 'Chrome screenshot unavailable or timed out on runner' > "$GITHUB_WORKSPACE/tools/anatomy3d/qa-screenshot-note.txt"
+          test -n "$CHROME"
+          CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
+            http://127.0.0.1:4173/ "$GITHUB_WORKSPACE/tools/anatomy3d" screenshot
 
       - name: Assert locked 390x844 layout geometry
         shell: bash
@@ -155,27 +150,8 @@ jobs:
           sleep 2
           CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
           test -n "$CHROME"
-          timeout 120s "$CHROME" --headless --no-sandbox --disable-gpu \
-            --window-size=390,844 --force-device-scale-factor=1 \
-            --virtual-time-budget=35000 \
-            --dump-dom 'http://127.0.0.1:4174/?qa=1' \
-            > "$GITHUB_WORKSPACE/tools/anatomy3d/qa-layout-dom.html"
-          python3 - <<'PY'
-          import html, json, pathlib, re
-          dom_path = pathlib.Path('tools/anatomy3d/qa-layout-dom.html')
-          text = dom_path.read_text(encoding='utf-8', errors='replace')
-          m = re.search(r'<pre[^>]*id="qa-layout-report"[^>]*>(.*?)</pre>', text, flags=re.S)
-          if not m:
-              raise SystemExit('QA layout report missing from DOM')
-          payload = html.unescape(m.group(1)).strip()
-          report = json.loads(payload)
-          out = pathlib.Path('tools/anatomy3d/qa-layout-report.json')
-          out.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding='utf-8')
-          print(json.dumps(report, indent=2, ensure_ascii=False))
-          if not report.get('pass'):
-              raise SystemExit('LOCKED PHONE LAYOUT QA FAILED')
-          print('LOCKED PHONE LAYOUT QA PASS')
-          PY
+          CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
+            http://127.0.0.1:4174/ "$GITHUB_WORKSPACE/tools/anatomy3d" assert
 
       - name: Upload 3D anatomy module artifact
         if: always()
