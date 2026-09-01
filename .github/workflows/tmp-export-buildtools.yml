@@ -1,0 +1,35 @@
+name: tmp-export-buildtools
+on:
+  push:
+    branches: [tmp-runway-media-bridge]
+    paths:
+      - 'tmp-export-buildtools-trigger.txt'
+      - '.github/workflows/tmp-export-buildtools.yml'
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Export Android Build Tools 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          test -x "$BT/zipalign"
+          test -f "$BT/apksigner"
+          test -f "$BT/lib/apksigner.jar"
+          mkdir -p out/lib
+          cp "$BT/zipalign" out/zipalign
+          cp "$BT/apksigner" out/apksigner
+          cp "$BT/lib/apksigner.jar" out/lib/apksigner.jar
+          chmod +x out/zipalign out/apksigner
+          out/zipalign -h >/dev/null 2>&1 || true
+          java -jar out/lib/apksigner.jar --version
+      - name: Upload tools artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-36-signing
+          path: out/
+          if-no-files-found: error
+          retention-days: 1
