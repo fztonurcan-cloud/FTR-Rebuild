@@ -55,7 +55,7 @@ async function runFunctionQa(page) {
 
   const initialStructure = await text('#structureName');
   const pickedState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pickDifferentStructure());
-  record('canvas_structure_selection', pickedState.selectedStructure !== initialStructure, `${initialStructure} -> ${pickedState.selectedStructure}`);
+  record('structure_selection', pickedState.selectedStructure !== initialStructure, `${initialStructure} -> ${pickedState.selectedStructure}`);
   record('selected_structure_highlight', pickedState.selectedHighlighted, pickedState.selectedStructure);
 
   const systems = [
