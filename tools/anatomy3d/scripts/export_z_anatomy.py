@@ -32,36 +32,63 @@ def display_name(raw: str) -> str:
 def norm(name: str) -> str:
     return re.sub(r'[^a-z0-9]+', ' ', name.lower()).strip()
 
+def safe_object_fields(obj):
+    """Return stable object fields or None for broken/unresolved Blender RNA links."""
+    try:
+        if obj is None:
+            return None
+        obj_type = getattr(obj, 'type', None)
+        obj_name = getattr(obj, 'name', '')
+        if not obj_type:
+            return None
+        return obj_type, obj_name
+    except (AttributeError, ReferenceError, RuntimeError):
+        return None
+
 def select_objects(collection_name, name_filter=None):
     coll = bpy.data.collections.get(collection_name)
     if coll is None:
         raise RuntimeError(f'Collection not found: {collection_name}')
     bpy.ops.object.select_all(action='DESELECT')
     selected = []
-    skipped_empty = 0
-    for obj in coll.all_objects:
-        # Some Z-Anatomy collection links resolve as empty entries in Blender 4.x headless mode.
-        # They are not anatomical meshes and must not abort the export.
-        if obj is None:
-            skipped_empty += 1
+    skipped_invalid = 0
+    # Materialize the collection iteration first; Blender 4 headless can expose stale RNA links.
+    try:
+        candidates = list(coll.all_objects)
+    except Exception:
+        candidates = []
+        for child in [coll, *list(coll.children_recursive)]:
+            try:
+                candidates.extend(list(child.objects))
+            except Exception:
+                continue
+    for obj in candidates:
+        fields = safe_object_fields(obj)
+        if fields is None:
+            skipped_invalid += 1
             continue
-        if obj.type != 'MESH':
+        obj_type, obj_name = fields
+        if obj_type != 'MESH':
             continue
-        if name_filter and not name_filter.search(obj.name):
+        if name_filter and not name_filter.search(obj_name):
             continue
         try:
             obj.hide_set(False)
-        except Exception:
-            pass
-        obj.hide_viewport = False
-        obj.hide_render = False
-        obj.select_set(True)
-        selected.append(obj)
-    if skipped_empty:
-        print(f'{collection_name}: skipped {skipped_empty} empty object link(s)')
+            obj.hide_viewport = False
+            obj.hide_render = False
+            obj.select_set(True)
+            selected.append(obj)
+        except (AttributeError, ReferenceError, RuntimeError):
+            skipped_invalid += 1
+            continue
+    if skipped_invalid:
+        print(f'{collection_name}: skipped {skipped_invalid} invalid object link(s)')
     if not selected:
         raise RuntimeError(f'No mesh objects selected for: {collection_name}')
-    bpy.context.view_layer.objects.active = selected[0]
+    try:
+        bpy.context.view_layer.objects.active = selected[0]
+    except Exception:
+        pass
     return selected
 
 def export_glb(path: Path):
@@ -106,9 +133,11 @@ for system, collection, name_filter, filename in SYSTEMS:
     }
     if system in structures:
         for obj in objects:
-            if obj is None:
+            fields = safe_object_fields(obj)
+            if fields is None:
                 continue
-            label = display_name(obj.name)
+            _, obj_name = fields
+            label = display_name(obj_name)
             if len(label) < 3:
                 continue
             key = norm(label)
