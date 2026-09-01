@@ -48,6 +48,7 @@ const quizScore = document.getElementById('quizScore');
 const quizOptions = document.getElementById('quizOptions');
 const quizFeedback = document.getElementById('quizFeedback');
 const nextQuestionBtn = document.getElementById('nextQuestionBtn');
+const mixedExamBtn = document.getElementById('mixedExamBtn');
 
 let scene, camera, renderer, controls, raycaster, pointer;
 let skeletonRoot = null;
@@ -65,6 +66,8 @@ let quizScoreValue = 0;
 let quizTarget = null;
 let answered = false;
 let quizPool = [];
+let mixedExamMode = false;
+let mixedPlan = [];
 let metadata = {};
 
 const highlightMaterial = new THREE.MeshStandardMaterial({
@@ -179,7 +182,7 @@ async function loadSkeleton() {
   fitWholeBody();
 }
 
-async function switchSystem(system, initial = false) {
+async function switchSystem(system, initial = false, examTransition = false) {
   activeSystem = system;
   systemHeading.textContent = SYSTEM_LABELS[system];
   document.querySelectorAll('.system-btn').forEach(b => b.classList.toggle('active', b.dataset.system === system));
@@ -208,7 +211,11 @@ async function switchSystem(system, initial = false) {
       const first = activeMeshes[0];
       if (first && !examMode) selectMesh(first, false);
     }
-    if (examMode) startExam(true);
+    if (examMode && !examTransition) {
+      mixedExamMode = false;
+      mixedExamBtn.classList.remove('active');
+      startExam(true);
+    }
   } catch (err) {
     console.error(err);
     loading.innerHTML = '<span>3D model yüklenemedi. Paket dosyalarını kontrol edin.</span>';
@@ -368,11 +375,15 @@ function setView(view) {
 function toggleExam() {
   examMode = !examMode;
   if (examMode) {
+    mixedExamMode = false;
+    mixedExamBtn.classList.remove('active');
     examBtn.innerHTML = '<span>💡</span> Öğrenme Modu';
     infoCard.classList.add('hidden');
     quizCard.classList.remove('hidden');
     startExam(true);
   } else {
+    mixedExamMode = false;
+    mixedExamBtn.classList.remove('active');
     examBtn.innerHTML = '<span>⌘</span> Sınav Modu';
     quizCard.classList.add('hidden');
     infoCard.classList.remove('hidden');
@@ -382,23 +393,32 @@ function toggleExam() {
   }
 }
 
-function startExam(reset = false) {
+async function startExam(reset = false) {
   if (!activeMeshes.length) return;
   if (reset) {
     quizIndex = 0;
     quizScoreValue = 0;
-    quizPool = shuffle([...activeMeshes]).slice(0, Math.min(20, activeMeshes.length));
+    if (mixedExamMode) {
+      const systems = Object.keys(SYSTEM_LABELS);
+      const offset = Math.floor(Math.random() * systems.length);
+      mixedPlan = Array.from({ length: 20 }, (_, index) => systems[(index + offset) % systems.length]);
+      quizPool = [];
+    } else {
+      mixedPlan = [];
+      quizPool = shuffle([...activeMeshes]).slice(0, Math.min(20, activeMeshes.length));
+    }
   }
-  nextQuestion();
+  await nextQuestion();
 }
 
-function nextQuestion() {
-  if (!examMode || !activeMeshes.length) return;
+async function nextQuestion() {
+  if (!examMode) return;
   restoreSelection();
   answered = false;
   quizFeedback.textContent = '';
-  if (quizIndex >= quizPool.length) {
-    quizFeedback.textContent = `Sınav tamamlandı: ${quizScoreValue} / ${quizPool.length} doğru.`;
+  const total = mixedExamMode ? mixedPlan.length : quizPool.length;
+  if (quizIndex >= total) {
+    quizFeedback.textContent = `Sınav tamamlandı: ${quizScoreValue} / ${total} doğru.`;
     quizOptions.innerHTML = '';
     nextQuestionBtn.textContent = 'Sınavı Yeniden Başlat';
     nextQuestionBtn.dataset.restart = '1';
@@ -406,7 +426,16 @@ function nextQuestion() {
   }
   nextQuestionBtn.textContent = 'Sonraki Soru →';
   delete nextQuestionBtn.dataset.restart;
-  quizTarget = quizPool[quizIndex];
+  if (mixedExamMode) {
+    const questionSystem = mixedPlan[quizIndex];
+    if (activeSystem !== questionSystem || !activeMeshes.length) {
+      await switchSystem(questionSystem, false, true);
+    }
+    quizTarget = activeMeshes[Math.floor(Math.random() * activeMeshes.length)];
+  } else {
+    quizTarget = quizPool[quizIndex];
+  }
+  if (!quizTarget) throw new Error('Sınav sorusu için anatomik yapı bulunamadı');
   selectedMesh = quizTarget;
   selectedOriginalMaterial = quizTarget.material;
   quizTarget.material = highlightMaterial;
@@ -422,7 +451,7 @@ function nextQuestion() {
     btn.addEventListener('click', () => answerQuestion(btn, label, correct));
     quizOptions.appendChild(btn);
   });
-  quizProgress.textContent = `Soru ${quizIndex + 1} / ${quizPool.length}`;
+  quizProgress.textContent = `Soru ${quizIndex + 1} / ${total}`;
   quizScore.textContent = `${quizScoreValue} doğru`;
 }
 
@@ -523,11 +552,16 @@ function bindUi() {
     showToast(on ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı');
   });
   examBtn.addEventListener('click', toggleExam);
-  nextQuestionBtn.addEventListener('click', () => {
+  mixedExamBtn.addEventListener('click', async () => {
+    mixedExamMode = true;
+    mixedExamBtn.classList.add('active');
+    await startExam(true);
+  });
+  nextQuestionBtn.addEventListener('click', async () => {
     if (nextQuestionBtn.dataset.restart) return startExam(true);
     if (!answered) return showToast('Önce bir cevap seç');
     quizIndex++;
-    nextQuestion();
+    await nextQuestion();
   });
   document.getElementById('backBtn').addEventListener('click', () => history.back());
   document.querySelectorAll('.bottom-nav button').forEach((btn, i) => btn.addEventListener('click', () => {

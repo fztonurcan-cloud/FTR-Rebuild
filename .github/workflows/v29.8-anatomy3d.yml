@@ -106,6 +106,7 @@ jobs:
           grep -R "Biceps brachii" tools/anatomy3d/dist/assets >/dev/null
           grep -R "Ligament Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           grep -R "Damar Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Karma Sınav" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           du -sh tools/anatomy3d/dist
 
       - name: Create module manifest
@@ -153,6 +154,20 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4174/ "$GITHUB_WORKSPACE/tools/anatomy3d" assert
 
+      - name: Verify 3D anatomy functions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/anatomy3d/dist
+          python3 -m http.server 4175 --bind 127.0.0.1 >/tmp/ftr-anatomy-function-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
+            http://127.0.0.1:4175/ "$GITHUB_WORKSPACE/tools/anatomy3d" function
+
       - name: Upload 3D anatomy module artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -167,5 +182,7 @@ jobs:
             tools/anatomy3d/qa-screenshot-note.txt
             tools/anatomy3d/qa-layout-report.json
             tools/anatomy3d/qa-layout-dom.html
+            tools/anatomy3d/qa-function-report.json
+            tools/anatomy3d/qa-function.png
           if-no-files-found: warn
           retention-days: 7

@@ -7,6 +7,7 @@ if (params.get('qa') === '1') {
   const lockedLabels = [
     '3D ANATOMİ',
     'Sınav Modu',
+    'Karma Sınav',
     'Kas Sistemi',
     'Sinir Sistemi',
     'Ligament Sistemi',
@@ -62,7 +63,7 @@ if (params.get('qa') === '1') {
     const r = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
     const visible = cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity || 1) > 0 && r.width > 0 && r.height > 0;
-    const inViewport = visible && r.right > 0 && r.bottom > 0 && r.left < window.innerWidth && r.top < window.innerHeight;
+    const inViewport = visible && r.left >= -1 && r.top >= -1 && r.right <= window.innerWidth + 1 && r.bottom <= window.innerHeight + 1;
     return {
       exists: true,
       visible,
@@ -72,7 +73,7 @@ if (params.get('qa') === '1') {
   }
 
   function buildReport() {
-    const bodyText = document.body.innerText || '';
+    const bodyText = document.body.textContent || '';
     const elements = Object.fromEntries(Object.entries(targets).map(([key, selector]) => [key, snapshot(selector)]));
     const loading = document.getElementById('loading');
     const loadingHidden = !loading || loading.classList.contains('hidden') || getComputedStyle(loading).display === 'none';
