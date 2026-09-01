@@ -2,7 +2,6 @@ import bpy
 import json
 import os
 import re
-import sys
 from pathlib import Path
 
 OUT = Path(os.environ.get('FTR_ANATOMY_OUT', 'tools/anatomy3d/public'))
@@ -11,11 +10,15 @@ DATA = OUT / 'data'
 MODELS.mkdir(parents=True, exist_ok=True)
 DATA.mkdir(parents=True, exist_ok=True)
 
+# FTR Akademi deliberately exports focused study layers instead of whole source collections.
+# In particular, the nervous layer excludes sense-organ/inner-ear meshes; the vessel layer
+# excludes non-vessel organ meshes. This keeps the module aligned with Kas/Sinir/Ligament/Damar
+# and avoids bundling unrelated third-party submodels credited under non-commercial terms.
 SYSTEMS = [
     ('skeleton', '1: Skeletal system', None, 'skeleton.glb'),
     ('muscle', '4: Muscular system', None, 'muscular.glb'),
-    ('vessel', '5: Cardiovascular system', None, 'cardiovascular.glb'),
-    ('nerve', '7: Nervous system & Sense organs', None, 'nervous.glb'),
+    ('vessel', '5: Cardiovascular system', re.compile(r'(arter|vein|vena|aorta|cava|vascular|vessel|capillar|sinus)', re.I), 'cardiovascular.glb'),
+    ('nerve', '7: Nervous system & Sense organs', re.compile(r'(nerve|nervus|nervi|plexus|ganglion|spinal cord|cauda equina|ramus|root)', re.I), 'nervous.glb'),
     ('ligament', '3: Joints', re.compile(r'(ligament|retinacul)', re.I), 'ligaments.glb'),
 ]
 
@@ -62,7 +65,6 @@ def export_glb(path: Path):
         export_lights=False,
         export_animations=False,
     )
-    # Blender builds that contain Draco produce much smaller offline Android assets.
     try:
         bpy.ops.export_scene.gltf(
             **kwargs,
@@ -79,7 +81,7 @@ def export_glb(path: Path):
         bpy.ops.export_scene.gltf(**kwargs)
 
 structures = {'muscle': {}, 'nerve': {}, 'ligament': {}, 'vessel': {}}
-report = {'systems': {}}
+report = {'systems': {}, 'policy': {'excluded_unrelated_noncommercial_submodels': True}}
 for system, collection, name_filter, filename in SYSTEMS:
     objects = select_objects(collection, name_filter)
     output = MODELS / filename
@@ -98,12 +100,8 @@ for system, collection, name_filter, filename in SYSTEMS:
                 continue
             key = norm(label)
             if key and key not in structures[system]:
-                structures[system][key] = {
-                    'name': label,
-                    'system': system,
-                }
+                structures[system][key] = {'name': label, 'system': system}
 
-# Curated first-view card required by the locked FTR Akademi design.
 biceps_key = norm('Biceps brachii')
 structures['muscle'].setdefault(biceps_key, {'name': 'Biceps brachii', 'system': 'muscle'})
 structures['muscle'][biceps_key].update({
