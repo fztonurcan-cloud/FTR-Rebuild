@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Build the isolated v29.8.1 simple 3D APK from the immutable v29.7 APK.
+"""Build a v29.9 static-atlas APK from the immutable v29.7 checkpoint.
 
-The script refuses any base APK that does not match the locked v29.7 size and
-SHA-256. It changes only the host HTML bootstrap, adds the home-card bootstrap,
-and adds the already-QA'd offline 3D Anatomy module. The original APK is never
-opened for writing.
+The base APK is never modified in place. The script refuses any base that does
+not exactly match the locked v29.7 size/SHA, injects only the 3D Anatomi home
+bootstrap and the QA-approved static atlas module, then signs a new APK with the
+existing locked certificate.
 """
 
 from __future__ import annotations
@@ -20,7 +20,6 @@ import tempfile
 import zipfile
 from pathlib import Path
 
-
 BASE_NAME = "FTR-Akademi-v29.7-BILDIRIM.apk"
 BASE_SIZE = 1_133_611_894
 BASE_SHA256 = "f541b238e40113c02de101a9b7059f6b192f8381eaffbd0357314ce25bdd715c"
@@ -31,6 +30,7 @@ HOME_CSS = "assets/app/anatomy3d-home-card.css"
 HOME_JS = "assets/app/anatomy3d-home-inject.js"
 MODULE_FETCH = "assets/app/anatomy3d/android-asset-fetch.js"
 MODULE_PHONE_CSS = "assets/app/anatomy3d/module-phone-fix.css"
+VERSION = "v29.9-static-atlas"
 
 
 def sha256(path: Path) -> str:
@@ -44,11 +44,7 @@ def sha256(path: Path) -> str:
 def run(args: list[str], *, cwd: Path | None = None, env: dict[str, str] | None = None,
         capture: bool = False) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        args,
-        cwd=cwd,
-        env=env,
-        text=True,
-        check=True,
+        args, cwd=cwd, env=env, text=True, check=True,
         stdout=subprocess.PIPE if capture else None,
         stderr=subprocess.STDOUT if capture else None,
     )
@@ -68,8 +64,8 @@ def signing_values(path: Path) -> tuple[str, str]:
 
 
 def inject_host_bootstrap(source: str) -> str:
-    css_tag = '<link rel="stylesheet" href="./anatomy3d-home-card.css" data-ftr-anatomy3d="v29.8.1">'
-    js_tag = '<script defer src="./anatomy3d-home-inject.js" data-ftr-anatomy3d="v29.8.1"></script>'
+    css_tag = f'<link rel="stylesheet" href="./anatomy3d-home-card.css" data-ftr-anatomy3d="{VERSION}">'
+    js_tag = f'<script defer src="./anatomy3d-home-inject.js" data-ftr-anatomy3d="{VERSION}"></script>'
     if "data-ftr-anatomy3d" in source:
         raise SystemExit("Host index already contains a 3D Anatomy bootstrap")
     if "</head>" not in source or "</body>" not in source:
@@ -80,8 +76,8 @@ def inject_host_bootstrap(source: str) -> str:
 
 
 def inject_module_bootstrap(source: str) -> str:
-    fetch_tag = '<script src="./android-asset-fetch.js" data-ftr-android-asset-fetch="v29.8.1-simple"></script>'
-    css_tag = '<link rel="stylesheet" href="./module-phone-fix.css" data-ftr-phone-layout="v29.8.1-simple">'
+    fetch_tag = f'<script src="./android-asset-fetch.js" data-ftr-android-asset-fetch="{VERSION}"></script>'
+    css_tag = f'<link rel="stylesheet" href="./module-phone-fix.css" data-ftr-phone-layout="{VERSION}">'
     if "android-asset-fetch.js" not in source:
         source = source.replace("</head>", f"  {fetch_tag}\n</head>", 1)
     if "module-phone-fix.css" not in source:
@@ -101,25 +97,34 @@ def signature_entries(names: list[str]) -> list[str]:
 def validate_module(module_root: Path) -> list[Path]:
     required = [
         "index.html",
-        "models/skeleton.glb",
-        "models/muscular.glb",
-        "models/ligaments.glb",
-        "models/cardiovascular.glb",
-        "data/structures.json",
+        "data/atlas-map.json",
+        "atlas/muscle-front.png", "atlas/muscle-id.png",
+        "atlas/bone-front.png", "atlas/bone-id.png",
+        "atlas/ligament-front.png", "atlas/ligament-id.png",
+        "atlas/vessel-front.png", "atlas/vessel-id.png",
+        "atlas/nerve-front.png", "atlas/nerve-id.png",
         "licenses/ATTRIBUTION.txt",
         "licenses/Z-Anatomy-License.txt",
     ]
     missing = [item for item in required if not (module_root / item).is_file()]
     if missing:
-        raise SystemExit(f"3D Anatomy module is incomplete: {missing}")
+        raise SystemExit(f"Static Anatomy module is incomplete: {missing}")
+
+    atlas = json.loads((module_root / "data/atlas-map.json").read_text(encoding="utf-8"))
+    if atlas.get("render_mode") != "static-layered-atlas":
+        raise SystemExit("Module is not the locked static-layered-atlas architecture")
+    policy = atlas.get("policy") or {}
+    if policy.get("webgl") is not False or policy.get("runtime_3d_models") is not False or policy.get("continuous_render_loop") is not False:
+        raise SystemExit(f"Static atlas performance contract missing: {policy}")
+    if list(module_root.rglob("*.glb")):
+        raise SystemExit("Runtime GLB files are forbidden in the v29.9 static atlas")
     return sorted(path for path in module_root.rglob("*") if path.is_file())
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", type=Path, required=True)
-    parser.add_argument("--artifact", type=Path, required=True,
-                        help="Extracted v29.8 Actions artifact root")
+    parser.add_argument("--artifact", type=Path, required=True, help="Extracted v29.9 Actions artifact root")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--zipalign", type=Path, required=True)
     parser.add_argument("--apksigner", type=Path, required=True)
@@ -172,11 +177,11 @@ def main() -> None:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     alias, password = signing_values(args.signing_metadata)
 
-    with tempfile.TemporaryDirectory(prefix="ftr-v29.8-") as temp_name:
+    with tempfile.TemporaryDirectory(prefix="ftr-v29.9-static-") as temp_name:
         temp = Path(temp_name)
         stage = temp / "stage"
-        work_apk = temp / "v29.8-unaligned.apk"
-        aligned_apk = temp / "v29.8-aligned.apk"
+        work_apk = temp / "v29.9-unaligned.apk"
+        aligned_apk = temp / "v29.9-aligned.apk"
         host_dir = stage / "assets" / "app"
         host_dir.mkdir(parents=True)
         shutil.copyfile(base, work_apk)
@@ -196,37 +201,26 @@ def main() -> None:
             "zip", "-q", "-9", "-D", "-r", str(work_apk),
             HOST_INDEX, HOME_CSS, HOME_JS, MODULE_PREFIX.rstrip("/"),
         ], cwd=stage)
-        stored_assets = [
-            MODULE_PREFIX + str(path.relative_to(module_root)).replace(os.sep, "/")
-            for path in module_files
-            if path.suffix.lower() in {".glb", ".wasm"}
-        ]
-        # Android WebView serves packaged binary assets most reliably when they
-        # are not DEFLATE-compressed inside the APK. No model data is changed.
-        run(["zip", "-q", "-d", str(work_apk), *stored_assets])
-        run(["zip", "-q", "-0", "-D", str(work_apk), *stored_assets], cwd=stage)
 
         run([str(args.zipalign.resolve()), "-p", "-f", "4", str(work_apk), str(aligned_apk)])
         sign_env = os.environ.copy()
-        sign_env["FTR_V29_8_KS_PASS"] = password
+        sign_env["FTR_V29_9_KS_PASS"] = password
         run([
             str(args.apksigner.resolve()), "sign",
             "--ks", str(args.keystore.resolve()),
             "--ks-key-alias", alias,
-            "--ks-pass", "env:FTR_V29_8_KS_PASS",
-            "--key-pass", "env:FTR_V29_8_KS_PASS",
+            "--ks-pass", "env:FTR_V29_9_KS_PASS",
+            "--key-pass", "env:FTR_V29_9_KS_PASS",
             "--v1-signing-enabled", "true",
             "--v2-signing-enabled", "true",
             "--v3-signing-enabled", "false",
             "--v4-signing-enabled", "false",
-            "--out", str(output),
-            str(aligned_apk),
+            "--out", str(output), str(aligned_apk),
         ], env=sign_env)
 
     verify = run([str(args.apksigner.resolve()), "verify", "--verbose", "--print-certs", str(output)], capture=True)
-    verify_text = verify.stdout or ""
-    cert_match = EXPECTED_CERT_SHA256 in re.sub(r"[^0-9A-Fa-f]", "", verify_text).lower()
-    if not cert_match:
+    verify_text = re.sub(r"[^0-9A-Fa-f]", "", verify.stdout or "").lower()
+    if EXPECTED_CERT_SHA256.lower() not in verify_text:
         raise SystemExit("Signed APK certificate does not match the locked FTR v41 certificate")
     run([str(args.zipalign.resolve()), "-c", "-p", "4", str(output)])
 
@@ -242,12 +236,6 @@ def main() -> None:
         bad_entry = archive.testzip()
         if bad_entry:
             raise SystemExit(f"Output APK ZIP integrity failed at: {bad_entry}")
-        wrongly_compressed = [
-            name for name in stored_assets
-            if archive.getinfo(name).compress_type != zipfile.ZIP_STORED
-        ]
-        if wrongly_compressed:
-            raise SystemExit(f"Android binary assets are compressed: {wrongly_compressed}")
 
     expected_changed = {HOST_INDEX}
     added_expected = {HOME_CSS, HOME_JS, MODULE_FETCH, MODULE_PHONE_CSS} | {
@@ -268,7 +256,7 @@ def main() -> None:
         raise SystemExit("Added payload does not exactly match the locked 3D Anatomy integration")
 
     report = {
-        "version": "v29.8.1-3d-simple",
+        "version": VERSION,
         "status": "BUILD_STATIC_QA_PASS_PHONE_QA_REQUIRED",
         "base": {"file": BASE_NAME, "bytes": BASE_SIZE, "sha256": BASE_SHA256, "modified": False},
         "output": {"file": output.name, "bytes": output.stat().st_size, "sha256": sha256(output)},
@@ -279,6 +267,10 @@ def main() -> None:
         "zip_alignment": "PASS",
         "zip_integrity": "PASS",
         "duplicate_zip_entries": 0,
+        "render_mode": "static-layered-atlas",
+        "runtime_webgl": False,
+        "runtime_glb": False,
+        "continuous_render_loop": False,
         "changed_existing_payload": changed_existing,
         "added_payload_count": len(added),
         "removed_existing_payload": removed_existing,
@@ -286,7 +278,6 @@ def main() -> None:
             "all_other_existing_entries_match_by_size_and_crc32": True,
             "lessons_quizzes_movement_program_favorites_notes_auth_supabase_notifications_ftr_ai_untouched": True,
         },
-        "android_asset_binary_storage": "PASS",
         "physical_phone_qa": "PENDING_USER_RETEST",
     }
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
