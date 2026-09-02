@@ -4,6 +4,8 @@ import puppeteer from 'puppeteer-core';
 
 const [url, outputDir, mode = 'assert'] = process.argv.slice(2);
 const executablePath = process.env.CHROME_BIN;
+const qaWidth = Number(process.env.QA_WIDTH || 390);
+const qaHeight = Number(process.env.QA_HEIGHT || 844);
 
 if (!url || !outputDir || !executablePath) {
   throw new Error('Usage: CHROME_BIN=/path/to/chrome node qa-browser.mjs <url> <output-dir> <screenshot|assert|function>');
@@ -109,8 +111,8 @@ async function runFunctionQa(page) {
 try {
   const page = await browser.newPage();
   await page.setViewport({
-    width: 390,
-    height: 844,
+    width: qaWidth,
+    height: qaHeight,
     deviceScaleFactor: 1,
     isMobile: true,
     hasTouch: true
@@ -147,13 +149,13 @@ try {
 
     console.log(JSON.stringify(report, null, 2));
 
-    if (report.viewport?.width !== 390 || report.viewport?.height !== 844) {
-      throw new Error(`QA viewport mismatch: ${report.viewport?.width}x${report.viewport?.height}`);
+    if (report.viewport?.width !== qaWidth || report.viewport?.height !== qaHeight) {
+      throw new Error(`QA viewport mismatch: ${report.viewport?.width}x${report.viewport?.height}; expected ${qaWidth}x${qaHeight}`);
     }
     if (mode === 'assert' && !report.pass) {
       throw new Error('LOCKED PHONE LAYOUT QA FAILED');
     }
-    console.log(mode === 'assert' ? 'LOCKED PHONE LAYOUT QA PASS' : '390x844 QA screenshot captured');
+    console.log(mode === 'assert' ? `LOCKED PHONE LAYOUT QA PASS (${qaWidth}x${qaHeight})` : `${qaWidth}x${qaHeight} QA screenshot captured`);
   }
 } finally {
   await browser.close();

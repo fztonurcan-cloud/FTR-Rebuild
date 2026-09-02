@@ -154,6 +154,20 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4174/ "$GITHUB_WORKSPACE/tools/anatomy3d" assert
 
+      - name: Assert physical 360x800 phone geometry
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd tools/anatomy3d/dist
+          python3 -m http.server 4176 --bind 127.0.0.1 >/tmp/ftr-anatomy-qa-360-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID || true' EXIT
+          sleep 2
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          QA_WIDTH=360 QA_HEIGHT=800 CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
+            http://127.0.0.1:4176/ "$GITHUB_WORKSPACE/tools/anatomy3d/qa-360" assert
+
       - name: Verify 3D anatomy functions
         shell: bash
         run: |
@@ -184,5 +198,6 @@ jobs:
             tools/anatomy3d/qa-layout-dom.html
             tools/anatomy3d/qa-function-report.json
             tools/anatomy3d/qa-function.png
+            tools/anatomy3d/qa-360
           if-no-files-found: warn
           retention-days: 7

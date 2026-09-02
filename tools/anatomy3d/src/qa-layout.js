@@ -87,8 +87,21 @@ if (params.get('qa') === '1') {
     const canvasUsable = canvasRect.width >= 120 && canvasRect.height >= 400;
     const bicepsDefault = (document.getElementById('structureName')?.textContent || '').trim().toLowerCase().includes('biceps brachii');
     const activeSystem = (document.querySelector('.system-btn.active')?.textContent || '').includes('Kas Sistemi');
+    const fitSelectors = ['.system-btn', '.view-btn', '.controls-panel button', '.tool-panel button', '.tabs', '.tab'];
+    const clippedControls = [...document.querySelectorAll(fitSelectors.join(','))]
+      .filter(el => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1)
+      .map(el => ({
+        selector: el.className || el.id || el.tagName,
+        text: (el.textContent || '').replace(/\s+/g, ' ').trim(),
+        client: [el.clientWidth, el.clientHeight],
+        scroll: [el.scrollWidth, el.scrollHeight]
+      }));
+    const controlsClearBottomNav =
+      (elements.controlsPanel?.rect?.bottom || Infinity) <= (elements.bottomNav?.rect?.top || -Infinity) + 1;
 
-    const pass = missingLabels.length === 0 && invisible.length === 0 && outsideViewport.length === 0 && noHorizontalOverflow && noVerticalOverflow && canvasUsable && bicepsDefault && activeSystem && loadingHidden;
+    const pass = missingLabels.length === 0 && invisible.length === 0 && outsideViewport.length === 0 &&
+      noHorizontalOverflow && noVerticalOverflow && canvasUsable && bicepsDefault && activeSystem &&
+      loadingHidden && clippedControls.length === 0 && controlsClearBottomNav;
 
     return {
       pass,
@@ -101,6 +114,8 @@ if (params.get('qa') === '1') {
       loadingHidden,
       bicepsDefault,
       activeSystem,
+      clippedControls,
+      controlsClearBottomNav,
       missingLabels,
       invisible,
       outsideViewport,

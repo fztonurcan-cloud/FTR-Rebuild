@@ -4,65 +4,54 @@
   window.__FTR_3D_ANATOMY_HOME__ = true;
 
   const CARD_ID = 'ftr-anatomy3d-home-section';
-  const STUDIO_RE = /HAREKET\s*ST[ÜU]DYOSU/i;
 
-  function text(el) { return (el && el.textContent || '').replace(/\s+/g, ' ').trim(); }
-  function visible(el) {
-    if (!el) return false;
-    const s = getComputedStyle(el);
-    const r = el.getBoundingClientRect();
-    return s.display !== 'none' && s.visibility !== 'hidden' && r.width > 10 && r.height > 8;
-  }
-  function studioAnchor() {
-    const all = [...document.querySelectorAll('body *')];
-    const hits = all.filter(el => visible(el) && STUDIO_RE.test(text(el)) && text(el).length < 120);
-    for (const hit of hits) {
-      let node = hit;
-      for (let i = 0; i < 7 && node && node.parentElement; i++, node = node.parentElement) {
-        const t = text(node);
-        const r = node.getBoundingClientRect();
-        if (STUDIO_RE.test(t) && /St[üu]dyoya\s*Gir/i.test(t) && r.width > 220 && r.height > 90) return node;
-      }
-    }
-    return hits[0]?.parentElement || null;
-  }
-  function createCard() {
-    const section = document.createElement('section');
-    section.id = CARD_ID;
-    section.className = 'ftr-a3d-home';
-    section.innerHTML = `
-      <div class="ftr-a3d-kicker"><span class="ftr-a3d-kicker-icon">⌬</span><strong>3D ANATOMİ</strong><span class="ftr-a3d-new">YENİ</span></div>
-      <button class="ftr-a3d-card" type="button" aria-label="3D Anatomi modülünü aç">
-        <div class="ftr-a3d-copy">
-          <h3>3D ANATOMİ</h3>
-          <p>Kaslar • Sinirler • Ligamentler • Damarlar</p>
-          <small>3D model üzerinde keşfet, öğren ve sınav ol!</small>
-          <span class="ftr-a3d-cta">Keşfetmeye Başla <b>→</b></span>
-        </div>
-        <div class="ftr-a3d-body" aria-hidden="true">
-          <span class="ftr-a3d-skull">◉</span>
-          <span class="ftr-a3d-spine">││</span>
-          <span class="ftr-a3d-ribs">≋</span>
-        </div>
-        <div class="ftr-a3d-systems" aria-hidden="true">
-          <span><i class="m">◒</i>Kas</span><span><i class="n">✳</i>Sinir</span><span><i class="l">✦</i>Ligament</span><span><i class="v">⌬</i>Damar</span>
-        </div>
+  function cardMarkup() {
+    return `
+      <button id="${CARD_ID}" class="ftr-a3d-v56-card" type="button" aria-label="3D Anatomi modülünü aç">
+        <span class="ftr-a3d-v56-copy">
+          <span class="ftr-a3d-v56-title">3D ANATOMİ <em>YENİ</em></span>
+          <span class="ftr-a3d-v56-sub">Kaslar • Sinirler • Ligamentler • Damarlar</span>
+          <span class="ftr-a3d-v56-note">3D model üzerinde keşfet, öğren ve sınav ol!</span>
+          <span class="ftr-a3d-v56-cta">Keşfetmeye Başla <b>→</b></span>
+        </span>
+        <span class="ftr-a3d-v56-figure" aria-hidden="true">
+          <svg viewBox="0 0 72 126" focusable="false">
+            <circle cx="36" cy="13" r="10"/>
+            <path d="M29 12h14M31 17h10M36 23v55M24 33c7-7 17-7 24 0M22 39c9 7 19 7 28 0M24 46c8 6 16 6 24 0M27 53c6 4 12 4 18 0M36 27L18 58M36 27l18 31M18 58l-7 27M54 58l7 27M36 78l-14 39M36 78l14 39M18 85l-5 24M54 85l5 24"/>
+            <path class="ftr-a3d-v56-muscle" d="M25 31c-8 9-10 22-7 31M47 31c8 9 10 22 7 31M29 80l-7 35M43 80l7 35"/>
+          </svg>
+        </span>
+        <span class="ftr-a3d-v56-systems" aria-hidden="true">
+          <span><i class="muscle">◒</i>Kas Sistemi <b>›</b></span>
+          <span><i class="nerve">✳</i>Sinir Sistemi <b>›</b></span>
+          <span><i class="ligament">✦</i>Ligament Sistemi <b>›</b></span>
+          <span><i class="vessel">⌬</i>Damar Sistemi <b>›</b></span>
+        </span>
       </button>`;
-    section.querySelector('.ftr-a3d-card').addEventListener('click', () => {
+  }
+
+  function install() {
+    const shell = document.querySelector('.v56-home-shell');
+    if (!shell || shell.classList.contains('ftr-a3d-v56-installed')) return false;
+    const original = shell.querySelector(':scope > .v56-home-reference');
+    if (!original) return false;
+
+    shell.classList.add('ftr-a3d-v56-installed');
+    original.classList.add('ftr-a3d-v56-reference-top');
+    const lower = original.cloneNode(false);
+    lower.removeAttribute('alt');
+    lower.setAttribute('aria-hidden', 'true');
+    lower.classList.remove('ftr-a3d-v56-reference-top');
+    lower.classList.add('ftr-a3d-v56-reference-bottom');
+    original.insertAdjacentElement('afterend', lower);
+    lower.insertAdjacentHTML('afterend', cardMarkup());
+    shell.querySelector(`#${CARD_ID}`).addEventListener('click', () => {
       window.location.href = './anatomy3d/index.html';
     });
-    return section;
-  }
-  function install() {
-    if (document.getElementById(CARD_ID)) return true;
-    const anchor = studioAnchor();
-    if (!anchor || !anchor.parentElement) return false;
-    anchor.parentElement.insertBefore(createCard(), anchor);
     return true;
   }
-  if (!install()) {
-    const observer = new MutationObserver(() => { if (install()) observer.disconnect(); });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    setTimeout(() => observer.disconnect(), 15000);
-  }
+
+  install();
+  const observer = new MutationObserver(install);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
 })();
