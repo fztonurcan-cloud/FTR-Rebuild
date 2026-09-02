@@ -39,6 +39,37 @@ async function runFunctionQa(page) {
 
   await waitReady();
   await waitHighlight();
+
+  const mobileDrawerContract = await page.evaluate(() => {
+    const button = document.getElementById('structureToggleBtn');
+    const browser = document.getElementById('structureBrowser');
+    const mobile = matchMedia('(max-width: 760px)').matches;
+    if (!mobile) return { mobile, ready: true, closed: true };
+    const style = browser ? getComputedStyle(browser) : null;
+    return {
+      mobile,
+      ready: Boolean(button && browser),
+      closed: button?.getAttribute('aria-expanded') === 'false' && style?.pointerEvents === 'none'
+    };
+  });
+  record('mobile_drawer_closed_by_default', mobileDrawerContract.ready && mobileDrawerContract.closed, JSON.stringify(mobileDrawerContract));
+
+  if (mobileDrawerContract.mobile) {
+    await page.click('#structureToggleBtn');
+    await page.waitForFunction(() => document.getElementById('anatomy-app')?.classList.contains('structure-open'));
+    const opened = await page.evaluate(() => {
+      const browser = document.getElementById('structureBrowser');
+      const rect = browser?.getBoundingClientRect();
+      const style = browser ? getComputedStyle(browser) : null;
+      return document.getElementById('structureToggleBtn')?.getAttribute('aria-expanded') === 'true' &&
+        style?.pointerEvents !== 'none' && Number(style?.opacity || 0) > .9 && rect?.width > 200;
+    });
+    record('mobile_drawer_opens', opened);
+    await page.click('#structureCloseBtn');
+    await page.waitForFunction(() => !document.getElementById('anatomy-app')?.classList.contains('structure-open'));
+    record('mobile_drawer_closes', await page.evaluate(() => document.getElementById('structureToggleBtn')?.getAttribute('aria-expanded') === 'false'));
+  }
+
   const initialState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
   record('static_atlas_runtime', initialState.renderMode === 'static-layered-atlas' && initialState.webgl === false && initialState.runtime3dModels === false);
   record('initial_muscle_system', initialState.activeSystem === 'muscle' && initialState.activeStructureCount > 0, `${initialState.activeStructureCount} structure`);
