@@ -20,14 +20,33 @@ SYSTEMS = [
     ('muscle', ('4: Muscular system', 'Muscular system'), None, ('MESH',)),
     ('bone', ('1: Skeletal system', 'Skeletal system'), None, ('MESH',)),
     ('ligament', ('3: Joints', 'Joints'), re.compile(r'(ligament|retinacul)', re.I), ('MESH',)),
-    # Z-Anatomy stores most peripheral vessels and nerves as CURVE objects. The
-    # old mesh-only path therefore reduced the vascular system to a handful of
-    # cardiac structures and omitted the peripheral neural tree entirely.
+    # Z-Anatomy stores most peripheral vessels and nerves as CURVE objects.
     ('vessel', ('5: Cardiovascular system', 'Cardiovascular system'), None, ('MESH', 'CURVE')),
     ('nerve', ('6: Nervous system', 'Nervous system'), None, ('MESH', 'CURVE')),
 ]
 REFERENCE_SYSTEMS = {'ligament', 'vessel', 'nerve'}
 BONE_CANDIDATES = ('1: Skeletal system', 'Skeletal system')
+
+# Non-muscular connective/synovial layers were visually covering the muscle atlas.
+# Keep true tendons and the muscle Tensor fasciae latae, but remove fascia sheets,
+# bursae, tendon sheaths, retinacula, septa, aponeuroses and ligaments from the
+# *muscle presentation*. Those structures remain available in their own systems.
+MUSCLE_PRESENTATION_EXCLUDE = re.compile(
+    r'(?:\bburs(?:a|ae)\b|\bsheaths?\b|\bretinaculum\b|\bligament\b|'
+    r'\bintermuscular\s+septum\b|\baponeurosis\b|\bfascia\b)',
+    re.I,
+)
+SYSTEM_TEXT_ARTIFACT = re.compile(r'\bsystem(?:\.g)?$', re.I)
+
+# Exact preferred objects are placed before branch/child structures. main.js uses
+# the first regex match as its initial selection, so this guarantees that opening
+# Sinirler selects the whole Median nerve rather than a small digital branch.
+PREFERRED_EXACT = {
+    'bone': {'fibula'},
+    'ligament': {'anterior talofibular ligament'},
+    'vessel': {'anterior tibial artery'},
+    'nerve': {'median nerve', 'n medianus'},
+}
 
 
 def display_name(raw: str) -> str:
@@ -66,7 +85,22 @@ def has_renderable_geometry(obj):
     return False
 
 
-def collection_objects(collection, name_filter=None, allowed_types=('MESH',), exclude_keys=None):
+def is_presentation_artifact(system, obj):
+    label = display_name(obj.name)
+    if SYSTEM_TEXT_ARTIFACT.search(label):
+        return True
+    if system == 'muscle' and MUSCLE_PRESENTATION_EXCLUDE.search(label):
+        return True
+    return False
+
+
+def collection_objects(
+    collection,
+    system,
+    name_filter=None,
+    allowed_types=('MESH',),
+    exclude_keys=None,
+):
     try:
         candidates = list(collection.all_objects)
     except Exception:
@@ -81,7 +115,9 @@ def collection_objects(collection, name_filter=None, allowed_types=('MESH',), ex
     exclude_keys = exclude_keys or set()
     rows = []
     seen = set()
-    skipped_excluded = 0
+    skipped_context = 0
+    skipped_presentation = 0
+
     for obj in candidates:
         try:
             ptr = obj.as_pointer()
@@ -92,17 +128,32 @@ def collection_objects(collection, name_filter=None, allowed_types=('MESH',), ex
                 continue
             if name_filter and not name_filter.search(obj.name):
                 continue
+            if is_presentation_artifact(system, obj):
+                skipped_presentation += 1
+                continue
             key = norm(display_name(obj.name))
             if key and key in exclude_keys:
-                skipped_excluded += 1
+                skipped_context += 1
                 continue
             rows.append(obj)
         except Exception:
             continue
+
     if not rows:
-        raise RuntimeError(f'No renderable objects for {collection.name} / types={sorted(allowed_types)}')
+        raise RuntimeError(
+            f'No renderable objects for {collection.name} / system={system} / types={sorted(allowed_types)}'
+        )
+
+    preferred = PREFERRED_EXACT.get(system, set())
+    if preferred:
+        # Stable sort: exact preferred structures first, source order otherwise.
+        rows.sort(key=lambda obj: 0 if norm(display_name(obj.name)) in preferred else 1)
+
     counts = Counter(obj.type for obj in rows)
-    print(f'[STATIC ATLAS] {collection.name}: selected types={dict(counts)} excluded_context={skipped_excluded}')
+    print(
+        f'[STATIC ATLAS] {collection.name}: selected types={dict(counts)} '
+        f'excluded_context={skipped_context} excluded_presentation={skipped_presentation}'
+    )
     return rows
 
 
@@ -129,7 +180,7 @@ def object_center(obj):
 def beauty_rgba(system, raw_name):
     n = raw_name.lower()
     if system == 'muscle':
-        if re.search(r'tendon|aponeuros|fascia', n):
+        if re.search(r'tendon', n):
             return (0.90, 0.82, 0.69, 1.0)
         return (0.72, 0.11, 0.055, 1.0)
     if system == 'bone':
@@ -176,8 +227,6 @@ def setup_scene(name, id_pass=False):
     coll = bpy.data.collections.new(name + ' objects')
     scene.collection.children.link(coll)
 
-    # Workbench renders the Z-Anatomy geometry directly with object colors. It avoids
-    # copying hundreds of meshes/materials and is dramatically lighter in headless CI.
     try:
         scene.render.engine = 'BLENDER_WORKBENCH'
     except Exception:
@@ -203,7 +252,6 @@ def setup_scene(name, id_pass=False):
         set_if(shading, 'show_specular_highlight', False)
         set_if(shading, 'background_color', (0.0, 0.0, 0.0))
         set_if(scene.display, 'render_aa', 'OFF')
-        # Raw keeps the integer object-ID colors from being display-transformed.
         try:
             scene.view_settings.view_transform = 'Raw'
         except Exception:
@@ -247,7 +295,6 @@ def add_camera(scene, min_v, max_v):
     scene.collection.objects.link(camera)
     camera_data.type = 'ORTHO'
 
-    # BodyParts3D/Z-Anatomy is upright on Z. View from anterior (-Y -> +Y).
     visible_h = max(size.z * 1.08, (size.x / ASPECT) * 1.08)
     camera_data.ortho_scale = max(visible_h, 0.1)
     distance = max(size.x, size.y, size.z, 0.1) * 3.2
@@ -332,8 +379,6 @@ def render_pass(system, source_objects, bone_objects, id_pass=False):
         except Exception:
             pass
 
-        # Unlinking/removing only the temporary scene/collection keeps source geometry
-        # in place and avoids the invalid-RNA cleanup failures from the old copy-heavy path.
         scene_name = scene.name
         coll_name = coll.name
         scene_ref = bpy.data.scenes.get(scene_name)
@@ -352,17 +397,43 @@ def render_pass(system, source_objects, bone_objects, id_pass=False):
                 pass
 
 
+def validate_presentation(system, rows):
+    labels = [row['name'] for row in rows]
+
+    bad_system = [label for label in labels if SYSTEM_TEXT_ARTIFACT.search(label)]
+    if bad_system:
+        raise RuntimeError(f'{system}: system text mesh leaked into atlas: {bad_system[:3]}')
+
+    if system == 'muscle':
+        bad_overlay = [label for label in labels if MUSCLE_PRESENTATION_EXCLUDE.search(label)]
+        if bad_overlay:
+            raise RuntimeError(f'Muscle presentation overlay leak: {bad_overlay[:8]}')
+        if not any(re.search(r'tensor\s+fasciae\s+latae', label, re.I) for label in labels):
+            raise RuntimeError('Muscle cleanup was too broad: Tensor fasciae latae missing')
+
+    if system == 'vessel' and not any(re.search(r'anterior\s+tibial\s+arter', label, re.I) for label in labels):
+        raise RuntimeError('Vascular curve extraction incomplete: Anterior tibial artery missing')
+
+    if system == 'nerve':
+        if not any(norm(label) in PREFERRED_EXACT['nerve'] for label in labels):
+            raise RuntimeError('Neural curve extraction incomplete: whole Median nerve missing')
+        first_median = next((label for label in labels if re.search(r'median\s+nerve|medianus', label, re.I)), '')
+        if norm(first_median) not in PREFERRED_EXACT['nerve']:
+            raise RuntimeError(f'Initial nerve selection would resolve to a branch: {first_median}')
+
+
 def run():
     resolved = {system: resolve_collection(candidates) for system, candidates, _, _ in SYSTEMS}
-    bone_objects = collection_objects(resolved['bone'])
-    muscle_objects = collection_objects(resolved['muscle'])
-    # Some Z-Anatomy system collections cross-link muscles as innervation/context
-    # objects. Remove those exact structures from vessel/nerve atlases while keeping
-    # central nervous meshes, cardiac structures and the actual CURVE trees.
+
+    bone_objects = collection_objects(resolved['bone'], 'bone')
+    muscle_objects = collection_objects(resolved['muscle'], 'muscle')
+
+    # Remove muscle cross-links from vascular/neural atlases while retaining the
+    # actual central nervous, cardiac and CURVE structures.
     muscle_keys = {norm(display_name(obj.name)) for obj in muscle_objects if display_name(obj.name)}
 
     manifest = {
-        'version': 3,
+        'version': 4,
         'render_mode': 'static-layered-atlas',
         'width': WIDTH,
         'height': HEIGHT,
@@ -376,6 +447,9 @@ def run():
             'atlas_renderer': 'Blender Workbench linked-object render',
             'vascular_neural_curves': True,
             'muscle_context_removed_from_vessel_nerve': True,
+            'muscle_surface_overlays_removed': True,
+            'system_text_artifacts_removed': True,
+            'exact_default_structure_priority': True,
         },
     }
 
@@ -388,10 +462,12 @@ def run():
             exclude = muscle_keys if system in {'vessel', 'nerve'} else set()
             source_objects = collection_objects(
                 resolved[system],
+                system,
                 name_filter,
                 allowed_types=allowed_types,
                 exclude_keys=exclude,
             )
+
         type_counts = Counter(obj.type for obj in source_objects)
         print(f'[STATIC ATLAS] {system}: {len(source_objects)} structures / {dict(type_counts)}')
 
@@ -413,14 +489,7 @@ def run():
                 'anchor': anchors[index],
             })
 
-        # These two structures are release-gate sentinels: if they are absent, the
-        # atlas has silently fallen back to the old incomplete mesh-only extraction.
-        labels = [row['name'] for row in rows]
-        if system == 'vessel' and not any(re.search(r'anterior\s+tibial\s+arter', label, re.I) for label in labels):
-            raise RuntimeError('Vascular curve extraction incomplete: Anterior tibial artery missing')
-        if system == 'nerve' and not any(re.search(r'median\s+nerve|medianus', label, re.I) for label in labels):
-            raise RuntimeError('Neural curve extraction incomplete: Median nerve missing')
-
+        validate_presentation(system, rows)
         manifest['systems'][system] = {
             'beauty': f'atlas/{system}-front.png',
             'id_map': f'atlas/{system}-id.png',
@@ -429,7 +498,10 @@ def run():
             'structures': rows,
         }
 
-    (DATA / 'atlas-map.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+    (DATA / 'atlas-map.json').write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding='utf-8',
+    )
     print(json.dumps({key: value['structure_count'] for key, value in manifest['systems'].items()}, indent=2))
 
 
