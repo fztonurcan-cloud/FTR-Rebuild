@@ -112,8 +112,25 @@ def export_glb(path: Path, objects):
     export_scene = bpy.data.scenes.new('FTR isolated export')
     export_collection = bpy.data.collections.new('FTR isolated meshes')
     export_scene.collection.children.link(export_collection)
-    for obj in objects:
-        export_collection.objects.link(obj)
+    isolated_objects = []
+    for source in objects:
+        # A linked source object keeps its original parent/child graph. Blender's
+        # glTF exporter follows that graph and can silently pull unrelated meshes
+        # into the file. A shallow, hierarchy-free copy retains the exact source
+        # mesh/material but has no route back to sibling collections.
+        world_matrix = source.matrix_world.copy()
+        duplicate = source.copy()
+        duplicate.parent = None
+        duplicate.matrix_world = world_matrix
+        duplicate.animation_data_clear()
+        duplicate.constraints.clear()
+        duplicate.modifiers.clear()
+        duplicate.hide_set(False)
+        duplicate.hide_viewport = False
+        duplicate.hide_render = False
+        export_collection.objects.link(duplicate)
+        isolated_objects.append(duplicate)
+    expected = Counter(obj.name for obj in isolated_objects)
     bpy.context.window.scene = export_scene
     bpy.context.view_layer.update()
 
@@ -148,8 +165,9 @@ def export_glb(path: Path, objects):
         bpy.context.window.scene = original_scene
         bpy.data.scenes.remove(export_scene)
         bpy.data.collections.remove(export_collection)
+        for duplicate in isolated_objects:
+            bpy.data.objects.remove(duplicate, do_unlink=True)
 
-    expected = Counter(obj.name for obj in objects)
     actual = Counter(glb_mesh_names(path))
     if actual != expected:
         missing = list((expected - actual).elements())[:20]
