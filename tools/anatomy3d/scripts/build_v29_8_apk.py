@@ -121,6 +121,51 @@ def validate_module(module_root: Path) -> list[Path]:
     return sorted(path for path in module_root.rglob("*") if path.is_file())
 
 
+def verify_signing(apksigner: Path, output: Path) -> dict[str, object]:
+    verify = run([str(apksigner.resolve()), "verify", "--verbose", "--print-certs", str(output)], capture=True)
+    text = verify.stdout or ""
+
+    def scheme(number: int) -> bool:
+        pattern = rf"Verified using v{number} scheme[^:]*:\s*(true|false)"
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            raise SystemExit(f"apksigner output is missing explicit v{number} verification status")
+        return match.group(1).lower() == "true"
+
+    v1 = scheme(1)
+    v2 = scheme(2)
+    if not v1 or not v2:
+        raise SystemExit(f"APK must verify with both v1 and v2 signatures; v1={v1}, v2={v2}")
+
+    signer_count_match = re.search(r"Number of signers:\s*(\d+)", text, flags=re.IGNORECASE)
+    if not signer_count_match:
+        raise SystemExit("apksigner output is missing signer count")
+    signer_count = int(signer_count_match.group(1))
+    if signer_count != 1:
+        raise SystemExit(f"Expected exactly one APK signer, found {signer_count}")
+
+    cert_match = re.search(
+        r"Signer #1 certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not cert_match:
+        raise SystemExit("apksigner output is missing signer certificate SHA-256")
+    cert_sha256 = re.sub(r"[^0-9A-Fa-f]", "", cert_match.group(1)).lower()
+    if cert_sha256 != EXPECTED_CERT_SHA256:
+        raise SystemExit(
+            "Signed APK certificate does not match the locked FTR v41 certificate: "
+            f"{cert_sha256}"
+        )
+
+    return {
+        "v1": v1,
+        "v2": v2,
+        "signer_count": signer_count,
+        "certificate_sha256": cert_sha256,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", type=Path, required=True)
@@ -218,10 +263,7 @@ def main() -> None:
             "--out", str(output), str(aligned_apk),
         ], env=sign_env)
 
-    verify = run([str(args.apksigner.resolve()), "verify", "--verbose", "--print-certs", str(output)], capture=True)
-    verify_text = re.sub(r"[^0-9A-Fa-f]", "", verify.stdout or "").lower()
-    if EXPECTED_CERT_SHA256.lower() not in verify_text:
-        raise SystemExit("Signed APK certificate does not match the locked FTR v41 certificate")
+    signing = verify_signing(args.apksigner, output)
     run([str(args.zipalign.resolve()), "-c", "-p", "4", str(output)])
 
     with zipfile.ZipFile(output) as archive:
@@ -236,6 +278,15 @@ def main() -> None:
         bad_entry = archive.testzip()
         if bad_entry:
             raise SystemExit(f"Output APK ZIP integrity failed at: {bad_entry}")
+        output_index = archive.read(HOST_INDEX).decode("utf-8")
+        module_index = archive.read(MODULE_PREFIX + "index.html").decode("utf-8")
+
+    if output_index.count("data-ftr-anatomy3d") != 2:
+        raise SystemExit("Host 3D Anatomy bootstrap is missing or duplicated")
+    if "anatomy3d-home-card.css" not in output_index or "anatomy3d-home-inject.js" not in output_index:
+        raise SystemExit("Host 3D Anatomy CSS/JS bootstrap is incomplete")
+    if "android-asset-fetch.js" not in module_index or "module-phone-fix.css" not in module_index:
+        raise SystemExit("3D Anatomy Android module bootstrap is incomplete")
 
     expected_changed = {HOST_INDEX}
     added_expected = {HOME_CSS, HOME_JS, MODULE_FETCH, MODULE_PHONE_CSS} | {
@@ -261,9 +312,10 @@ def main() -> None:
         "base": {"file": BASE_NAME, "bytes": BASE_SIZE, "sha256": BASE_SHA256, "modified": False},
         "output": {"file": output.name, "bytes": output.stat().st_size, "sha256": sha256(output)},
         "package": "com.ftrakademi.preview3",
-        "signer_cert_sha256": EXPECTED_CERT_SHA256,
-        "v1_signature": "PASS",
-        "v2_signature": "PASS",
+        "signer_cert_sha256": signing["certificate_sha256"],
+        "signer_count": signing["signer_count"],
+        "v1_signature": "PASS" if signing["v1"] else "FAIL",
+        "v2_signature": "PASS" if signing["v2"] else "FAIL",
         "zip_alignment": "PASS",
         "zip_integrity": "PASS",
         "duplicate_zip_entries": 0,
@@ -271,6 +323,8 @@ def main() -> None:
         "runtime_webgl": False,
         "runtime_glb": False,
         "continuous_render_loop": False,
+        "host_bootstrap": "PASS",
+        "module_android_bootstrap": "PASS",
         "changed_existing_payload": changed_existing,
         "added_payload_count": len(added),
         "removed_existing_payload": removed_existing,
