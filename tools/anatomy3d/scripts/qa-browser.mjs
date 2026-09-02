@@ -56,24 +56,46 @@ async function runFunctionQa(page) {
 
   if (mobileDrawerContract.mobile) {
     await page.click('#structureToggleBtn');
-    await page.waitForFunction(() => document.getElementById('anatomy-app')?.classList.contains('structure-open'));
-    const opened = await page.evaluate(() => {
+    // The drawer deliberately has a short premium transform/opacity transition.
+    // Wait for the actual visible/interactable end state instead of racing the
+    // class toggle; keep the >.9 opacity and width thresholds unchanged.
+    await page.waitForFunction(() => {
+      const app = document.getElementById('anatomy-app');
+      const button = document.getElementById('structureToggleBtn');
       const browser = document.getElementById('structureBrowser');
       const rect = browser?.getBoundingClientRect();
       const style = browser ? getComputedStyle(browser) : null;
-      return document.getElementById('structureToggleBtn')?.getAttribute('aria-expanded') === 'true' &&
-        style?.pointerEvents !== 'none' && Number(style?.opacity || 0) > .9 && rect?.width > 200;
-    });
-    record('mobile_drawer_opens', opened);
+      return app?.classList.contains('structure-open') &&
+        button?.getAttribute('aria-expanded') === 'true' &&
+        style?.pointerEvents !== 'none' &&
+        Number(style?.opacity || 0) > .9 &&
+        Number(rect?.width || 0) > 200;
+    }, { timeout: 5_000 });
+    record('mobile_drawer_opens', true);
+
     await page.click('#structureCloseBtn');
-    await page.waitForFunction(() => !document.getElementById('anatomy-app')?.classList.contains('structure-open'));
-    record('mobile_drawer_closes', await page.evaluate(() => document.getElementById('structureToggleBtn')?.getAttribute('aria-expanded') === 'false'));
+    await page.waitForFunction(() => {
+      const app = document.getElementById('anatomy-app');
+      const button = document.getElementById('structureToggleBtn');
+      const browser = document.getElementById('structureBrowser');
+      const style = browser ? getComputedStyle(browser) : null;
+      return !app?.classList.contains('structure-open') &&
+        button?.getAttribute('aria-expanded') === 'false' &&
+        style?.pointerEvents === 'none';
+    }, { timeout: 5_000 });
+    record('mobile_drawer_closes', true);
   }
 
   const initialState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
   record('static_atlas_runtime', initialState.renderMode === 'static-layered-atlas' && initialState.webgl === false && initialState.runtime3dModels === false);
   record('initial_muscle_system', initialState.activeSystem === 'muscle' && initialState.activeStructureCount > 0, `${initialState.activeStructureCount} structure`);
   record('initial_biceps', (await text('#structureName')).toLowerCase().includes('biceps brachii') && initialState.selectedStructure.toLowerCase().includes('biceps brachii'), initialState.selectedStructure);
+  record('initial_biceps_composite', initialState.selectedStructure.trim().toLowerCase() === 'biceps brachii', initialState.selectedStructure);
+  record('biceps_list_is_composite', await page.evaluate(() => {
+    const labels = [...document.querySelectorAll('.structure-label')].map(element => (element.textContent || '').trim().toLowerCase());
+    return labels.filter(label => label === 'biceps brachii').length === 1 &&
+      !labels.some(label => /(?:long|short)\s+head\s+of\s+biceps\s+brachii/.test(label));
+  }));
   record('initial_structure_highlight', initialState.selectedHighlighted, initialState.selectedStructure);
   record('no_continuous_render', initialState.continuousAnimation === false);
   record('legacy_model_controls_removed', await page.evaluate(() => !document.querySelector('.viewer-controls, #rotateBtn, #zoomInBtn, #zoomOutBtn, #autoRotateBtn')));
