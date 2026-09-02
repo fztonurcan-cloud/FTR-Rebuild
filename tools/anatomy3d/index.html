@@ -8,6 +8,7 @@
   <script src="./android-asset-fetch.js"></script>
   <link rel="stylesheet" href="/src/style.css" />
   <link rel="stylesheet" href="/src/layout-lock.css" />
+  <link rel="stylesheet" href="/src/mobile-premium.css" />
 </head>
 <body>
   <main id="anatomy-app" class="anatomy-app" data-system="muscle">
@@ -29,8 +30,16 @@
     </nav>
 
     <section class="stage-shell">
-      <aside class="structure-browser panel" aria-label="Anatomik yapı listesi">
-        <h2 id="browserHeading">KAS SİSTEMİ</h2>
+      <button id="structureToggleBtn" class="structure-toggle" type="button" aria-controls="structureBrowser" aria-expanded="false">
+        <span class="toggle-symbol" aria-hidden="true">☰</span><span>Yapılar</span>
+      </button>
+      <div id="structureBackdrop" class="structure-backdrop" aria-hidden="true"></div>
+
+      <aside id="structureBrowser" class="structure-browser panel" aria-label="Anatomik yapı listesi">
+        <div class="browser-head">
+          <h2 id="browserHeading">KAS SİSTEMİ</h2>
+          <button id="structureCloseBtn" class="structure-close" type="button" aria-label="Yapı listesini kapat">×</button>
+        </div>
         <label class="search-box">
           <span class="sr-only">Yapı ara</span>
           <input id="structureSearch" type="search" autocomplete="off" placeholder="Kas ara..." />
@@ -69,6 +78,7 @@
     </section>
   </main>
   <script type="module" src="/src/main.js"></script>
+  <script type="module" src="/src/mobile-browser.js"></script>
   <script type="module" src="/src/qa-layout.js"></script>
 </body>
 </html>
