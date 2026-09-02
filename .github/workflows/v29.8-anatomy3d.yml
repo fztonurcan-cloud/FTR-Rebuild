@@ -1,16 +1,17 @@
-name: v29.8.1 simplified 3D anatomy module
+name: v29.9 premium 3D anatomy module
 
 on:
   push:
     branches:
       - v29.8-3d-anatomy
       - v29.8.1-3d-simple
+      - v29.9-3d-premium
     paths:
       - 'tools/anatomy3d/**'
       - '.github/workflows/v29.8-anatomy3d.yml'
 
 concurrency:
-  group: v29.8-anatomy3d-${{ github.ref }}
+  group: v29.9-anatomy3d-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -19,9 +20,9 @@ permissions:
 jobs:
   build-anatomy3d:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
-      - name: Checkout v29.8 branch
+      - name: Checkout anatomy branch
         uses: actions/checkout@v4
 
       - name: Set up Node 22
@@ -53,7 +54,7 @@ jobs:
             https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/master/License.txt
           ls -lh /tmp/Z-Anatomy.zip "$BLEND"
 
-      - name: Export isolated muscle ligament vessel bone GLBs
+      - name: Export five isolated premium mobile anatomy systems
         env:
           FTR_ANATOMY_OUT: ${{ github.workspace }}/tools/anatomy3d/public
         run: |
@@ -70,16 +71,20 @@ jobs:
           import json, pathlib
           p = pathlib.Path('tools/anatomy3d/public/data/export-report.json')
           d = json.loads(p.read_text())
-          required = ['muscle','ligament','vessel','bone']
+          required = ['muscle','bone','ligament','vessel','nerve']
           for key in required:
               row = d['systems'].get(key)
               if not row or row['mesh_count'] < 1 or row['bytes'] < 1000 or not row.get('isolated'):
                   raise SystemExit(f'Invalid export for {key}: {row}')
               if row['exported_mesh_count'] != row['mesh_count']:
                   raise SystemExit(f'Contaminated GLB for {key}: {row}')
-              print(key, row['mesh_count'], row['exported_mesh_count'], row['bytes'])
-          if not d.get('policy',{}).get('excluded_unrelated_noncommercial_submodels'):
-              raise SystemExit('Commercial-safe export policy flag missing')
+              print(key, row['mesh_count'], row['exported_mesh_count'], row['bytes'], row.get('source_polygons'), row.get('decimate_ratio'))
+          ref = d.get('reference', {})
+          if ref.get('mesh_count') != 1 or ref.get('bytes', 0) < 1000:
+              raise SystemExit(f'Invalid reference skeleton: {ref}')
+          policy = d.get('policy', {})
+          if not policy.get('isolated_system_exports') or not policy.get('mobile_decimation') or not policy.get('one_detailed_system_loaded_at_a_time'):
+              raise SystemExit(f'Premium mobile export policy missing: {policy}')
           PY
           ls -lh tools/anatomy3d/public/models/*.glb
 
@@ -102,15 +107,18 @@ jobs:
           test -f tools/anatomy3d/dist/models/muscular.glb
           test -f tools/anatomy3d/dist/models/ligaments.glb
           test -f tools/anatomy3d/dist/models/cardiovascular.glb
+          test -f tools/anatomy3d/dist/models/nervous.glb
+          test -f tools/anatomy3d/dist/models/skeleton-reference.glb
           test -f tools/anatomy3d/dist/licenses/ATTRIBUTION.txt
           test -f tools/anatomy3d/dist/licenses/Z-Anatomy-License.txt
           grep -R "3D ANATOM" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           grep -R "Biceps brachii" tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Fibula" tools/anatomy3d/dist/data tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Ligamentler" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Damarlar" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Kemikler" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
-          ! grep -E "Sınav Modu|Karma Sınav|Öğrenme Modu|Sinir Sistemi" tools/anatomy3d/dist/index.html
+          grep -R "Fibula" tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Anterior talofibular" tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Anterior tibial artery" tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Median sinir" tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Sinirler" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          ! grep -E "Sınav Modu|Karma Sınav|Öğrenme Modu|Etiketler|Not Ekle|Bilgiyi Paylaş" tools/anatomy3d/dist/index.html
           du -sh tools/anatomy3d/dist
 
       - name: Create module manifest
@@ -126,7 +134,13 @@ jobs:
               if p.is_file():
                   h=hashlib.sha256(p.read_bytes()).hexdigest()
                   rows.append({'path':str(p.relative_to(root)).replace('\\','/'),'bytes':p.stat().st_size,'sha256':h})
-          out={'module':'FTR Akademi 3D Anatomi','version':'v29.8.1-simple','locked_reference':'Simplified 3D anatomy decision 2026-09-02','files':rows}
+          out={
+              'module':'FTR Akademi 3D Anatomi',
+              'version':'v29.9-premium',
+              'reference':'six approved premium visual references 2026-09-02',
+              'systems':['muscle','bone','ligament','vessel','nerve'],
+              'files':rows
+          }
           pathlib.Path('ANATOMY3D-MANIFEST.json').write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding='utf-8')
           PY
 
@@ -144,7 +158,7 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4173/ "$GITHUB_WORKSPACE/tools/anatomy3d" screenshot
 
-      - name: Assert locked 390x844 layout geometry
+      - name: Assert premium 390x844 layout
         shell: bash
         run: |
           set -euo pipefail
@@ -172,7 +186,7 @@ jobs:
           QA_WIDTH=360 QA_HEIGHT=800 CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4176/ "$GITHUB_WORKSPACE/tools/anatomy3d/qa-360" assert
 
-      - name: Verify 3D anatomy functions
+      - name: Verify five-system anatomy functions
         shell: bash
         run: |
           set -euo pipefail
@@ -186,18 +200,17 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4175/ "$GITHUB_WORKSPACE/tools/anatomy3d" function
 
-      - name: Upload 3D anatomy module artifact
+      - name: Upload premium 3D anatomy module artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v29.8.1-anatomy3d-simple-module
+          name: v29.9-anatomy3d-premium-module
           path: |
             tools/anatomy3d/dist
             tools/anatomy3d/integration
             tools/anatomy3d/DESIGN-LOCK.md
             tools/anatomy3d/ANATOMY3D-MANIFEST.json
             tools/anatomy3d/qa-phone.png
-            tools/anatomy3d/qa-screenshot-note.txt
             tools/anatomy3d/qa-layout-report.json
             tools/anatomy3d/qa-layout-dom.html
             tools/anatomy3d/qa-function-report.json
