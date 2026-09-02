@@ -90,7 +90,14 @@ async function runFunctionQa(page) {
   record('exam_next_question', true, await text('#quizProgress'));
 
   await page.click('#mixedExamBtn');
-  await page.waitForFunction(() => document.getElementById('mixedExamBtn')?.classList.contains('active') && document.querySelectorAll('.quiz-option').length >= 4, { timeout: 120_000 });
+  await page.waitForFunction(
+    () => window.__FTR_ANATOMY_QA__?.state().mixedExamMode === true &&
+      document.getElementById('mixedExamBtn')?.classList.contains('active') &&
+      document.getElementById('quizProgress')?.textContent.startsWith('Soru 1') &&
+      document.getElementById('loading')?.classList.contains('hidden') &&
+      document.querySelectorAll('.quiz-option').length >= 4,
+    { timeout: 120_000 }
+  );
   const mixedSystemOne = await text('#quizSystem');
   await page.click('.quiz-option');
   await page.click('#nextQuestionBtn');
