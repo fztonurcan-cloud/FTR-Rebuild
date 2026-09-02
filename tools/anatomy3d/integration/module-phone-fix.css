@@ -1,7 +1,8 @@
-/* APK compatibility guard for the v29.8.1 simplified module. */
+/* APK compatibility guard for the v29.9 static layered anatomy atlas. */
 @media(max-width:760px){
-  .system-btn,.controls-panel button{overflow:hidden}
-  .system-btn>span:last-child,.controls-panel button>span:last-child{min-width:0;overflow-wrap:anywhere;white-space:normal}
-  .tabs{min-width:0;grid-template-columns:repeat(5,minmax(0,1fr))}
-  .tab{min-width:0;overflow:hidden;white-space:nowrap}
+  .system-btn{overflow:hidden;min-width:0}
+  .system-btn>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tabs{min-width:0;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{flex:0 0 auto;min-width:max-content;white-space:nowrap}
+  #anatomyCanvas{touch-action:none}
 }
