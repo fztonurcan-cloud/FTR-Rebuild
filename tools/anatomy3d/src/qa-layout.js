@@ -58,8 +58,13 @@ if (params.get('qa') === '1') {
       ? canvasRect.width >= innerWidth - 24 && canvasRect.height >= mobileMinHeight
       : canvasRect.width >= 145 && canvasRect.height >= 490;
     const noHorizontalOverflow = document.documentElement.scrollWidth <= innerWidth + 2;
-    const systemCount = document.querySelectorAll('.system-btn').length;
-    const uniqueSystems = new Set([...document.querySelectorAll('.system-btn')].map(button => button.dataset.system)).size;
+    const systemButtons = [...document.querySelectorAll('.system-btn')];
+    const systemCount = systemButtons.length;
+    const uniqueSystems = new Set(systemButtons.map(button => button.dataset.system)).size;
+    const allSystemTabsVisible = !isMobile || systemButtons.every(button => {
+      const rect = button.getBoundingClientRect();
+      return rect.left >= -1 && rect.right <= innerWidth + 1 && rect.width >= 48 && rect.height >= 36;
+    });
     const bicepsDefault = (document.getElementById('structureName')?.textContent || '').toLowerCase().includes('biceps brachii');
     const activeSystem = document.querySelector('.system-btn.active')?.dataset.system === 'muscle';
     const state = window.__FTR_ANATOMY_QA__?.state?.() || {};
@@ -69,20 +74,20 @@ if (params.get('qa') === '1') {
     const browserHiddenOnMobile = !isMobile || !elements.browser?.visible;
     const drawerClosed = !isMobile || document.getElementById('structureToggleBtn')?.getAttribute('aria-expanded') === 'false';
     const fullWidthMobileAtlas = !isMobile || canvasRect.width >= innerWidth - 24;
-    const premiumMobile = browserHiddenOnMobile && drawerClosed && fullWidthMobileAtlas;
+    const premiumMobile = browserHiddenOnMobile && drawerClosed && fullWidthMobileAtlas && allSystemTabsVisible;
 
     const pass = missingLabels.length === 0 && forbiddenPresent.length === 0 && invisible.length === 0 && loadingHidden &&
-      canvasUsable && noHorizontalOverflow && systemCount === 5 && uniqueSystems === 5 && bicepsDefault && activeSystem &&
-      staticAtlas && noLegacyControls && premiumMobile;
+      canvasUsable && noHorizontalOverflow && systemCount === 5 && uniqueSystems === 5 && allSystemTabsVisible &&
+      bicepsDefault && activeSystem && staticAtlas && noLegacyControls && premiumMobile;
 
     return {
       pass,
       elapsed_ms: Math.round(performance.now() - started),
       viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
       document: { scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight },
-      loadingHidden, canvasUsable, noHorizontalOverflow, systemCount, uniqueSystems, bicepsDefault, activeSystem,
-      staticAtlas, noLegacyControls, isMobile, browserHiddenOnMobile, drawerClosed, fullWidthMobileAtlas, premiumMobile,
-      state, missingLabels, forbiddenPresent, invisible, elements
+      loadingHidden, canvasUsable, noHorizontalOverflow, systemCount, uniqueSystems, allSystemTabsVisible,
+      bicepsDefault, activeSystem, staticAtlas, noLegacyControls, isMobile, browserHiddenOnMobile, drawerClosed,
+      fullWidthMobileAtlas, premiumMobile, state, missingLabels, forbiddenPresent, invisible, elements
     };
   }
 
