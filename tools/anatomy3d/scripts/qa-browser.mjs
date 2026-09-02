@@ -16,7 +16,7 @@ await fs.mkdir(outputDir, { recursive: true });
 const browser = await puppeteer.launch({
   executablePath,
   headless: true,
-  args: ['--no-sandbox', '--disable-dev-shm-usage', '--enable-unsafe-swiftshader']
+  args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
 });
 
 async function runFunctionQa(page) {
@@ -26,21 +26,26 @@ async function runFunctionQa(page) {
     console.log(`[FUNCTION QA] ${pass ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`);
   };
   const text = selector => page.$eval(selector, element => (element.textContent || '').trim());
-  const waitForLoading = () => page.waitForFunction(
-    () => document.getElementById('loading')?.classList.contains('hidden'),
-    { timeout: 120_000 }
-  );
+  const waitReady = () => page.waitForFunction(() => {
+    const state = window.__FTR_ANATOMY_QA__?.state?.();
+    return state?.imageReady && document.getElementById('loading')?.classList.contains('hidden');
+  }, { timeout: 120_000 });
+  const waitHighlight = () => page.waitForFunction(() => window.__FTR_ANATOMY_QA__?.state?.().selectedHighlighted === true, { timeout: 30_000 });
 
   record('five_unique_systems', await page.evaluate(() => {
     const buttons = [...document.querySelectorAll('.system-btn')];
     return buttons.length === 5 && new Set(buttons.map(button => button.dataset.system)).size === 5 && Boolean(document.querySelector('.system-btn[data-system="nerve"]'));
   }));
 
+  await waitReady();
+  await waitHighlight();
   const initialState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
-  record('initial_muscle_system', initialState.activeSystem === 'muscle' && initialState.activeMeshCount > 0, `${initialState.activeMeshCount} mesh`);
+  record('static_atlas_runtime', initialState.renderMode === 'static-layered-atlas' && initialState.webgl === false && initialState.runtime3dModels === false);
+  record('initial_muscle_system', initialState.activeSystem === 'muscle' && initialState.activeStructureCount > 0, `${initialState.activeStructureCount} structure`);
   record('initial_biceps', (await text('#structureName')).toLowerCase().includes('biceps brachii') && initialState.selectedStructure.toLowerCase().includes('biceps brachii'), initialState.selectedStructure);
   record('initial_structure_highlight', initialState.selectedHighlighted, initialState.selectedStructure);
-  record('no_continuous_render_by_default', initialState.continuousAnimation === false);
+  record('no_continuous_render', initialState.continuousAnimation === false);
+  record('legacy_model_controls_removed', await page.evaluate(() => !document.querySelector('.viewer-controls, #rotateBtn, #zoomInBtn, #zoomOutBtn, #autoRotateBtn')));
 
   const generalText = await text('#structureText');
   await page.click('.tab[data-tab="origin"]');
@@ -48,37 +53,31 @@ async function runFunctionQa(page) {
   record('muscle_semantic_tabs', originText !== generalText && originText.toLowerCase().includes('supraglenoid'), originText.slice(0, 80));
   await page.click('.tab[data-tab="general"]');
 
-  const beforeZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
-  await page.click('#zoomInBtn');
-  const afterZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
-  record('zoom_in', afterZoom.cameraDistance < beforeZoom.cameraDistance, `${beforeZoom.cameraDistance} -> ${afterZoom.cameraDistance}`);
-  await page.click('#zoomOutBtn');
-  await page.click('#resetBtn');
-
-  const rotationBefore = (await page.evaluate(() => window.__FTR_ANATOMY_QA__.state())).activeRotationY;
-  await page.click('#rotateBtn');
-  const rotationAfter = (await page.evaluate(() => window.__FTR_ANATOMY_QA__.state())).activeRotationY;
-  record('single_step_rotate', rotationAfter > rotationBefore + 0.25, `${rotationBefore} -> ${rotationAfter}`);
+  const beforeZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state().zoomScale);
+  const afterZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.zoom(2).zoomScale);
+  record('pinch_zoom_engine', afterZoom > beforeZoom, `${beforeZoom} -> ${afterZoom}`);
+  const resetZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.resetView().zoomScale);
+  record('zoom_reset', resetZoom === 1, String(resetZoom));
 
   const systems = [
-    ['bone', 'KEMİK SİSTEMİ', false],
-    ['ligament', 'LİGAMENT SİSTEMİ', true],
-    ['vessel', 'DAMAR SİSTEMİ', true],
-    ['nerve', 'SİNİR SİSTEMİ', true],
-    ['muscle', 'KAS SİSTEMİ', false]
+    ['bone', 'KEMİK SİSTEMİ'],
+    ['ligament', 'LİGAMENT SİSTEMİ'],
+    ['vessel', 'DAMAR SİSTEMİ'],
+    ['nerve', 'SİNİR SİSTEMİ'],
+    ['muscle', 'KAS SİSTEMİ']
   ];
-  for (const [key, title, expectsReference] of systems) {
+  for (const [key, title] of systems) {
     await page.click(`.system-btn[data-system="${key}"]`);
-    await waitForLoading();
+    await waitReady();
     const state = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
     const subtitle = await text('#systemSubtitle');
-    record(`system_${key}`, state.activeSystem === key && state.activeMeshCount > 0 && subtitle.includes(title), `${subtitle} / ${state.activeMeshCount} mesh`);
-    if (expectsReference) record(`reference_${key}`, state.referenceLoaded === true, `referenceLoaded=${state.referenceLoaded}`);
+    record(`system_${key}`, state.activeSystem === key && state.activeStructureCount > 0 && subtitle.includes(title), `${subtitle} / ${state.activeStructureCount} structures`);
   }
 
   await page.click('.system-btn[data-system="bone"]');
-  await waitForLoading();
+  await waitReady();
   const fibula = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pick('^fibula'));
+  await waitHighlight();
   record('fibula_target', fibula.selectedStructure.toLowerCase().startsWith('fibula'), fibula.selectedStructure);
   record('bone_tabs_correct', await page.evaluate(() =>
     Boolean(document.querySelector('.tab[data-tab="features"]')) &&
@@ -91,45 +90,41 @@ async function runFunctionQa(page) {
   record('fibula_clinical_info', (await text('#structureText')).toLowerCase().includes('fibularis communis'));
 
   await page.click('.system-btn[data-system="ligament"]');
-  await waitForLoading();
+  await waitReady();
   const atfl = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pick('anterior\\s+talofibular|talofibular\\s+anterior|atfl'));
+  await waitHighlight();
   record('atfl_target', /talofibular|atfl/i.test(atfl.selectedStructure), atfl.selectedStructure);
   record('ligament_tabs_correct', await page.evaluate(() =>
-    Boolean(document.querySelector('.tab[data-tab="attachments"]')) &&
-    Boolean(document.querySelector('.tab[data-tab="clinical"]')) &&
-    !document.querySelector('.tab[data-tab="origin"]')
+    Boolean(document.querySelector('.tab[data-tab="attachments"]')) && Boolean(document.querySelector('.tab[data-tab="clinical"]')) && !document.querySelector('.tab[data-tab="origin"]')
   ));
 
   await page.click('.system-btn[data-system="vessel"]');
-  await waitForLoading();
+  await waitReady();
   const artery = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pick('anterior\\s+tibial\\s+arter'));
+  await waitHighlight();
   record('anterior_tibial_target', /anterior\s+tibial\s+arter/i.test(artery.selectedStructure), artery.selectedStructure);
   record('vessel_tabs_correct', await page.evaluate(() =>
-    Boolean(document.querySelector('.tab[data-tab="course"]')) &&
-    Boolean(document.querySelector('.tab[data-tab="branches"]')) &&
-    Boolean(document.querySelector('.tab[data-tab="supply"]')) &&
-    !document.querySelector('.tab[data-tab="insertion"]')
+    Boolean(document.querySelector('.tab[data-tab="course"]')) && Boolean(document.querySelector('.tab[data-tab="branches"]')) && Boolean(document.querySelector('.tab[data-tab="supply"]')) && !document.querySelector('.tab[data-tab="insertion"]')
   ));
 
   await page.click('.system-btn[data-system="nerve"]');
-  await waitForLoading();
+  await waitReady();
   const median = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pick('median\\s+nerve|medianus'));
+  await waitHighlight();
   record('median_nerve_target', /median\s+nerve|medianus/i.test(median.selectedStructure), median.selectedStructure);
   record('nerve_tabs_correct', await page.evaluate(() =>
-    Boolean(document.querySelector('.tab[data-tab="anatomy"]')) &&
-    Boolean(document.querySelector('.tab[data-tab="course"]')) &&
-    Boolean(document.querySelector('.tab[data-tab="innervation"]')) &&
-    Boolean(document.querySelector('.tab[data-tab="clinical"]'))
+    Boolean(document.querySelector('.tab[data-tab="anatomy"]')) && Boolean(document.querySelector('.tab[data-tab="course"]')) && Boolean(document.querySelector('.tab[data-tab="innervation"]')) && Boolean(document.querySelector('.tab[data-tab="clinical"]'))
   ));
   record('median_info_card', (await text('#structureName')).toLowerCase().includes('median'));
 
   await page.click('.system-btn[data-system="ligament"]');
   await page.click('.system-btn[data-system="vessel"]');
   await page.click('.system-btn[data-system="nerve"]');
-  await waitForLoading();
+  await waitReady();
   const raceState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
   record('rapid_switch_latest_wins', raceState.activeSystem === 'nerve', `${raceState.activeSystem} / ${raceState.selectedStructure}`);
-  record('mobile_render_budget', raceState.pixelRatio <= 1 && raceState.continuousAnimation === false, `pixelRatio=${raceState.pixelRatio}`);
+  record('low_end_render_budget', raceState.pixelRatio === 1 && raceState.continuousAnimation === false && raceState.webgl === false && raceState.runtime3dModels === false,
+    `webgl=${raceState.webgl} pixelRatio=${raceState.pixelRatio}`);
 
   return { pass: checks.every(check => check.pass), checks };
 }
@@ -148,8 +143,8 @@ try {
     await page.screenshot({ path: path.join(outputDir, 'qa-function.png'), type: 'png', fullPage: true });
     await fs.writeFile(path.join(outputDir, 'qa-function-report.json'), `${JSON.stringify(report, null, 2)}\n`, 'utf8');
     console.log(JSON.stringify(report, null, 2));
-    if (!report.pass) throw new Error('3D ANATOMY FUNCTION QA FAILED');
-    console.log('3D ANATOMY FUNCTION QA PASS');
+    if (!report.pass) throw new Error('ANATOMY STATIC ATLAS FUNCTION QA FAILED');
+    console.log('ANATOMY STATIC ATLAS FUNCTION QA PASS');
   } else {
     const report = await page.$eval('#qa-layout-report', element => JSON.parse(element.textContent));
     await page.screenshot({ path: path.join(outputDir, 'qa-phone.png'), type: 'png', fullPage: true });
