@@ -1,24 +1,22 @@
-name: v29.9 premium 3D anatomy module
+name: v29.9 premium static anatomy atlas
 
 on:
   push:
     branches:
-      - v29.8-3d-anatomy
-      - v29.8.1-3d-simple
       - v29.9-3d-premium
     paths:
       - 'tools/anatomy3d/**'
       - '.github/workflows/v29.8-anatomy3d.yml'
 
 concurrency:
-  group: v29.9-anatomy3d-${{ github.ref }}
+  group: v29.9-static-atlas-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  build-anatomy3d:
+  build-anatomy-atlas:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
@@ -32,12 +30,12 @@ jobs:
 
       - name: Install Blender and utilities
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y blender unzip curl python3-numpy
           blender --version | head -n 2
-          blender -b --python-expr "import numpy as np; print('BLENDER_NUMPY', np.__version__)"
 
-      - name: Download libre Z-Anatomy source model
+      - name: Download libre Z-Anatomy source
         shell: bash
         run: |
           set -euo pipefail
@@ -49,66 +47,64 @@ jobs:
           BLEND="$(find /tmp/z-anatomy -type f -name Startup.blend | head -n 1)"
           test -n "$BLEND"
           echo "BLEND_FILE=$BLEND" >> "$GITHUB_ENV"
+          mkdir -p tools/anatomy3d/public/licenses
           curl -L --retry 3 --fail \
             -o tools/anatomy3d/public/licenses/Z-Anatomy-License.txt \
             https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/master/License.txt
           ls -lh /tmp/Z-Anatomy.zip "$BLEND"
 
-      - name: Export five isolated premium mobile anatomy systems
+      - name: Render five static layered anatomy atlases
         env:
           FTR_ANATOMY_OUT: ${{ github.workspace }}/tools/anatomy3d/public
+          FTR_ATLAS_WIDTH: '720'
+          FTR_ATLAS_HEIGHT: '1120'
         run: |
           set -euo pipefail
+          python3 -m py_compile tools/anatomy3d/scripts/render_static_atlas.py
           blender -b "$BLEND_FILE" \
-            --python "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/export_z_anatomy.py"
-          test -f "$GITHUB_WORKSPACE/tools/anatomy3d/public/data/export-report.json"
+            --python "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/render_static_atlas.py"
 
-      - name: Validate exported anatomy systems
+      - name: Validate static atlas contract
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json, pathlib
-          p = pathlib.Path('tools/anatomy3d/public/data/export-report.json')
-          d = json.loads(p.read_text())
+          root = pathlib.Path('tools/anatomy3d/public')
+          data = json.loads((root/'data/atlas-map.json').read_text(encoding='utf-8'))
+          assert data['render_mode'] == 'static-layered-atlas'
+          assert data['policy']['webgl'] is False
+          assert data['policy']['runtime_3d_models'] is False
+          assert data['policy']['continuous_render_loop'] is False
           required = ['muscle','bone','ligament','vessel','nerve']
           for key in required:
-              row = d['systems'].get(key)
-              if not row or row['mesh_count'] < 1 or row['bytes'] < 1000 or not row.get('isolated'):
-                  raise SystemExit(f'Invalid export for {key}: {row}')
-              if row['exported_mesh_count'] != row['mesh_count']:
-                  raise SystemExit(f'Contaminated GLB for {key}: {row}')
-              print(key, row['mesh_count'], row['exported_mesh_count'], row['bytes'], row.get('source_polygons'), row.get('decimate_ratio'))
-          ref = d.get('reference', {})
-          if ref.get('mesh_count') != 1 or ref.get('bytes', 0) < 1000:
-              raise SystemExit(f'Invalid reference skeleton: {ref}')
-          policy = d.get('policy', {})
-          if not policy.get('isolated_system_exports') or not policy.get('mobile_decimation') or not policy.get('one_detailed_system_loaded_at_a_time'):
-              raise SystemExit(f'Premium mobile export policy missing: {policy}')
+              row = data['systems'][key]
+              assert row['structure_count'] > 0, (key, row['structure_count'])
+              for asset in [row['beauty'], row['id_map']]:
+                  p = root / asset
+                  assert p.is_file() and p.stat().st_size > 1000, (key, asset)
+              print(key, row['structure_count'], row['beauty'], row['id_map'])
           PY
-          ls -lh tools/anatomy3d/public/models/*.glb
+          ls -lh tools/anatomy3d/public/atlas/*.png
 
-      - name: Install and bundle offline Three.js module
+      - name: Install and bundle offline module
         working-directory: tools/anatomy3d
         shell: bash
         run: |
           set -euo pipefail
           npm install --no-audit --no-fund
-          mkdir -p public/draco
-          cp node_modules/three/examples/jsm/libs/draco/gltf/* public/draco/
           npm run build
 
-      - name: Static QA
+      - name: Static package QA
         shell: bash
         run: |
           set -euo pipefail
           test -f tools/anatomy3d/dist/index.html
-          test -f tools/anatomy3d/dist/models/skeleton.glb
-          test -f tools/anatomy3d/dist/models/muscular.glb
-          test -f tools/anatomy3d/dist/models/ligaments.glb
-          test -f tools/anatomy3d/dist/models/cardiovascular.glb
-          test -f tools/anatomy3d/dist/models/nervous.glb
-          test -f tools/anatomy3d/dist/models/skeleton-reference.glb
+          test -f tools/anatomy3d/dist/data/atlas-map.json
+          for s in muscle bone ligament vessel nerve; do
+            test -f "tools/anatomy3d/dist/atlas/${s}-front.png"
+            test -f "tools/anatomy3d/dist/atlas/${s}-id.png"
+          done
           test -f tools/anatomy3d/dist/licenses/ATTRIBUTION.txt
           test -f tools/anatomy3d/dist/licenses/Z-Anatomy-License.txt
           grep -R "3D ANATOM" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
@@ -117,11 +113,12 @@ jobs:
           grep -R "Anterior talofibular" tools/anatomy3d/dist/assets >/dev/null
           grep -R "Anterior tibial artery" tools/anatomy3d/dist/assets >/dev/null
           grep -R "Median sinir" tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Sinirler" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
-          ! grep -E "Sınav Modu|Karma Sınav|Öğrenme Modu|Etiketler|Not Ekle|Bilgiyi Paylaş" tools/anatomy3d/dist/index.html
+          grep -R "static-layered-atlas" tools/anatomy3d/dist/assets >/dev/null
+          ! grep -R -E "OrbitControls|GLTFLoader|WebGLRenderer|three/examples" tools/anatomy3d/dist/assets
+          ! grep -E "Sınav Modu|Karma Sınav|Öğrenme Modu|Etiketler|Not Ekle|Bilgiyi Paylaş|Otomatik Döndür" tools/anatomy3d/dist/index.html
           du -sh tools/anatomy3d/dist
 
-      - name: Create module manifest
+      - name: Create immutable module manifest
         shell: bash
         run: |
           set -euo pipefail
@@ -132,19 +129,25 @@ jobs:
           rows=[]
           for p in sorted(root.rglob('*')):
               if p.is_file():
-                  h=hashlib.sha256(p.read_bytes()).hexdigest()
-                  rows.append({'path':str(p.relative_to(root)).replace('\\','/'),'bytes':p.stat().st_size,'sha256':h})
+                  rows.append({
+                      'path':str(p.relative_to(root)).replace('\\','/'),
+                      'bytes':p.stat().st_size,
+                      'sha256':hashlib.sha256(p.read_bytes()).hexdigest()
+                  })
           out={
               'module':'FTR Akademi 3D Anatomi',
-              'version':'v29.9-premium',
-              'reference':'six approved premium visual references 2026-09-02',
+              'version':'v29.9-static-atlas',
+              'design_lock':'approved premium references 2026-09-02',
+              'render_mode':'static-layered-atlas',
               'systems':['muscle','bone','ligament','vessel','nerve'],
+              'runtime_webgl':False,
+              'runtime_glb':False,
               'files':rows
           }
           pathlib.Path('ANATOMY3D-MANIFEST.json').write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding='utf-8')
           PY
 
-      - name: Render phone-size QA screenshot
+      - name: Render phone QA screenshot
         shell: bash
         run: |
           set -euo pipefail
@@ -158,7 +161,7 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4173/ "$GITHUB_WORKSPACE/tools/anatomy3d" screenshot
 
-      - name: Assert premium 390x844 layout
+      - name: Assert locked 390x844 layout
         shell: bash
         run: |
           set -euo pipefail
@@ -172,7 +175,7 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4174/ "$GITHUB_WORKSPACE/tools/anatomy3d" assert
 
-      - name: Assert physical 360x800 phone geometry
+      - name: Assert Reder-class 360x800 layout
         shell: bash
         run: |
           set -euo pipefail
@@ -186,7 +189,7 @@ jobs:
           QA_WIDTH=360 QA_HEIGHT=800 CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4176/ "$GITHUB_WORKSPACE/tools/anatomy3d/qa-360" assert
 
-      - name: Verify five-system anatomy functions
+      - name: Verify five-system static atlas functions
         shell: bash
         run: |
           set -euo pipefail
@@ -200,11 +203,11 @@ jobs:
           CHROME_BIN="$CHROME" node "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/qa-browser.mjs" \
             http://127.0.0.1:4175/ "$GITHUB_WORKSPACE/tools/anatomy3d" function
 
-      - name: Upload premium 3D anatomy module artifact
+      - name: Upload premium static anatomy artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v29.9-anatomy3d-premium-module
+          name: v29.9-anatomy-static-atlas
           path: |
             tools/anatomy3d/dist
             tools/anatomy3d/integration
