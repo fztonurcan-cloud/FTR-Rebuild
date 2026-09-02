@@ -6,6 +6,8 @@ on:
       - v29.9-3d-premium
     paths:
       - 'tools/anatomy3d/**'
+      - '!tools/anatomy3d/scripts/assemble_v29_7_base.py'
+      - '!tools/anatomy3d/scripts/build_v29_8_apk.py'
       - '.github/workflows/v29.8-anatomy3d.yml'
 
 concurrency:
