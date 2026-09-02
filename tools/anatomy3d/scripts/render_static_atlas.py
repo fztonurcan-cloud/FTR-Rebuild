@@ -1,6 +1,5 @@
 import bpy
 import json
-import math
 import os
 import re
 from pathlib import Path
@@ -62,6 +61,7 @@ def collection_objects(collection, name_filter=None):
                 candidates.extend(list(child.objects))
             except Exception:
                 pass
+
     rows = []
     seen = set()
     for obj in candidates:
@@ -78,77 +78,6 @@ def collection_objects(collection, name_filter=None):
     if not rows:
         raise RuntimeError(f'No mesh objects for {collection.name}')
     return rows
-
-
-def material(name, rgba, emission=False):
-    mat = bpy.data.materials.new(name)
-    mat.use_nodes = True
-    nodes = mat.node_tree.nodes
-    links = mat.node_tree.links
-    for node in list(nodes):
-        nodes.remove(node)
-    out = nodes.new('ShaderNodeOutputMaterial')
-    if emission:
-        shader = nodes.new('ShaderNodeEmission')
-        shader.inputs['Color'].default_value = rgba
-        shader.inputs['Strength'].default_value = 1.0
-    else:
-        shader = nodes.new('ShaderNodeBsdfPrincipled')
-        shader.inputs['Base Color'].default_value = rgba
-        shader.inputs['Roughness'].default_value = 0.62
-        if 'Specular IOR Level' in shader.inputs:
-            shader.inputs['Specular IOR Level'].default_value = 0.28
-        elif 'Specular' in shader.inputs:
-            shader.inputs['Specular'].default_value = 0.28
-    links.new(shader.outputs[0], out.inputs['Surface'])
-    return mat
-
-
-def beauty_rgba(system, raw_name):
-    n = raw_name.lower()
-    if system == 'muscle':
-        if re.search(r'tendon|aponeuros|fascia', n):
-            return (0.88, 0.82, 0.72, 1)
-        return (0.62, 0.095, 0.055, 1)
-    if system == 'bone':
-        return (0.82, 0.75, 0.62, 1)
-    if system == 'ligament':
-        return (0.82, 0.78, 0.70, 1)
-    if system == 'vessel':
-        if re.search(r'vein|vena|venous|saphen', n):
-            return (0.045, 0.18, 0.72, 1)
-        return (0.82, 0.035, 0.055, 1)
-    if system == 'nerve':
-        if re.search(r'brain|cerebr|spinal cord|medulla', n):
-            return (0.58, 0.40, 0.24, 1)
-        return (0.96, 0.62, 0.015, 1)
-    return (0.7, 0.7, 0.7, 1)
-
-
-def id_rgba(index):
-    value = index + 1
-    return ((value & 255) / 255.0, ((value >> 8) & 255) / 255.0, ((value >> 16) & 255) / 255.0, 1.0)
-
-
-def id_rgb(index):
-    value = index + 1
-    return [value & 255, (value >> 8) & 255, (value >> 16) & 255]
-
-
-def duplicate_into(source, collection, mat):
-    dup = source.copy()
-    dup.data = source.data.copy()
-    dup.parent = None
-    dup.matrix_world = source.matrix_world.copy()
-    dup.animation_data_clear()
-    dup.constraints.clear()
-    dup.modifiers.clear()
-    dup.hide_render = False
-    dup.hide_viewport = False
-    dup.data.materials.clear()
-    dup.data.materials.append(mat)
-    collection.objects.link(dup)
-    return dup
 
 
 def bbox_world(objects):
@@ -171,26 +100,116 @@ def object_center(obj):
     return sum(points, Vector()) / len(points)
 
 
-def setup_scene(name, world_color=(0.003, 0.010, 0.022, 1)):
+def beauty_rgba(system, raw_name):
+    n = raw_name.lower()
+    if system == 'muscle':
+        if re.search(r'tendon|aponeuros|fascia', n):
+            return (0.90, 0.82, 0.69, 1.0)
+        return (0.72, 0.11, 0.055, 1.0)
+    if system == 'bone':
+        return (0.90, 0.84, 0.72, 1.0)
+    if system == 'ligament':
+        return (0.92, 0.89, 0.80, 1.0)
+    if system == 'vessel':
+        if re.search(r'vein|vena|venous|saphen', n):
+            return (0.045, 0.20, 0.84, 1.0)
+        return (0.88, 0.035, 0.055, 1.0)
+    if system == 'nerve':
+        if re.search(r'brain|cerebr|spinal cord|medulla', n):
+            return (0.66, 0.47, 0.28, 1.0)
+        return (1.00, 0.64, 0.02, 1.0)
+    return (0.72, 0.72, 0.72, 1.0)
+
+
+def id_rgb(index):
+    """4096 well-separated non-black IDs; robust against edge antialiasing."""
+    value = int(index)
+    return [
+        (value & 15) * 16 + 8,
+        ((value >> 4) & 15) * 16 + 8,
+        ((value >> 8) & 15) * 16 + 8,
+    ]
+
+
+def id_rgba(index):
+    rgb = id_rgb(index)
+    return tuple(channel / 255.0 for channel in rgb) + (1.0,)
+
+
+def set_if(obj, name, value):
+    if not hasattr(obj, name):
+        return
+    try:
+        setattr(obj, name, value)
+    except Exception:
+        pass
+
+
+def setup_scene(name, id_pass=False):
     scene = bpy.data.scenes.new(name)
     coll = bpy.data.collections.new(name + ' objects')
     scene.collection.children.link(coll)
-    scene.render.engine = 'BLENDER_EEVEE'
+
+    # Workbench renders the Z-Anatomy geometry directly with object colors. It avoids
+    # copying hundreds of meshes/materials and is dramatically lighter in headless CI.
+    try:
+        scene.render.engine = 'BLENDER_WORKBENCH'
+    except Exception:
+        scene.render.engine = 'BLENDER_WORKBENCH_NEXT'
+
     scene.render.resolution_x = WIDTH
     scene.render.resolution_y = HEIGHT
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = 'PNG'
-    scene.render.image_settings.color_mode = 'RGBA'
-    scene.render.film_transparent = False
+    scene.render.image_settings.color_mode = 'RGB' if id_pass else 'RGBA'
     scene.render.image_settings.color_depth = '8'
-    scene.view_settings.view_transform = 'Standard'
-    scene.view_settings.look = 'Medium High Contrast'
+    scene.render.film_transparent = False
+
+    shading = scene.display.shading
+    set_if(shading, 'color_type', 'OBJECT')
+    set_if(shading, 'background_type', 'VIEWPORT')
+    set_if(shading, 'show_outline', False)
+
+    if id_pass:
+        set_if(shading, 'light', 'FLAT')
+        set_if(shading, 'show_shadows', False)
+        set_if(shading, 'show_cavity', False)
+        set_if(shading, 'show_specular_highlight', False)
+        set_if(shading, 'background_color', (0.0, 0.0, 0.0))
+        set_if(scene.display, 'render_aa', 'OFF')
+        # Raw keeps the integer object-ID colors from being display-transformed.
+        try:
+            scene.view_settings.view_transform = 'Raw'
+        except Exception:
+            scene.view_settings.view_transform = 'Standard'
+        try:
+            scene.view_settings.look = 'None'
+        except Exception:
+            pass
+    else:
+        set_if(shading, 'light', 'STUDIO')
+        set_if(shading, 'show_shadows', True)
+        set_if(shading, 'show_cavity', True)
+        set_if(shading, 'cavity_type', 'WORLD')
+        set_if(shading, 'curvature_ridge_factor', 1.35)
+        set_if(shading, 'curvature_valley_factor', 0.85)
+        set_if(shading, 'show_specular_highlight', True)
+        set_if(shading, 'background_color', (0.003, 0.010, 0.026))
+        set_if(scene.display, 'render_aa', '8')
+        try:
+            scene.view_settings.view_transform = 'Standard'
+        except Exception:
+            pass
+        try:
+            scene.view_settings.look = 'Medium High Contrast'
+        except Exception:
+            try:
+                scene.view_settings.look = 'None'
+            except Exception:
+                pass
+
     scene.view_settings.exposure = 0
     scene.view_settings.gamma = 1
-    scene.world = bpy.data.worlds.new(name + ' world')
-    scene.world.use_nodes = True
-    scene.world.node_tree.nodes['Background'].inputs['Color'].default_value = world_color
-    scene.world.node_tree.nodes['Background'].inputs['Strength'].default_value = 0.16
     return scene, coll
 
 
@@ -201,7 +220,8 @@ def add_camera(scene, min_v, max_v):
     camera = bpy.data.objects.new(scene.name + ' camera', camera_data)
     scene.collection.objects.link(camera)
     camera_data.type = 'ORTHO'
-    # BodyParts3D/Z-Anatomy is authored upright on Z. View from anterior (-Y -> +Y).
+
+    # BodyParts3D/Z-Anatomy is upright on Z. View from anterior (-Y -> +Y).
     visible_h = max(size.z * 1.08, (size.x / ASPECT) * 1.08)
     camera_data.ortho_scale = max(visible_h, 0.1)
     distance = max(size.x, size.y, size.z, 0.1) * 3.2
@@ -209,26 +229,7 @@ def add_camera(scene, min_v, max_v):
     direction = center - camera.location
     camera.rotation_euler = direction.to_track_quat('-Z', 'Y').to_euler()
     scene.camera = camera
-    return camera, center, camera_data.ortho_scale
-
-
-def add_lights(scene, center, scale):
-    hemi = bpy.data.lights.new(scene.name + ' key', type='AREA')
-    hemi.energy = 820
-    hemi.size = max(scale * 0.7, 1)
-    key = bpy.data.objects.new(scene.name + ' key', hemi)
-    key.location = (center.x - scale * .45, center.y - scale * .8, center.z + scale * .4)
-    key.rotation_euler = (math.radians(64), 0, math.radians(-24))
-    scene.collection.objects.link(key)
-
-    fill_data = bpy.data.lights.new(scene.name + ' fill', type='AREA')
-    fill_data.energy = 420
-    fill_data.color = (0.35, 0.55, 1.0)
-    fill_data.size = max(scale, 1)
-    fill = bpy.data.objects.new(scene.name + ' fill', fill_data)
-    fill.location = (center.x + scale * .6, center.y - scale * .5, center.z + scale * .1)
-    fill.rotation_euler = (math.radians(70), 0, math.radians(145))
-    scene.collection.objects.link(fill)
+    return center, camera_data.ortho_scale
 
 
 def project_anchor(center, camera_center, ortho_scale):
@@ -240,145 +241,95 @@ def project_anchor(center, camera_center, ortho_scale):
     return [round(max(0.02, min(0.98, x)), 5), round(max(0.02, min(0.98, y)), 5)]
 
 
-def cleanup_scene(scene):
-    """Remove only temporary atlas datablocks without retaining invalid Blender RNA refs."""
-    objects = list(scene.objects)
-    object_names = [obj.name for obj in objects]
-    mesh_names = set()
-    material_names = set()
-    camera_names = set()
-    light_names = set()
-
-    for obj in objects:
-        data = getattr(obj, 'data', None)
-        obj_type = getattr(obj, 'type', None)
-        if obj_type == 'MESH' and data:
-            mesh_names.add(data.name)
-            for mat in list(data.materials):
-                if mat:
-                    material_names.add(mat.name)
-        elif obj_type == 'CAMERA' and data:
-            camera_names.add(data.name)
-        elif obj_type == 'LIGHT' and data:
-            light_names.add(data.name)
-
-    world_name = scene.world.name if scene.world else None
-    child_collection_names = [coll.name for coll in list(scene.collection.children)]
-
-    bpy.data.scenes.remove(scene)
-
-    for name in object_names:
-        obj = bpy.data.objects.get(name)
-        if obj is not None:
-            bpy.data.objects.remove(obj, do_unlink=True)
-
-    for name in mesh_names:
-        mesh = bpy.data.meshes.get(name)
-        if mesh is not None and mesh.users == 0:
-            bpy.data.meshes.remove(mesh)
-
-    # Material names are captured before mesh deletion. Looking them up again avoids
-    # dereferencing a StructRNA that was already removed when a shared material name
-    # appeared in multiple mesh slots (the previous CI failure).
-    for name in material_names:
-        mat = bpy.data.materials.get(name)
-        if mat is not None and mat.users == 0:
-            bpy.data.materials.remove(mat)
-
-    for name in camera_names:
-        camera = bpy.data.cameras.get(name)
-        if camera is not None and camera.users == 0:
-            bpy.data.cameras.remove(camera)
-
-    for name in light_names:
-        light = bpy.data.lights.get(name)
-        if light is not None and light.users == 0:
-            bpy.data.lights.remove(light)
-
-    for name in child_collection_names:
-        coll = bpy.data.collections.get(name)
-        if coll is not None and coll.users == 0:
-            bpy.data.collections.remove(coll)
-
-    if world_name:
-        world = bpy.data.worlds.get(world_name)
-        if world is not None and world.users == 0:
-            bpy.data.worlds.remove(world)
+def unique_objects(rows):
+    out = []
+    seen = set()
+    for obj in rows:
+        try:
+            ptr = obj.as_pointer()
+        except Exception:
+            continue
+        if ptr in seen:
+            continue
+        seen.add(ptr)
+        out.append(obj)
+    return out
 
 
-def render_beauty(system, source_objects, bone_objects):
-    scene, coll = setup_scene('FTR atlas beauty ' + system)
-    duplicates = []
-    cache = {}
+def render_pass(system, source_objects, bone_objects, id_pass=False):
+    original_scene = bpy.context.window.scene
+    scene, coll = setup_scene(f'FTR atlas {"id" if id_pass else "beauty"} {system}', id_pass=id_pass)
 
+    render_objects = list(source_objects)
     if system in REFERENCE_SYSTEMS:
-        ref_mat = material('FTR reference ' + system, (0.22, 0.23, 0.23, 1))
-        for source in bone_objects:
-            duplicates.append(duplicate_into(source, coll, ref_mat))
+        render_objects = list(bone_objects) + render_objects
+    render_objects = unique_objects(render_objects)
 
-    active_dups = []
-    for source in source_objects:
-        rgba = beauty_rgba(system, source.name)
-        key = tuple(round(v, 3) for v in rgba)
-        mat = cache.get(key)
-        if mat is None:
-            mat = material(f'FTR {system} beauty {len(cache)}', rgba)
-            cache[key] = mat
-        dup = duplicate_into(source, coll, mat)
-        duplicates.append(dup)
-        active_dups.append(dup)
+    saved = []
+    try:
+        for obj in render_objects:
+            saved.append((obj, tuple(obj.color), bool(obj.hide_render), bool(obj.hide_viewport)))
+            obj.hide_render = False
+            obj.hide_viewport = False
+            coll.objects.link(obj)
 
-    min_v, max_v = bbox_world(active_dups if system not in REFERENCE_SYSTEMS else duplicates)
-    camera, center, ortho = add_camera(scene, min_v, max_v)
-    add_lights(scene, center, ortho)
-    scene.render.filepath = str(ATLAS / f'{system}-front.png')
-    bpy.context.window.scene = scene
-    bpy.context.view_layer.update()
-    bpy.ops.render.render(write_still=True)
+        if system in REFERENCE_SYSTEMS:
+            ref = (0.0, 0.0, 0.0, 1.0) if id_pass else (0.18, 0.20, 0.25, 1.0)
+            for obj in bone_objects:
+                try:
+                    obj.color = ref
+                except Exception:
+                    pass
 
-    anchors = [project_anchor(object_center(obj), center, ortho) for obj in active_dups]
-    cleanup_scene(scene)
-    return anchors
+        for index, obj in enumerate(source_objects):
+            try:
+                obj.color = id_rgba(index) if id_pass else beauty_rgba(system, obj.name)
+            except Exception:
+                pass
 
+        min_v, max_v = bbox_world(render_objects)
+        camera_center, ortho = add_camera(scene, min_v, max_v)
+        scene.render.filepath = str(ATLAS / f'{system}-{"id" if id_pass else "front"}.png')
 
-def render_id(system, source_objects, bone_objects):
-    scene, coll = setup_scene('FTR atlas id ' + system, (0, 0, 0, 1))
-    duplicates = []
-    ref_mat = material('FTR id reference ' + system, (0, 0, 0, 1), emission=True)
-    if system in REFERENCE_SYSTEMS:
-        for source in bone_objects:
-            duplicates.append(duplicate_into(source, coll, ref_mat))
+        bpy.context.window.scene = scene
+        bpy.context.view_layer.update()
+        print(f'[STATIC ATLAS] render {system} {"id" if id_pass else "beauty"}: {len(render_objects)} linked objects')
+        bpy.ops.render.render(write_still=True)
 
-    active_dups = []
-    for index, source in enumerate(source_objects):
-        mat = material(f'FTR id {system} {index}', id_rgba(index), emission=True)
-        dup = duplicate_into(source, coll, mat)
-        duplicates.append(dup)
-        active_dups.append(dup)
+        if id_pass:
+            return None
+        return [project_anchor(object_center(obj), camera_center, ortho) for obj in source_objects]
+    finally:
+        bpy.context.window.scene = original_scene
+        try:
+            bpy.context.view_layer.update()
+        except Exception:
+            pass
 
-    min_v, max_v = bbox_world(active_dups if system not in REFERENCE_SYSTEMS else duplicates)
-    add_camera(scene, min_v, max_v)
-    scene.render.filepath = str(ATLAS / f'{system}-id.png')
-    scene.render.image_settings.color_mode = 'RGB'
-    scene.render.film_transparent = False
-    scene.view_settings.view_transform = 'Standard'
-    scene.view_settings.look = 'None'
-    scene.view_settings.exposure = 0
-    scene.view_settings.gamma = 1
-    scene.render.image_settings.color_depth = '8'
-    # Disable antialiasing for deterministic integer-color object IDs when supported.
-    if hasattr(scene.render, 'use_antialiasing'):
-        scene.render.use_antialiasing = False
-    bpy.context.window.scene = scene
-    bpy.context.view_layer.update()
-    bpy.ops.render.render(write_still=True)
-    cleanup_scene(scene)
+        # Unlinking/removing only the temporary scene/collection keeps source meshes in
+        # place and avoids the invalid-RNA cleanup failures from the old copy-heavy path.
+        scene_name = scene.name
+        coll_name = coll.name
+        scene_ref = bpy.data.scenes.get(scene_name)
+        if scene_ref is not None:
+            bpy.data.scenes.remove(scene_ref)
+        coll_ref = bpy.data.collections.get(coll_name)
+        if coll_ref is not None and coll_ref.users == 0:
+            bpy.data.collections.remove(coll_ref)
+
+        for obj, color, hide_render, hide_viewport in saved:
+            try:
+                obj.color = color
+                obj.hide_render = hide_render
+                obj.hide_viewport = hide_viewport
+            except Exception:
+                pass
 
 
 def run():
     bone_objects = collection_objects(resolve_collection(BONE_CANDIDATES))
     manifest = {
-        'version': 1,
+        'version': 2,
         'render_mode': 'static-layered-atlas',
         'width': WIDTH,
         'height': HEIGHT,
@@ -389,6 +340,7 @@ def run():
             'runtime_3d_models': False,
             'selection': 'id-map + 2d highlight mask',
             'low_end_phone_first': True,
+            'atlas_renderer': 'Blender Workbench linked-object render',
         },
     }
 
@@ -396,8 +348,10 @@ def run():
         collection = resolve_collection(candidates)
         source_objects = collection_objects(collection, name_filter)
         print(f'[STATIC ATLAS] {system}: {len(source_objects)} structures')
-        anchors = render_beauty(system, source_objects, bone_objects)
-        render_id(system, source_objects, bone_objects)
+
+        anchors = render_pass(system, source_objects, bone_objects, id_pass=False)
+        render_pass(system, source_objects, bone_objects, id_pass=True)
+
         rows = []
         for index, source in enumerate(source_objects):
             label = display_name(source.name)
@@ -419,7 +373,7 @@ def run():
         }
 
     (DATA / 'atlas-map.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(json.dumps({k: v['structure_count'] for k, v in manifest['systems'].items()}, indent=2))
+    print(json.dumps({key: value['structure_count'] for key, value in manifest['systems'].items()}, indent=2))
 
 
 run()
