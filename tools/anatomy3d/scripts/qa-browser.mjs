@@ -138,6 +138,14 @@ try {
   await page.goto(qaUrl.href, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   await page.waitForFunction(() => document.documentElement.dataset.qaReady === 'true', { timeout: 120_000 });
 
+  // main.js marks the page QA-ready as soon as the first atlas image is loaded.
+  // qa-layout.js intentionally publishes its immutable DOM snapshot two animation
+  // frames later. Waiting for the snapshot itself removes that small race and
+  // makes screenshot/assert modes deterministic on both fast and slow runners.
+  if (mode !== 'function') {
+    await page.waitForSelector('#qa-layout-report', { timeout: 120_000 });
+  }
+
   if (mode === 'function') {
     const report = await runFunctionQa(page);
     await page.screenshot({ path: path.join(outputDir, 'qa-function.png'), type: 'png', fullPage: true });
