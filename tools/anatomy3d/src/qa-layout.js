@@ -5,13 +5,15 @@ if (params.get('qa') === '1') {
   const deadlineMs = 120000;
   const requiredLabels = [
     '3D ANATOMİ', 'Kaslar', 'Kemikler', 'Ligamentler', 'Damarlar', 'Sinirler',
-    'Döndür', 'Yakınlaştır', 'Uzaklaştır', 'Sıfırla', 'Katmanlar', 'Şeffaflık',
-    'Biceps brachii', 'Genel Bilgi'
+    'Biceps brachii', 'Genel Bilgi', 'Bir yapıya dokununca model üzerinde vurgulanır.'
   ];
-  const forbiddenLabels = ['Sınav Modu', 'Karma Sınav', 'Öğrenme Modu', 'Etiketler', 'Not Ekle', 'Bilgiyi Paylaş'];
+  const forbiddenLabels = [
+    'Sınav Modu', 'Karma Sınav', 'Öğrenme Modu', 'Etiketler', 'Not Ekle', 'Bilgiyi Paylaş',
+    'Döndür', 'Yakınlaştır', 'Uzaklaştır', 'Otomatik Döndür'
+  ];
   const targets = {
     app: '#anatomy-app', topbar: '.topbar', systemTabs: '.system-tabs', browser: '.structure-browser',
-    controls: '.viewer-controls', viewer: '#viewer', canvas: '#anatomyCanvas', infoCard: '#infoCard'
+    viewer: '#viewer', canvas: '#anatomyCanvas', infoCard: '#infoCard'
   };
 
   const round = number => Math.round(number * 10) / 10;
@@ -33,26 +35,29 @@ if (params.get('qa') === '1') {
     const loading = document.getElementById('loading');
     const loadingHidden = !loading || loading.classList.contains('hidden') || getComputedStyle(loading).display === 'none';
     const canvasRect = elements.canvas?.rect || { width: 0, height: 0 };
-    const canvasUsable = canvasRect.width >= 150 && canvasRect.height >= 440;
+    const canvasUsable = canvasRect.width >= 145 && canvasRect.height >= 490;
     const noHorizontalOverflow = document.documentElement.scrollWidth <= innerWidth + 2;
     const systemCount = document.querySelectorAll('.system-btn').length;
     const uniqueSystems = new Set([...document.querySelectorAll('.system-btn')].map(button => button.dataset.system)).size;
     const bicepsDefault = (document.getElementById('structureName')?.textContent || '').toLowerCase().includes('biceps brachii');
     const activeSystem = document.querySelector('.system-btn.active')?.dataset.system === 'muscle';
-    const legacyModesAbsent = !document.querySelector('#examBtn, #quizCard, .learn-chip, .tool-panel');
+    const state = window.__FTR_ANATOMY_QA__?.state?.() || {};
+    const staticAtlas = state.renderMode === 'static-layered-atlas' && state.webgl === false && state.runtime3dModels === false && state.continuousAnimation === false;
+    const noLegacyControls = !document.querySelector('.viewer-controls, #rotateBtn, #zoomInBtn, #zoomOutBtn, #autoRotateBtn');
     const pass = missingLabels.length === 0 && forbiddenPresent.length === 0 && invisible.length === 0 && loadingHidden &&
-      canvasUsable && noHorizontalOverflow && systemCount === 5 && uniqueSystems === 5 && bicepsDefault && activeSystem && legacyModesAbsent;
+      canvasUsable && noHorizontalOverflow && systemCount === 5 && uniqueSystems === 5 && bicepsDefault && activeSystem && staticAtlas && noLegacyControls;
     return {
       pass,
       elapsed_ms: Math.round(performance.now() - started),
       viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
       document: { scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight },
       loadingHidden, canvasUsable, noHorizontalOverflow, systemCount, uniqueSystems, bicepsDefault, activeSystem,
-      legacyModesAbsent, missingLabels, forbiddenPresent, invisible, elements
+      staticAtlas, noLegacyControls, state, missingLabels, forbiddenPresent, invisible, elements
     };
   }
 
   function publish() {
+    if (document.getElementById('qa-layout-report')) return;
     const report = buildReport();
     const pre = Object.assign(document.createElement('pre'), { id: 'qa-layout-report' });
     pre.setAttribute('aria-hidden', 'true');
@@ -65,7 +70,8 @@ if (params.get('qa') === '1') {
 
   const timer = setInterval(() => {
     const loading = document.getElementById('loading');
-    const ready = !loading || loading.classList.contains('hidden') || getComputedStyle(loading).display === 'none';
+    const state = window.__FTR_ANATOMY_QA__?.state?.() || {};
+    const ready = state.imageReady && (!loading || loading.classList.contains('hidden') || getComputedStyle(loading).display === 'none');
     if (ready || performance.now() - started >= deadlineMs) {
       clearInterval(timer);
       requestAnimationFrame(() => requestAnimationFrame(publish));
