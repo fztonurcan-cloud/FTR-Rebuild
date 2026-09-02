@@ -347,7 +347,16 @@ def render_pass(system, source_objects, bone_objects, id_pass=False):
             coll.objects.link(obj)
 
         if system in REFERENCE_SYSTEMS:
-            ref = (0.0, 0.0, 0.0, 1.0) if id_pass else (0.18, 0.20, 0.25, 1.0)
+            if id_pass:
+                ref = (0.0, 0.0, 0.0, 1.0)
+            elif system == 'ligament':
+                # Locked ligament reference: ivory/cream skeletal context, with
+                # ligaments remaining lighter and the selected ATFL turning purple.
+                ref = (0.72, 0.66, 0.56, 1.0)
+            else:
+                # Vessels/nerves keep a subdued neutral skeleton so their colored
+                # trees remain the dominant information layer.
+                ref = (0.18, 0.20, 0.25, 1.0)
             for obj in bone_objects:
                 try:
                     obj.color = ref
@@ -450,6 +459,7 @@ def run():
             'muscle_surface_overlays_removed': True,
             'system_text_artifacts_removed': True,
             'exact_default_structure_priority': True,
+            'ligament_ivory_skeleton_reference': True,
         },
     }
 
