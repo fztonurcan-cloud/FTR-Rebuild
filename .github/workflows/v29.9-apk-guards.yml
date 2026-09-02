@@ -111,6 +111,77 @@ jobs:
           print('assembler missing-part + no-overwrite fail-closed behavior PASS')
           PY
 
+      - name: Assert signer and bootstrap parsers fail closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import pathlib
+          import types
+
+          script = pathlib.Path('tools/anatomy3d/scripts/build_v29_8_apk.py')
+          spec = importlib.util.spec_from_file_location('v299_builder', script)
+          builder = importlib.util.module_from_spec(spec)
+          assert spec and spec.loader
+          spec.loader.exec_module(builder)
+
+          good = '''
+          Verified using v1 scheme (JAR signing): true
+          Verified using v2 scheme (APK Signature Scheme v2): true
+          Verified using v3 scheme (APK Signature Scheme v3): false
+          Number of signers: 1
+          Signer #1 certificate SHA-256 digest: 8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2
+          '''
+
+          def set_apksigner_output(text):
+              def fake_run(*args, **kwargs):
+                  return types.SimpleNamespace(stdout=text)
+              builder.run = fake_run
+
+          set_apksigner_output(good)
+          verified = builder.verify_signing(pathlib.Path('/fake/apksigner'), pathlib.Path('/fake/app.apk'))
+          assert verified['v1'] is True
+          assert verified['v2'] is True
+          assert verified['signer_count'] == 1
+          assert verified['certificate_sha256'] == builder.EXPECTED_CERT_SHA256
+
+          def must_fail(text, label):
+              set_apksigner_output(text)
+              try:
+                  builder.verify_signing(pathlib.Path('/fake/apksigner'), pathlib.Path('/fake/app.apk'))
+              except SystemExit:
+                  return
+              raise AssertionError(f'{label} did not fail closed')
+
+          must_fail(good.replace('v1 scheme (JAR signing): true', 'v1 scheme (JAR signing): false'), 'v1=false')
+          must_fail(good.replace('Number of signers: 1', 'Number of signers: 2'), 'multiple signers')
+          must_fail(
+              good.replace(builder.EXPECTED_CERT_SHA256, '0' * 64),
+              'wrong signer certificate',
+          )
+
+          html = '<!doctype html><html><head></head><body></body></html>'
+          host_once = builder.inject_host_bootstrap(html)
+          assert host_once.count('data-ftr-anatomy3d') == 2
+          assert 'anatomy3d-home-card.css' in host_once
+          assert 'anatomy3d-home-inject.js' in host_once
+          try:
+              builder.inject_host_bootstrap(host_once)
+          except SystemExit:
+              pass
+          else:
+              raise AssertionError('duplicate host bootstrap did not fail closed')
+
+          module_once = builder.inject_module_bootstrap(html)
+          assert 'android-asset-fetch.js' in module_once
+          assert 'module-phone-fix.css' in module_once
+          module_twice = builder.inject_module_bootstrap(module_once)
+          assert module_twice == module_once
+
+          print('apksigner + bootstrap parser fail-closed behavior PASS')
+          PY
+
       - name: Print locked v29.7 contract for audit log
         shell: bash
         run: |
