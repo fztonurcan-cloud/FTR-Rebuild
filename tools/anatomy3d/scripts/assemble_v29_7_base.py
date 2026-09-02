@@ -80,6 +80,32 @@ def validate_contract() -> None:
         raise SystemExit("Invalid locked final SHA-256")
 
 
+def promote_no_clobber(temp_path: Path, output: Path) -> None:
+    """Atomically publish temp_path without ever replacing output.
+
+    The temporary file is deliberately created in output.parent, so an atomic
+    hard-link promotion remains on the same filesystem. os.link fails with
+    FileExistsError if another process creates output after our initial check.
+    We fail closed rather than falling back to a replacement-style rename.
+    """
+    try:
+        os.link(temp_path, output)
+    except FileExistsError as exc:
+        raise SystemExit(f"Refusing to overwrite output created during assembly: {output}") from exc
+    except OSError as exc:
+        raise SystemExit(
+            "Atomic no-clobber promotion is unavailable; refusing unsafe fallback: "
+            f"{exc}"
+        ) from exc
+
+    try:
+        temp_path.unlink()
+    except OSError as exc:
+        # output is already a verified hard link to the same inode. Keep the
+        # verified output, but fail so the caller notices the cleanup problem.
+        raise SystemExit(f"Verified output published but temporary-link cleanup failed: {exc}") from exc
+
+
 def assemble(parts_dir: Path, output: Path) -> dict[str, object]:
     validate_contract()
     parts_dir = parts_dir.resolve()
@@ -166,13 +192,14 @@ def assemble(parts_dir: Path, output: Path) -> dict[str, object]:
         if temp_path is None or temp_path.stat().st_size != BASE_SIZE:
             raise SystemExit("Temporary assembled APK failed final size verification")
 
-        os.replace(temp_path, output)
+        promote_no_clobber(temp_path, output)
         temp_path = None
 
         return {
             "status": "PASS",
             "immutable_source_parts": True,
             "output_overwrite_allowed": False,
+            "atomic_no_clobber_promotion": True,
             "parts": verified_parts,
             "output": {
                 "file": output.name,
