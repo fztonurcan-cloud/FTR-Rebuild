@@ -1,28 +1,19 @@
-# FTR Akademi 3D Anatomi — PREMIUM DESIGN LOCK
+# FTR Akademi 3D Anatomi — FINAL PREMIUM DESIGN LOCK
 
-Status: **USER REFERENCE LOCK — 2026-09-02 / v29.9 development line**
+Status: **USER FINAL REFERENCE LOCK — 2026-09-02 / v29.9 development line**
 
 ## Absolute scope rule
 
 - The only active development area is **3D Anatomi**.
 - No lesson, quiz, auth, Supabase, Hareket Stüdyosu, Programım, favorite, note, notification, FTR AI, drawer or unrelated home component may be changed.
 - `FTR-Akademi-v29.7-BILDIRIM.apk` is the untouched safe checkpoint and must never be overwritten or repackaged in place.
-- v29.8.1 remains an earlier test candidate; v29.9 work is isolated on its own branch.
+- v29.8.1 remains an earlier technical prototype. v29.9 work is isolated on its own branch.
 
-## Visual reference lock
+## Final visual reference lock
 
-The six user-approved reference images supplied on 2026-09-02 define the target visual language for:
+The user-approved premium reference images supplied on 2026-09-02 define the visual result. The implementation must stay inside those references: dark navy medical-atlas UI, left searchable anatomy browser, large central anatomical figure, strong system-specific selection color, bottom information card and the same five system tabs.
 
-1. Home-page 3D Anatomi card
-2. Kas Sistemi
-3. Kemik Sistemi
-4. Ligament Sistemi
-5. Damar Sistemi
-6. Sinir Sistemi
-
-The implementation must reproduce their hierarchy and premium medical-atlas character rather than the low-quality white/raw-model appearance of v29.8.1.
-
-## Required 3D systems
+Required systems:
 
 - Kaslar
 - Kemikler
@@ -30,7 +21,34 @@ The implementation must reproduce their hierarchy and premium medical-atlas char
 - Damarlar
 - Sinirler
 
-Only the selected detailed system is resident at a time. Ligament, vessel and nerve views may load a **single heavily optimized merged skeleton reference mesh** for anatomical context.
+## Final interaction architecture
+
+The heavy live WebGL/GLB viewer is removed from runtime.
+
+`3D ANATOMİ` remains the product/design name because the anatomical figures are produced from 3D anatomical source models, but the phone runtime is a **static layered anatomical atlas**:
+
+1. A premium pre-rendered front-view anatomical image is loaded for the selected system.
+2. A matching invisible object-ID map is loaded with it.
+3. Choosing a structure in the left browser highlights that exact structure on the anatomical figure.
+4. Tapping the anatomical figure can select the structure under the finger through the ID map.
+5. The previously selected structure turns off when another structure is selected.
+6. Other anatomy is visually subdued while the selected structure remains clear and receives the system highlight.
+7. The bottom information card updates immediately to the selected structure.
+8. Two-finger pinch zoom and panning while zoomed are allowed; double tap may toggle zoom.
+
+There is **no runtime free 3D rotation**, no WebGL renderer, no runtime GLB model loading, no automatic rotation and no continuous render loop.
+
+The old right-side controls `Döndür / Yakınlaştır / Uzaklaştır / Sıfırla / Otomatik Döndür` are removed. This is intentional and is part of the user's final decision.
+
+## Selection colors
+
+- Muscle selection: vivid orange/purple premium highlight over anatomical red muscle.
+- Bone selection: blue.
+- Ligament selection: purple.
+- Vessel selection: artery red / vessel-system red; veins remain blue in the base atlas.
+- Nerve selection: yellow/gold.
+
+Raw Blender/export suffixes such as `001`, `.001`, `.L` and `.R` must never be shown as learner-facing names.
 
 ## System-specific information semantics
 
@@ -42,33 +60,19 @@ Only the selected detailed system is resident at a time. Ligament, vessel and ne
 
 Mandatory curated QA examples: Biceps brachii, Fibula, anterior talofibular ligament (ATFL), anterior tibial artery and median nerve.
 
-## Premium model presentation
-
-- Muscle tissue: anatomical red; tendon/aponeurosis: pale ivory.
-- Bone: warm ivory/off-white with depth-preserving medical lighting.
-- Ligament: pale fibrous material over a contextual skeleton; selected ligament highlighted purple.
-- Vessels: arteries red, veins blue; selected vessel receives a stronger system-color highlight.
-- Nerves: warm yellow/gold; selected nerve receives a bright yellow highlight.
-- Raw Blender suffixes such as `001` / `.001` must never be shown to the learner.
-- Structure selection must visually highlight the selected anatomy and update the matching information card.
-
-## Controls and interaction
-
-- Rotate, zoom in, zoom out and reset remain available.
-- Automatic rotation is **off by default** and may render continuously only after explicit user activation.
-- Searchable structure browser, layer isolation and transparency controls are allowed because they are part of the approved premium references; each visible control must work.
-- Full-screen icon operates as an in-module focus mode if platform fullscreen is unavailable.
+Generated visual copy is never accepted as medical truth. Unknown structures must not receive fabricated generic anatomy statements; detailed academic copy is published only after verification.
 
 ## Performance lock
 
-- Mobile pixel ratio: `1`.
-- Mobile antialias: off.
-- `preserveDrawingBuffer: false`.
-- No default continuous animation/render loop.
-- No shadows.
-- Models are Draco-compressed and mobile-decimated during export.
-- Fast system switching uses a load sequence so stale loads cannot replace the latest selected system.
-- Low-end Android physical QA remains mandatory; static QA never equals FINAL approval.
+- Runtime WebGL: **forbidden**.
+- Runtime GLB models: **forbidden**.
+- Continuous render/animation loop: **forbidden**.
+- Static beauty image + ID-selection map is the runtime architecture.
+- Rendering only occurs when a system, selection or zoom/pan state changes.
+- Atlas raster dimensions are intentionally bounded for low-end Android memory.
+- Only the selected system's two raster layers are kept active.
+- Reder S19 Max / equivalent low-end Android remains the physical acceptance floor.
+- Static and synthetic QA never equal FINAL phone approval.
 
 ## Home placement lock
 
@@ -76,4 +80,4 @@ Mandatory curated QA examples: Biceps brachii, Fibula, anterior talofibular liga
 
 ## Release rule
 
-No v29.9 APK is `FINAL` or `LOCKED` until the user physically tests it, including a low-end device test. The safe rollback remains `FTR-Akademi-v29.7-BILDIRIM.apk`.
+No v29.9 APK is `FINAL` or `LOCKED` until the user physically tests it. The safe rollback remains `FTR-Akademi-v29.7-BILDIRIM.apk`.
