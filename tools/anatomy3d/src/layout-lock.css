@@ -1,0 +1,55 @@
+/*
+ * FTR Akademi v29.9 — premium static anatomy layout lock.
+ *
+ * The structure browser can contain hundreds of rows. It must scroll inside
+ * its own panel and must never be allowed to define the height of the atlas
+ * stage. Without a definite stage height, CSS grid min-content sizing can
+ * stretch the mobile page to many thousands of pixels and move the initial
+ * viewport away from the locked reference composition.
+ */
+
+.stage-shell {
+  height: 860px;
+  min-height: 0;
+}
+
+.structure-browser,
+.model-column,
+.viewer {
+  height: 100%;
+  min-height: 0;
+}
+
+.structure-list {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 760px) {
+  .stage-shell {
+    height: 535px;
+    min-height: 0;
+  }
+
+  .structure-browser,
+  .model-column,
+  .viewer {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 365px) {
+  .stage-shell {
+    height: 510px;
+    min-height: 0;
+  }
+}
+
+@media (min-width: 1000px) {
+  .stage-shell {
+    height: 900px;
+    min-height: 0;
+  }
+}
