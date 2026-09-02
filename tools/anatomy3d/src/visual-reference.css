@@ -1,0 +1,27 @@
+/*
+ * Final reference palette pass.
+ *
+ * The runtime intentionally dims non-selected anatomy so the tapped structure
+ * reads immediately. These per-system filters restore the luminous medical-atlas
+ * appearance from the approved references without adding WebGL, animation or
+ * another render layer. They affect only the raster atlas canvas, never the UI.
+ */
+#anatomyCanvas{
+  filter:brightness(1.16) saturate(1.10) contrast(1.03);
+}
+
+.anatomy-app[data-system="bone"] #anatomyCanvas{
+  filter:brightness(1.24) saturate(1.03) contrast(1.04);
+}
+
+.anatomy-app[data-system="ligament"] #anatomyCanvas{
+  filter:brightness(1.34) saturate(1.06) contrast(1.04);
+}
+
+.anatomy-app[data-system="vessel"] #anatomyCanvas{
+  filter:brightness(1.32) saturate(1.24) contrast(1.05);
+}
+
+.anatomy-app[data-system="nerve"] #anatomyCanvas{
+  filter:brightness(1.48) saturate(1.40) contrast(1.06);
+}
