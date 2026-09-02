@@ -108,7 +108,23 @@ jobs:
                   raise AssertionError('existing output did not fail closed')
               assert protected_output.read_bytes() == before
 
-          print('assembler missing-part + no-overwrite fail-closed behavior PASS')
+              # Simulate the race where an output appears only after a verified
+              # temporary file exists. Promotion must still refuse to clobber it.
+              verified_temp = root / 'verified.tmp'
+              verified_temp.write_bytes(b'VERIFIED-TEMP')
+              raced_output = root / 'raced.apk'
+              raced_output.write_bytes(b'EXISTING-RACE-WINNER')
+              raced_before = raced_output.read_bytes()
+              try:
+                  assembler.promote_no_clobber(verified_temp, raced_output)
+              except SystemExit:
+                  pass
+              else:
+                  raise AssertionError('atomic promotion race did not fail closed')
+              assert raced_output.read_bytes() == raced_before
+              assert verified_temp.read_bytes() == b'VERIFIED-TEMP'
+
+          print('assembler missing-part + overwrite + race no-clobber guards PASS')
           PY
 
       - name: Assert signer and bootstrap parsers fail closed
