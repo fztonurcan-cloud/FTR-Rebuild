@@ -202,9 +202,9 @@ async function switchSystem(system, initial = false) {
     fitWholeBody();
 
     const preferred = system === 'muscle'
-      ? findMesh(/^biceps brachii$/i)
+      ? (findMesh(/^biceps\s*brachii/i) || activeMeshes[0])
       : system === 'bone'
-        ? findMesh(/^fibula$/i)
+        ? (findMesh(/^fibula/i) || activeMeshes[0])
         : activeMeshes[0];
     if (preferred) selectMesh(preferred, !initial && system === 'bone');
     requestRender(8);

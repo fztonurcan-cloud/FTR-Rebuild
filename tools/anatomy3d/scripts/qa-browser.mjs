@@ -39,13 +39,15 @@ async function runFunctionQa(page) {
     !document.querySelector('#examBtn, #quizCard, .learn-chip, .view-panel, .tool-panel') &&
     document.querySelectorAll('.system-btn').length === 4
   ));
-  record('initial_biceps', (await text('#structureName')).toLowerCase().includes('biceps brachii'));
+  const initialState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
+  record('initial_biceps', (await text('#structureName')).toLowerCase().includes('biceps brachii') && initialState.selectedStructure.toLowerCase().includes('biceps brachii'), initialState.selectedStructure);
+  record('initial_structure_highlight', initialState.selectedHighlighted, initialState.selectedStructure);
   record('initial_muscle_system', (await text('.system-btn.active')).includes('Kaslar'));
 
   const generalText = await text('#structureText');
   await page.click('.tab[data-tab="origin"]');
   const originText = await text('#structureText');
-  record('anatomy_info_tabs', originText !== generalText && originText.length > 20);
+  record('anatomy_info_tabs', originText !== generalText && originText.length > 20, `${generalText.slice(0, 34)} -> ${originText.slice(0, 34)}`);
   await page.click('.tab[data-tab="general"]');
 
   const stateBeforeZoom = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
@@ -81,7 +83,8 @@ async function runFunctionQa(page) {
       label
     );
     const systemState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
-    record(`system_${key}`, (await text('#systemHeading')).includes(label) && systemState.activeSystem === key && systemState.activeMeshCount > 0, `${await text('#structureName')} (${systemState.activeMeshCount} mesh)`);
+    const expectedDefault = key !== 'muscle' || systemState.selectedStructure.toLowerCase().includes('biceps brachii');
+    record(`system_${key}`, (await text('#systemHeading')).includes(label) && systemState.activeSystem === key && systemState.activeMeshCount > 0 && expectedDefault, `${await text('#structureName')} / ${systemState.selectedStructure} (${systemState.activeMeshCount} mesh)`);
   }
 
   await page.click('.system-btn[data-system="bone"]');
