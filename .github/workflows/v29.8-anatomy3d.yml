@@ -28,11 +28,16 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install Blender and utilities
+      - name: Install Blender and headless rendering stack
         run: |
           set -euo pipefail
           sudo apt-get update
-          sudo apt-get install -y blender unzip curl python3-numpy
+          sudo apt-get install -y \
+            blender unzip curl python3-numpy \
+            libegl1 libgl1 libglx0 libopengl0 libgles2 \
+            libx11-6 libxext6 libxi6 libxrender1 libxrandr2 libxfixes3 \
+            mesa-utils xvfb
+          ldconfig -p | grep -E 'libEGL\.so\.1|libGL\.so\.1' || true
           blender --version | head -n 2
 
       - name: Download libre Z-Anatomy source
@@ -58,10 +63,12 @@ jobs:
           FTR_ANATOMY_OUT: ${{ github.workspace }}/tools/anatomy3d/public
           FTR_ATLAS_WIDTH: '720'
           FTR_ATLAS_HEIGHT: '1120'
+          LIBGL_ALWAYS_SOFTWARE: '1'
         run: |
           set -euo pipefail
           python3 -m py_compile tools/anatomy3d/scripts/render_static_atlas.py
-          blender -b "$BLEND_FILE" \
+          xvfb-run -a -s '-screen 0 1280x1024x24' \
+            blender -b "$BLEND_FILE" \
             --python "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/render_static_atlas.py"
 
       - name: Validate static atlas contract
