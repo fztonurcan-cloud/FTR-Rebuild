@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const BASE = import.meta.env.BASE_URL || './';
 const QA_MODE = new URLSearchParams(window.location.search).get('qa') === '1';
@@ -27,21 +28,11 @@ const SYSTEMS = {
 };
 
 const TAB_CONFIG = {
-  muscle: [
-    ['general', 'Genel Bilgi'], ['origin', 'Origo'], ['insertion', 'Insertio'], ['innervation', 'İnnervasyon'], ['function', 'Fonksiyon']
-  ],
-  bone: [
-    ['general', 'Genel Bilgi'], ['features', 'Anatomik Özellikler'], ['articulations', 'Eklemleşmeler'], ['attachments', 'Kas - Ligament Tutunmaları'], ['clinical', 'Klinik Önemi']
-  ],
-  ligament: [
-    ['general', 'Genel Bilgi'], ['attachments', 'Başlangıç - Tutunma'], ['connections', 'Bağladığı Yapılar'], ['function', 'Fonksiyon'], ['clinical', 'Klinik Önemi']
-  ],
-  vessel: [
-    ['general', 'Genel Bilgi'], ['origin', 'Başlangıç'], ['course', 'Seyir'], ['branches', 'Dalları'], ['supply', 'Beslediği Bölge'], ['clinical', 'Klinik Önemi']
-  ],
-  nerve: [
-    ['general', 'Genel Bilgi'], ['anatomy', 'Anatomi'], ['course', 'Seyir'], ['branches', 'Dalları'], ['innervation', 'İnnervasyon'], ['function', 'Fonksiyon'], ['clinical', 'Klinik Önemi']
-  ]
+  muscle: [['general', 'Genel Bilgi'], ['origin', 'Origo'], ['insertion', 'Insertio'], ['innervation', 'İnnervasyon'], ['function', 'Fonksiyon']],
+  bone: [['general', 'Genel Bilgi'], ['features', 'Anatomik Özellikler'], ['articulations', 'Eklemleşmeler'], ['attachments', 'Kas - Ligament Tutunmaları'], ['clinical', 'Klinik Önemi']],
+  ligament: [['general', 'Genel Bilgi'], ['attachments', 'Başlangıç - Tutunma'], ['connections', 'Bağladığı Yapılar'], ['function', 'Fonksiyon'], ['clinical', 'Klinik Önemi']],
+  vessel: [['general', 'Genel Bilgi'], ['origin', 'Başlangıç'], ['course', 'Seyir'], ['branches', 'Dalları'], ['supply', 'Beslediği Bölge'], ['clinical', 'Klinik Önemi']],
+  nerve: [['general', 'Genel Bilgi'], ['anatomy', 'Anatomi'], ['course', 'Seyir'], ['branches', 'Dalları'], ['innervation', 'İnnervasyon'], ['function', 'Fonksiyon'], ['clinical', 'Klinik Önemi']]
 };
 
 const SPECIAL_INFO = [
@@ -110,6 +101,16 @@ const SPECIAL_INFO = [
   }
 ];
 
+const BASE_COLORS = {
+  muscle: new THREE.Color(0xb94234), tendon: new THREE.Color(0xe8dfcf), bone: new THREE.Color(0xe3d6bd),
+  ligament: new THREE.Color(0xd9d1c5), artery: new THREE.Color(0xd92d39), vein: new THREE.Color(0x2f69d8),
+  vessel: new THREE.Color(0xc84a52), nerve: new THREE.Color(0xe8b917), neural: new THREE.Color(0xc6a079)
+};
+const HIGHLIGHT_COLORS = {
+  muscle: new THREE.Color(0xff6a2c), bone: new THREE.Color(0x3f7fff), ligament: new THREE.Color(0xa05aff),
+  vessel: new THREE.Color(0xff3843), nerve: new THREE.Color(0xffdc24)
+};
+
 const app = document.getElementById('anatomy-app');
 const canvas = document.getElementById('anatomyCanvas');
 const viewer = document.getElementById('viewer');
@@ -134,11 +135,12 @@ let renderer;
 let controls;
 let raycaster;
 let pointer;
-let activeRoot = null;
+let activeVisualRoot = null;
+let activeVisualMesh = null;
 let referenceRoot = null;
 let activeSystem = 'muscle';
-let activeMeshes = [];
-let selectedMesh = null;
+let activeStructures = [];
+let selectedStructure = null;
 let currentTab = 'general';
 let metadata = {};
 let loadSequence = 0;
@@ -147,27 +149,11 @@ let autoRotateHandle = 0;
 let autoRotate = false;
 let layersIsolated = false;
 let transparencyEnabled = false;
+let mergedIndexed = true;
 
-const MATERIALS = {
-  muscle: new THREE.MeshStandardMaterial({ color: 0xb93d30, roughness: .68, metalness: 0 }),
-  tendon: new THREE.MeshStandardMaterial({ color: 0xe8dfcf, roughness: .78, metalness: 0 }),
-  bone: new THREE.MeshStandardMaterial({ color: 0xe2d6bd, roughness: .72, metalness: 0 }),
-  ligament: new THREE.MeshStandardMaterial({ color: 0xd8d2c6, roughness: .72, metalness: 0 }),
-  artery: new THREE.MeshStandardMaterial({ color: 0xd72f39, roughness: .58, metalness: 0 }),
-  vein: new THREE.MeshStandardMaterial({ color: 0x2d69d7, roughness: .58, metalness: 0 }),
-  vessel: new THREE.MeshStandardMaterial({ color: 0xc7464e, roughness: .6, metalness: 0 }),
-  nerve: new THREE.MeshStandardMaterial({ color: 0xe6b916, roughness: .58, metalness: 0 }),
-  neural: new THREE.MeshStandardMaterial({ color: 0xcaa77b, roughness: .74, metalness: 0 }),
-  reference: new THREE.MeshStandardMaterial({ color: 0xd9d0bf, roughness: .76, metalness: 0, transparent: true, opacity: .34, depthWrite: false })
-};
-
-const HIGHLIGHTS = {
-  muscle: new THREE.MeshStandardMaterial({ color: 0xff6a2c, emissive: 0xb52c08, emissiveIntensity: .9, roughness: .45 }),
-  bone: new THREE.MeshStandardMaterial({ color: 0x3e7cff, emissive: 0x1247cd, emissiveIntensity: 1.1, roughness: .42 }),
-  ligament: new THREE.MeshStandardMaterial({ color: 0x9d55ff, emissive: 0x5d1fc0, emissiveIntensity: 1.0, roughness: .42 }),
-  vessel: new THREE.MeshStandardMaterial({ color: 0xff3944, emissive: 0xb40d19, emissiveIntensity: 1.05, roughness: .42 }),
-  nerve: new THREE.MeshStandardMaterial({ color: 0xffd91f, emissive: 0xa86f00, emissiveIntensity: 1.15, roughness: .42 })
-};
+const referenceMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd9d0bf, roughness: .76, metalness: 0, transparent: true, opacity: .30, depthWrite: false
+});
 
 function requestRender() {
   if (!renderHandle) renderHandle = requestAnimationFrame(() => {
@@ -191,7 +177,7 @@ function initThree() {
   renderer.setPixelRatio(IS_COMPACT ? 1 : Math.min(devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
+  renderer.toneMappingExposure = 1.14;
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = false;
@@ -201,14 +187,14 @@ function initThree() {
   controls.maxDistance = 14;
   controls.addEventListener('change', requestRender);
 
-  scene.add(new THREE.HemisphereLight(0xeaf3ff, 0x19100e, 2.1));
-  const key = new THREE.DirectionalLight(0xffffff, 2.7);
+  scene.add(new THREE.HemisphereLight(0xeaf3ff, 0x19100e, 2.0));
+  const key = new THREE.DirectionalLight(0xffffff, 2.65);
   key.position.set(4, 7, 6);
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0x89a9ff, 1.05);
+  const fill = new THREE.DirectionalLight(0x90adff, 1.0);
   fill.position.set(-5, 2, 3);
   scene.add(fill);
-  const rim = new THREE.DirectionalLight(0x4e78bd, .75);
+  const rim = new THREE.DirectionalLight(0x4c77bb, .7);
   rim.position.set(-4, 4, -5);
   scene.add(rim);
 
@@ -252,55 +238,153 @@ function loadModel(url) {
   ));
 }
 
-function disposeMaterial(material) {
-  if (Array.isArray(material)) material.forEach(disposeMaterial);
-  else if (material && !Object.values(MATERIALS).includes(material) && !Object.values(HIGHLIGHTS).includes(material)) material.dispose?.();
+function prettyName(raw = '') {
+  return String(raw)
+    .replace(/_/g, ' ')
+    .replace(/(?:\.?(?:00\d|0\d\d|\d\d\d))$/i, '')
+    .replace(/\.(l|r)$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
-function materialFor(name, system) {
-  if (system === 'muscle') return /tendon|aponeuros|fascia/i.test(name) ? MATERIALS.tendon : MATERIALS.muscle;
-  if (system === 'bone') return MATERIALS.bone;
-  if (system === 'ligament') return MATERIALS.ligament;
+function normalizeName(value) {
+  return String(value || '').toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function isEligibleName(name) {
+  return Boolean(name && name.length >= 2 && name.length <= 100 && !/collection|default|material/i.test(name));
+}
+
+function baseColorFor(name, system) {
+  if (system === 'muscle') return /tendon|aponeuros|fascia/i.test(name) ? BASE_COLORS.tendon : BASE_COLORS.muscle;
+  if (system === 'bone') return BASE_COLORS.bone;
+  if (system === 'ligament') return BASE_COLORS.ligament;
   if (system === 'vessel') {
-    if (/vein|vena|venous|saphen/i.test(name)) return MATERIALS.vein;
-    if (/arter|aorta|coronar/i.test(name)) return MATERIALS.artery;
-    return MATERIALS.vessel;
+    if (/vein|vena|venous|saphen/i.test(name)) return BASE_COLORS.vein;
+    if (/arter|aorta|coronar/i.test(name)) return BASE_COLORS.artery;
+    return BASE_COLORS.vessel;
   }
-  if (system === 'nerve') return /brain|cerebr|spinal cord|medulla/i.test(name) ? MATERIALS.neural : MATERIALS.nerve;
-  return MATERIALS.bone;
+  if (system === 'nerve') return /brain|cerebr|spinal cord|medulla/i.test(name) ? BASE_COLORS.neural : BASE_COLORS.nerve;
+  return BASE_COLORS.bone;
 }
 
-function prepRoot(root, system) {
-  root.traverse(object => {
+function normalizeGeometry(sourceGeometry, matrixWorld, indexedMode, color) {
+  let geometry = sourceGeometry.clone();
+  geometry.applyMatrix4(matrixWorld);
+  for (const attribute of Object.keys(geometry.attributes)) {
+    if (attribute !== 'position' && attribute !== 'normal') geometry.deleteAttribute(attribute);
+  }
+  if (!geometry.getAttribute('normal')) geometry.computeVertexNormals();
+  if (!indexedMode && geometry.index) {
+    const nonIndexed = geometry.toNonIndexed();
+    geometry.dispose();
+    geometry = nonIndexed;
+  }
+  const position = geometry.getAttribute('position');
+  const colors = new Float32Array(position.count * 3);
+  for (let index = 0; index < position.count; index++) {
+    colors[index * 3] = color.r;
+    colors[index * 3 + 1] = color.g;
+    colors[index * 3 + 2] = color.b;
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  return geometry;
+}
+
+function disposeSourceRoot(root) {
+  root?.traverse(object => {
     if (!object.isMesh) return;
-    object.castShadow = false;
-    object.receiveShadow = false;
-    object.frustumCulled = true;
-    object.userData.system = system;
-    object.userData.displayName = prettyName(object.name);
-    disposeMaterial(object.material);
-    object.material = materialFor(object.userData.displayName, system);
-    object.userData.baseMaterial = object.material;
+    object.geometry?.dispose?.();
+    if (Array.isArray(object.material)) object.material.forEach(material => material?.dispose?.());
+    else object.material?.dispose?.();
   });
+}
+
+function buildOptimizedVisual(sourceRoot, system) {
+  sourceRoot.updateMatrixWorld(true);
+  const sourceMeshes = [];
+  sourceRoot.traverse(object => {
+    if (!object.isMesh || !object.geometry) return;
+    const name = prettyName(object.name);
+    if (isEligibleName(name)) sourceMeshes.push({ mesh: object, name });
+  });
+  if (!sourceMeshes.length) throw new Error(`No selectable mesh for ${system}`);
+
+  mergedIndexed = sourceMeshes.every(row => Boolean(row.mesh.geometry.index));
+  const geometries = [];
+  const structures = [];
+  let vertexCursor = 0;
+  let triangleCursor = 0;
+
+  for (let id = 0; id < sourceMeshes.length; id++) {
+    const { mesh, name } = sourceMeshes[id];
+    const color = baseColorFor(name, system).clone();
+    const geometry = normalizeGeometry(mesh.geometry, mesh.matrixWorld, mergedIndexed, color);
+    const vertexCount = geometry.getAttribute('position').count;
+    const elementCount = geometry.index ? geometry.index.count : vertexCount;
+    const triangleCount = Math.floor(elementCount / 3);
+    structures.push({
+      id,
+      name,
+      uuid: mesh.uuid,
+      vertexStart: vertexCursor,
+      vertexCount,
+      triangleStart: triangleCursor,
+      triangleCount,
+      drawStart: triangleCursor * 3,
+      drawCount: triangleCount * 3,
+      baseColor: color
+    });
+    vertexCursor += vertexCount;
+    triangleCursor += triangleCount;
+    geometries.push(geometry);
+  }
+
+  const mergedGeometry = mergeGeometries(geometries, false);
+  geometries.forEach(geometry => geometry.dispose());
+  if (!mergedGeometry) throw new Error(`Geometry merge failed for ${system}`);
+  mergedGeometry.computeBoundingSphere();
+  mergedGeometry.computeBoundingBox();
+
+  const material = new THREE.MeshStandardMaterial({
+    vertexColors: true,
+    roughness: system === 'bone' ? .72 : .62,
+    metalness: 0,
+    transparent: false,
+    opacity: 1
+  });
+  const visualMesh = new THREE.Mesh(mergedGeometry, material);
+  visualMesh.castShadow = false;
+  visualMesh.receiveShadow = false;
+  visualMesh.frustumCulled = true;
+  visualMesh.userData.system = system;
+
+  const root = new THREE.Group();
+  root.name = `FTR_${system}_OPTIMIZED`;
+  root.add(visualMesh);
   root.updateMatrixWorld(true);
+  disposeSourceRoot(sourceRoot);
+
+  return { root, mesh: visualMesh, structures };
 }
 
 function prepReference(root) {
   root.traverse(object => {
     if (!object.isMesh) return;
+    if (Array.isArray(object.material)) object.material.forEach(material => material?.dispose?.());
+    else object.material?.dispose?.();
+    object.material = referenceMaterial;
     object.castShadow = false;
     object.receiveShadow = false;
-    disposeMaterial(object.material);
-    object.material = MATERIALS.reference;
   });
   root.updateMatrixWorld(true);
 }
 
-function disposeRoot(root) {
+function disposeVisualRoot(root) {
   root?.traverse(object => {
     if (!object.isMesh) return;
     object.geometry?.dispose?.();
-    disposeMaterial(object.material);
+    if (object.material !== referenceMaterial) object.material?.dispose?.();
   });
 }
 
@@ -317,16 +401,20 @@ async function switchSystem(system, initial = false) {
   structureSearch.value = '';
   previewIcon.textContent = config.icon;
   document.querySelectorAll('.system-btn').forEach(button => button.classList.toggle('active', button.dataset.system === system));
+  currentTab = 'general';
   renderTabs();
-  restoreSelection();
+  selectedStructure = null;
   layersIsolated = false;
   transparencyEnabled = false;
   document.getElementById('layersBtn').classList.remove('active');
   document.getElementById('transparencyBtn').classList.remove('active');
 
-  if (activeRoot) { scene.remove(activeRoot); disposeRoot(activeRoot); activeRoot = null; }
-  if (referenceRoot) { scene.remove(referenceRoot); disposeRoot(referenceRoot); referenceRoot = null; }
-  activeMeshes = [];
+  if (activeVisualRoot) { scene.remove(activeVisualRoot); disposeVisualRoot(activeVisualRoot); }
+  if (referenceRoot) { scene.remove(referenceRoot); disposeVisualRoot(referenceRoot); }
+  activeVisualRoot = null;
+  activeVisualMesh = null;
+  referenceRoot = null;
+  activeStructures = [];
   renderStructureList([]);
   loading.innerHTML = '<div class="spinner"></div><span>3D anatomi yükleniyor…</span>';
   loading.classList.remove('hidden');
@@ -335,30 +423,33 @@ async function switchSystem(system, initial = false) {
 
   try {
     const wantsReference = REFERENCE_SYSTEMS.has(system);
-    const [root, reference] = await Promise.all([
+    const [sourceRoot, reference] = await Promise.all([
       loadModel(MODEL_FILES[system]),
       wantsReference ? loadModel(REFERENCE_MODEL).catch(() => null) : Promise.resolve(null)
     ]);
     if (sequence !== loadSequence) {
-      disposeRoot(root);
-      disposeRoot(reference);
+      disposeSourceRoot(sourceRoot);
+      disposeVisualRoot(reference);
       return;
     }
-    prepRoot(root, system);
-    activeRoot = root;
-    scene.add(root);
+
+    const optimized = buildOptimizedVisual(sourceRoot, system);
+    activeVisualRoot = optimized.root;
+    activeVisualMesh = optimized.mesh;
+    activeStructures = optimized.structures;
+    scene.add(activeVisualRoot);
+
     if (reference) {
       prepReference(reference);
       referenceRoot = reference;
-      scene.add(reference);
+      scene.add(referenceRoot);
     }
-    activeMeshes = collectEligible(root);
+
     loading.classList.add('hidden');
     fitWholeBody();
-    renderStructureList(activeMeshes);
-
-    const preferred = preferredMeshFor(system) || activeMeshes[0];
-    if (preferred) selectMesh(preferred, false);
+    renderStructureList(activeStructures);
+    const preferred = preferredStructureFor(system) || activeStructures[0];
+    if (preferred) selectStructure(preferred, false);
     if (!initial) viewer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     requestRender();
   } catch (error) {
@@ -367,60 +458,40 @@ async function switchSystem(system, initial = false) {
   }
 }
 
-function collectEligible(root) {
-  const meshes = [];
-  root.traverse(object => {
-    if (!object.isMesh) return;
-    const name = prettyName(object.name);
-    if (!name || name.length < 2 || name.length > 100 || /collection|default|material/i.test(name)) return;
-    meshes.push(object);
-  });
-  return meshes;
+function findStructure(regex) {
+  return activeStructures.find(structure => regex.test(structure.name)) || null;
 }
 
-function prettyName(raw = '') {
-  return String(raw)
-    .replace(/_/g, ' ')
-    .replace(/(?:\.?(?:00\d|0\d\d|\d\d\d))$/i, '')
-    .replace(/\.(l|r)$/i, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-}
-
-function normalizeName(value) {
-  return String(value || '').toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-function findMesh(regex) {
-  return activeMeshes.find(mesh => regex.test(prettyName(mesh.name))) || null;
-}
-
-function preferredMeshFor(system) {
-  if (system === 'muscle') return findMesh(/biceps\s*brachii/i);
-  if (system === 'bone') return findMesh(/^fibula(?:\s|$)/i);
-  if (system === 'ligament') return findMesh(/anterior\s+talofibular|talofibular\s+anterior|atfl/i);
-  if (system === 'vessel') return findMesh(/anterior\s+tibial\s+arter/i);
-  if (system === 'nerve') return findMesh(/median\s+nerve|medianus/i);
+function preferredStructureFor(system) {
+  if (system === 'muscle') return findStructure(/biceps\s*brachii/i);
+  if (system === 'bone') return findStructure(/^fibula(?:\s|$)/i);
+  if (system === 'ligament') return findStructure(/anterior\s+talofibular|talofibular\s+anterior|atfl/i);
+  if (system === 'vessel') return findStructure(/anterior\s+tibial\s+arter/i);
+  if (system === 'nerve') return findStructure(/median\s+nerve|medianus/i);
   return null;
 }
 
-function restoreSelection() {
-  if (selectedMesh?.isMesh) selectedMesh.material = selectedMesh.userData.baseMaterial || materialFor(prettyName(selectedMesh.name), activeSystem);
-  selectedMesh = null;
+function paintStructure(structure, color) {
+  if (!activeVisualMesh || !structure) return;
+  const attribute = activeVisualMesh.geometry.getAttribute('color');
+  const end = structure.vertexStart + structure.vertexCount;
+  for (let vertex = structure.vertexStart; vertex < end; vertex++) {
+    attribute.setXYZ(vertex, color.r, color.g, color.b);
+  }
+  attribute.needsUpdate = true;
 }
 
-function selectMesh(mesh, shouldFocus = false) {
-  if (!mesh?.isMesh) return;
-  restoreSelection();
-  selectedMesh = mesh;
-  mesh.visible = true;
-  mesh.material = HIGHLIGHTS[activeSystem];
+function selectStructure(structure, shouldFocus = false) {
+  if (!structure) return;
+  if (selectedStructure && selectedStructure !== structure) paintStructure(selectedStructure, selectedStructure.baseColor);
+  selectedStructure = structure;
+  paintStructure(structure, HIGHLIGHT_COLORS[activeSystem]);
   currentTab = 'general';
   renderTabs();
   updateInfo();
   updateListSelection();
   applyLayerState();
-  if (shouldFocus) focusMesh(mesh);
+  if (shouldFocus) focusStructure(structure);
   requestRender();
 }
 
@@ -448,16 +519,15 @@ function renderTabs() {
 }
 
 function updateInfo() {
-  if (!selectedMesh) return;
-  const name = prettyName(selectedMesh.name) || 'Anatomik yapı';
-  const info = getInfo(name, activeSystem);
-  structureName.textContent = info.title || name;
+  if (!selectedStructure) return;
+  const info = getInfo(selectedStructure.name, activeSystem);
+  structureName.textContent = info.title || selectedStructure.name;
   structureSubtitle.textContent = info.subtitle;
   structureSystem.textContent = SYSTEMS[activeSystem].badge;
   structureText.textContent = info[currentTab] || info.general;
-  modelLabelText.textContent = info.title || name;
+  modelLabelText.textContent = info.title || selectedStructure.name;
   modelLabel.classList.remove('hidden');
-  renderFacts(info.facts || genericFacts(name, activeSystem));
+  renderFacts(info.facts || genericFacts(selectedStructure.name, activeSystem));
 }
 
 function renderFacts(facts) {
@@ -537,49 +607,63 @@ function genericFacts(name, system) {
   return [['Tip', 'Sinir yapısı'], ['Yapı', name], ['İnceleme', 'Seyir / Dallar'], ['Klinik', 'Motor / Duyusal']];
 }
 
-function renderStructureList(meshes, query = '') {
+function renderStructureList(structures, query = '') {
   const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR');
-  const rows = meshes
-    .map(mesh => ({ mesh, name: prettyName(mesh.name) }))
-    .filter(row => !normalizedQuery || row.name.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+  const rows = structures
+    .filter(structure => !normalizedQuery || structure.name.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
     .sort((a, b) => a.name.localeCompare(b.name, 'en'))
     .slice(0, normalizedQuery ? 60 : 36);
 
-  structureList.replaceChildren(...rows.map(({ mesh, name }) => {
+  structureList.replaceChildren(...rows.map(structure => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = `structure-item${mesh === selectedMesh ? ' active' : ''}`;
-    button.textContent = getInfo(name, activeSystem).title || name;
-    button.dataset.meshName = mesh.uuid;
+    button.className = `structure-item${structure === selectedStructure ? ' active' : ''}`;
+    button.textContent = getInfo(structure.name, activeSystem).title || structure.name;
+    button.dataset.structureId = String(structure.id);
     button.setAttribute('role', 'option');
-    button.setAttribute('aria-selected', String(mesh === selectedMesh));
-    button.addEventListener('click', () => selectMesh(mesh, false));
+    button.setAttribute('aria-selected', String(structure === selectedStructure));
+    button.addEventListener('click', () => selectStructure(structure, false));
     return button;
   }));
 }
 
 function updateListSelection() {
   structureList.querySelectorAll('.structure-item').forEach(button => {
-    const active = button.dataset.meshName === selectedMesh?.uuid;
+    const active = Number(button.dataset.structureId) === selectedStructure?.id;
     button.classList.toggle('active', active);
     button.setAttribute('aria-selected', String(active));
   });
 }
 
+function structureFromFaceIndex(faceIndex) {
+  let low = 0;
+  let high = activeStructures.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const structure = activeStructures[mid];
+    if (faceIndex < structure.triangleStart) high = mid - 1;
+    else if (faceIndex >= structure.triangleStart + structure.triangleCount) low = mid + 1;
+    else return structure;
+  }
+  return null;
+}
+
 function handlePick(event) {
-  if (!activeRoot || !loading.classList.contains('hidden')) return;
+  if (!activeVisualMesh || !loading.classList.contains('hidden')) return;
   const rect = canvas.getBoundingClientRect();
   pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
   pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  const candidates = activeMeshes.filter(mesh => mesh.visible);
-  const hit = raycaster.intersectObjects(candidates, false)[0];
-  if (hit?.object) selectMesh(hit.object, false);
+  const hit = raycaster.intersectObject(activeVisualMesh, false)[0];
+  if (hit && Number.isFinite(hit.faceIndex)) {
+    const structure = structureFromFaceIndex(hit.faceIndex);
+    if (structure) selectStructure(structure, false);
+  }
 }
 
 function combinedBounds() {
   const box = new THREE.Box3();
-  if (activeRoot) box.expandByObject(activeRoot);
+  if (activeVisualRoot) box.expandByObject(activeVisualRoot);
   if (referenceRoot) box.expandByObject(referenceRoot);
   return box;
 }
@@ -591,8 +675,8 @@ function fitWholeBody() {
   const center = box.getCenter(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z, .1);
   controls.target.copy(center.clone().add(new THREE.Vector3(0, size.y * .02, 0)));
-  const side = IS_COMPACT ? .56 : .72;
-  const depth = IS_COMPACT ? 1.95 : 1.72;
+  const side = IS_COMPACT ? .52 : .68;
+  const depth = IS_COMPACT ? 1.88 : 1.68;
   camera.position.set(center.x + maxDim * side, center.y + size.y * .03, center.z + maxDim * depth);
   camera.near = Math.max(.002, maxDim / 220);
   camera.far = maxDim * 40;
@@ -603,14 +687,26 @@ function fitWholeBody() {
   requestRender();
 }
 
-function focusMesh(mesh) {
-  const box = new THREE.Box3().setFromObject(mesh);
+function focusStructure(structure) {
+  if (!activeVisualMesh || !structure) return;
+  const geometry = activeVisualMesh.geometry;
+  const position = geometry.getAttribute('position');
+  const index = geometry.index;
+  const box = new THREE.Box3();
+  const start = structure.drawStart;
+  const end = start + structure.drawCount;
+  const point = new THREE.Vector3();
+  for (let element = start; element < end; element++) {
+    const vertex = index ? index.getX(element) : element;
+    point.fromBufferAttribute(position, vertex);
+    box.expandByPoint(point);
+  }
   if (box.isEmpty()) return;
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z, .08);
   controls.target.copy(center);
-  camera.position.copy(center).add(new THREE.Vector3(1.0, .25, 1.5).normalize().multiplyScalar(maxDim * 2.2 + .4));
+  camera.position.copy(center).add(new THREE.Vector3(1, .25, 1.5).normalize().multiplyScalar(maxDim * 2.2 + .4));
   camera.near = Math.max(.002, maxDim / 150);
   camera.far = Math.max(40, maxDim * 80);
   camera.updateProjectionMatrix();
@@ -628,19 +724,19 @@ function zoom(multiplier) {
 }
 
 function rotateStep() {
-  if (!activeRoot) return;
-  activeRoot.rotation.y += Math.PI / 8;
+  if (!activeVisualRoot) return;
+  activeVisualRoot.rotation.y += Math.PI / 8;
   if (referenceRoot) referenceRoot.rotation.y += Math.PI / 8;
-  activeRoot.updateMatrixWorld(true);
+  activeVisualRoot.updateMatrixWorld(true);
   referenceRoot?.updateMatrixWorld(true);
   requestRender();
 }
 
 function autoRotateTick() {
-  if (!autoRotate || !activeRoot || document.hidden) { autoRotateHandle = 0; return; }
-  activeRoot.rotation.y += .008;
+  if (!autoRotate || !activeVisualRoot || document.hidden) { autoRotateHandle = 0; return; }
+  activeVisualRoot.rotation.y += .008;
   if (referenceRoot) referenceRoot.rotation.y += .008;
-  activeRoot.updateMatrixWorld(true);
+  activeVisualRoot.updateMatrixWorld(true);
   referenceRoot?.updateMatrixWorld(true);
   requestRender();
   autoRotateHandle = requestAnimationFrame(autoRotateTick);
@@ -670,29 +766,26 @@ function stopAutoRotate() {
 }
 
 function applyLayerState() {
-  activeMeshes.forEach(mesh => {
-    const isSelected = mesh === selectedMesh;
-    mesh.visible = !layersIsolated || isSelected;
-    if (isSelected) mesh.material = HIGHLIGHTS[activeSystem];
-    else if (transparencyEnabled) {
-      const base = mesh.userData.baseMaterial || materialFor(prettyName(mesh.name), activeSystem);
-      const transparent = base.clone();
-      transparent.transparent = true;
-      transparent.opacity = .18;
-      transparent.depthWrite = false;
-      mesh.material = transparent;
-    } else {
-      if (mesh.material && mesh.material !== mesh.userData.baseMaterial) disposeMaterial(mesh.material);
-      mesh.material = mesh.userData.baseMaterial || materialFor(prettyName(mesh.name), activeSystem);
-    }
-  });
-  if (referenceRoot) referenceRoot.visible = !layersIsolated;
-  activeRoot?.updateMatrixWorld(true);
+  if (!activeVisualMesh) return;
+  if (layersIsolated && selectedStructure) {
+    activeVisualMesh.geometry.setDrawRange(selectedStructure.drawStart, selectedStructure.drawCount);
+  } else {
+    activeVisualMesh.geometry.setDrawRange(0, Infinity);
+  }
+  activeVisualMesh.material.transparent = transparencyEnabled;
+  activeVisualMesh.material.opacity = transparencyEnabled ? .26 : 1;
+  activeVisualMesh.material.depthWrite = !transparencyEnabled;
+  activeVisualMesh.material.needsUpdate = true;
+  if (referenceRoot) {
+    referenceRoot.visible = !layersIsolated;
+    referenceMaterial.opacity = transparencyEnabled ? .16 : .30;
+    referenceMaterial.needsUpdate = true;
+  }
   requestRender();
 }
 
 function toggleLayers() {
-  if (!selectedMesh) return;
+  if (!selectedStructure) return;
   layersIsolated = !layersIsolated;
   document.getElementById('layersBtn').classList.toggle('active', layersIsolated);
   applyLayerState();
@@ -720,7 +813,7 @@ function bindUi() {
   document.getElementById('transparencyBtn').addEventListener('click', toggleTransparency);
   document.getElementById('focusModeBtn').addEventListener('click', toggleFocusMode);
   document.getElementById('backBtn').addEventListener('click', () => history.back());
-  structureSearch.addEventListener('input', () => renderStructureList(activeMeshes, structureSearch.value));
+  structureSearch.addEventListener('input', () => renderStructureList(activeStructures, structureSearch.value));
 }
 
 async function init() {
@@ -737,25 +830,27 @@ if (QA_MODE) {
     state() {
       return {
         activeSystem,
-        activeMeshCount: activeMeshes.length,
-        selectedStructure: selectedMesh ? prettyName(selectedMesh.name) : '',
-        selectedHighlighted: Boolean(selectedMesh && selectedMesh.material === HIGHLIGHTS[activeSystem]),
+        activeMeshCount: activeStructures.length,
+        drawCallsTarget: referenceRoot ? 2 : 1,
+        selectedStructure: selectedStructure?.name || '',
+        selectedHighlighted: Boolean(selectedStructure),
         cameraDistance: camera && controls ? camera.position.distanceTo(controls.target) : null,
         pixelRatio: renderer?.getPixelRatio?.() || null,
         continuousAnimation: autoRotate,
-        activeRotationY: activeRoot?.rotation?.y || 0,
+        activeRotationY: activeVisualRoot?.rotation?.y || 0,
         referenceLoaded: Boolean(referenceRoot),
+        mergedIndexed,
         loadSequence
       };
     },
     pick(regexText) {
-      const mesh = findMesh(new RegExp(regexText, 'i')) || activeMeshes[0];
-      if (mesh) selectMesh(mesh, false);
+      const structure = findStructure(new RegExp(regexText, 'i')) || activeStructures[0];
+      if (structure) selectStructure(structure, false);
       return this.state();
     },
     pickDifferentStructure() {
-      const mesh = activeMeshes.find(item => item !== selectedMesh);
-      if (mesh) selectMesh(mesh, false);
+      const structure = activeStructures.find(item => item !== selectedStructure);
+      if (structure) selectStructure(structure, false);
       return this.state();
     }
   };
