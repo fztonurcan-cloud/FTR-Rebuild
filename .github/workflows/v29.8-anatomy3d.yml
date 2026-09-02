@@ -33,7 +33,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y \
-            blender unzip curl python3-numpy \
+            blender unzip curl python3-numpy python3-pil \
             libegl1 libgl1 libglx0 libopengl0 libgles2 \
             libx11-6 libxext6 libxi6 libxrender1 libxrandr2 libxfixes3 \
             mesa-utils xvfb
@@ -71,6 +71,13 @@ jobs:
             blender -b "$BLEND_FILE" \
             --python "$GITHUB_WORKSPACE/tools/anatomy3d/scripts/render_static_atlas.py"
 
+      - name: Compose locked reference structures
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py
+          python3 tools/anatomy3d/scripts/postprocess_reference_groups.py
+
       - name: Validate static atlas contract
         shell: bash
         run: |
@@ -83,6 +90,7 @@ jobs:
           assert data['policy']['webgl'] is False
           assert data['policy']['runtime_3d_models'] is False
           assert data['policy']['continuous_render_loop'] is False
+          assert data['policy']['biceps_brachii_whole_muscle_selection'] is True
           required = ['muscle','bone','ligament','vessel','nerve']
           for key in required:
               row = data['systems'][key]
@@ -91,6 +99,11 @@ jobs:
                   p = root / asset
                   assert p.is_file() and p.stat().st_size > 1000, (key, asset)
               print(key, row['structure_count'], row['beauty'], row['id_map'])
+          biceps = [r for r in data['systems']['muscle']['structures'] if r['name'].strip().lower() == 'biceps brachii']
+          assert len(biceps) == 2, biceps
+          assert {r['raw'] for r in biceps} == {'Biceps brachii.r', 'Biceps brachii.l'}, biceps
+          assert all(r.get('object_type') == 'COMPOSITE' and len(r.get('members', [])) == 2 for r in biceps), biceps
+          print('Biceps composite PASS', [(r['raw'], r['rgb'], r['anchor']) for r in biceps])
           PY
           ls -lh tools/anatomy3d/public/atlas/*.png
 
@@ -116,6 +129,7 @@ jobs:
           test -f tools/anatomy3d/dist/licenses/Z-Anatomy-License.txt
           grep -R "3D ANATOM" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           grep -R "Biceps brachii" tools/anatomy3d/dist/assets >/dev/null
+          grep -R '"name": "Biceps brachii"' tools/anatomy3d/dist/data/atlas-map.json >/dev/null
           grep -R "Fibula" tools/anatomy3d/dist/assets >/dev/null
           grep -R "Anterior talofibular" tools/anatomy3d/dist/assets >/dev/null
           grep -R "Anterior tibial artery" tools/anatomy3d/dist/assets >/dev/null
