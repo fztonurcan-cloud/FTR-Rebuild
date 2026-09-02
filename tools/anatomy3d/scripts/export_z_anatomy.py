@@ -12,29 +12,31 @@ DATA = OUT / 'data'
 MODELS.mkdir(parents=True, exist_ok=True)
 DATA.mkdir(parents=True, exist_ok=True)
 
-# FTR Akademi deliberately exports focused study layers instead of whole source collections.
-# The vessel layer excludes non-vessel organ meshes and the joint layer keeps only
-# ligament/retinaculum structures. This keeps the simplified module aligned with
-# Kas/Ligament/Damar/Kemik and avoids exporting unrelated source collections.
+# Premium mobile export: every study system is physically isolated. The selected
+# system is the only detailed layer loaded; ligament/vessel/nerve screens may add
+# the tiny merged skeleton-reference GLB for anatomical context.
 SYSTEMS = [
-    ('bone', '1: Skeletal system', None, 'skeleton.glb'),
-    ('muscle', '4: Muscular system', None, 'muscular.glb'),
-    ('vessel', '5: Cardiovascular system', re.compile(r'(arter|vein|vena|aorta|cava|vascular|vessel|capillar|sinus)', re.I), 'cardiovascular.glb'),
-    ('ligament', '3: Joints', re.compile(r'(ligament|retinacul)', re.I), 'ligaments.glb'),
+    ('bone', ('1: Skeletal system', 'Skeletal system'), None, 'skeleton.glb', 0.58),
+    ('muscle', ('4: Muscular system', 'Muscular system'), None, 'muscular.glb', 0.48),
+    ('ligament', ('3: Joints', 'Joints'), re.compile(r'(ligament|retinacul)', re.I), 'ligaments.glb', 0.68),
+    ('vessel', ('5: Cardiovascular system', 'Cardiovascular system'), None, 'cardiovascular.glb', 0.52),
+    ('nerve', ('6: Nervous system', 'Nervous system'), None, 'nervous.glb', 0.48),
 ]
+
 
 def display_name(raw: str) -> str:
     name = raw.replace('_', ' ').strip()
-    name = re.sub(r'\.(?:\d{3})$', '', name)
+    name = re.sub(r'(?:\.?\d{3})$', '', name)
     name = re.sub(r'\.(?:l|r)$', '', name, flags=re.I)
     name = re.sub(r'\s+', ' ', name).strip()
     return name
 
+
 def norm(name: str) -> str:
     return re.sub(r'[^a-z0-9]+', ' ', name.lower()).strip()
 
+
 def safe_object_fields(obj):
-    """Return stable object fields or None for broken/unresolved Blender RNA links."""
     try:
         if obj is None:
             return None
@@ -46,51 +48,53 @@ def safe_object_fields(obj):
     except (AttributeError, ReferenceError, RuntimeError):
         return None
 
-def select_objects(collection_name, name_filter=None):
-    coll = bpy.data.collections.get(collection_name)
-    if coll is None:
-        raise RuntimeError(f'Collection not found: {collection_name}')
-    bpy.ops.object.select_all(action='DESELECT')
+
+def resolve_collection(candidates):
+    for name in candidates:
+        coll = bpy.data.collections.get(name)
+        if coll is not None:
+            return coll
+    needles = [re.sub(r'^\s*\d+\s*:\s*', '', name).lower().strip() for name in candidates]
+    for coll in bpy.data.collections:
+        lowered = coll.name.lower()
+        if any(needle and needle in lowered for needle in needles):
+            return coll
+    raise RuntimeError(f'Collection not found. Tried: {candidates}')
+
+
+def collection_objects(collection, name_filter=None):
     selected = []
     skipped_invalid = 0
-    # Materialize the collection iteration first; Blender 4 headless can expose stale RNA links.
     try:
-        candidates = list(coll.all_objects)
+        candidates = list(collection.all_objects)
     except Exception:
         candidates = []
-        for child in [coll, *list(coll.children_recursive)]:
+        for child in [collection, *list(collection.children_recursive)]:
             try:
                 candidates.extend(list(child.objects))
             except Exception:
                 continue
+    seen = set()
     for obj in candidates:
         fields = safe_object_fields(obj)
         if fields is None:
             skipped_invalid += 1
             continue
         obj_type, obj_name = fields
+        if obj.as_pointer() in seen:
+            continue
+        seen.add(obj.as_pointer())
         if obj_type != 'MESH' or not getattr(getattr(obj, 'data', None), 'polygons', None):
             continue
         if name_filter and not name_filter.search(obj_name):
             continue
-        try:
-            obj.hide_set(False)
-            obj.hide_viewport = False
-            obj.hide_render = False
-            obj.select_set(True)
-            selected.append(obj)
-        except (AttributeError, ReferenceError, RuntimeError):
-            skipped_invalid += 1
-            continue
+        selected.append(obj)
     if skipped_invalid:
-        print(f'{collection_name}: skipped {skipped_invalid} invalid object link(s)')
+        print(f'{collection.name}: skipped {skipped_invalid} invalid object link(s)')
     if not selected:
-        raise RuntimeError(f'No mesh objects selected for: {collection_name}')
-    try:
-        bpy.context.view_layer.objects.active = selected[0]
-    except Exception:
-        pass
+        raise RuntimeError(f'No mesh objects selected for: {collection.name}')
     return selected
+
 
 def glb_mesh_names(path: Path):
     raw = path.read_bytes()
@@ -104,37 +108,30 @@ def glb_mesh_names(path: Path):
     return [node.get('name', '') for node in document.get('nodes', []) if 'mesh' in node]
 
 
-def export_glb(path: Path, objects):
-    # Blender's glTF selection export can retain meshes from sibling collections in
-    # this source file. Export from a temporary scene containing only the requested
-    # mesh objects so each resulting GLB is physically isolated, not just labelled.
-    original_scene = bpy.context.window.scene
-    export_scene = bpy.data.scenes.new('FTR isolated export')
-    export_collection = bpy.data.collections.new('FTR isolated meshes')
-    export_scene.collection.children.link(export_collection)
-    isolated_objects = []
-    for source in objects:
-        # A linked source object keeps its original parent/child graph. Blender's
-        # glTF exporter follows that graph and can silently pull unrelated meshes
-        # into the file. A shallow, hierarchy-free copy retains the exact source
-        # mesh/material but has no route back to sibling collections.
-        world_matrix = source.matrix_world.copy()
-        duplicate = source.copy()
-        duplicate.parent = None
-        duplicate.matrix_world = world_matrix
-        duplicate.animation_data_clear()
-        duplicate.constraints.clear()
-        duplicate.modifiers.clear()
-        duplicate.hide_set(False)
-        duplicate.hide_viewport = False
-        duplicate.hide_render = False
-        export_collection.objects.link(duplicate)
-        isolated_objects.append(duplicate)
-    expected = Counter(obj.name for obj in isolated_objects)
-    bpy.context.window.scene = export_scene
-    bpy.context.view_layer.update()
+def polygon_count(objects):
+    total = 0
+    for obj in objects:
+        try:
+            total += len(obj.data.polygons)
+        except Exception:
+            pass
+    return total
 
-    kwargs = dict(
+
+def add_mobile_decimate(obj, ratio):
+    try:
+        polygons = len(obj.data.polygons)
+    except Exception:
+        return
+    if ratio >= 0.99 or polygons < 900:
+        return
+    modifier = obj.modifiers.new(name='FTR Mobile Decimate', type='DECIMATE')
+    modifier.decimate_type = 'COLLAPSE'
+    modifier.ratio = max(0.12, min(1.0, float(ratio)))
+
+
+def export_kwargs(path: Path):
+    return dict(
         filepath=str(path),
         export_format='GLB',
         use_selection=False,
@@ -146,87 +143,181 @@ def export_glb(path: Path, objects):
         export_lights=False,
         export_animations=False,
     )
+
+
+def run_gltf_export(path: Path):
+    kwargs = export_kwargs(path)
     try:
-        try:
-            bpy.ops.export_scene.gltf(
-                **kwargs,
-                export_draco_mesh_compression_enable=True,
-                export_draco_mesh_compression_level=6,
-                export_draco_position_quantization=14,
-                export_draco_normal_quantization=10,
-                export_draco_texcoord_quantization=12,
-                export_draco_color_quantization=10,
-                export_draco_generic_quantization=12,
-            )
-        except Exception as exc:
-            print(f'Draco export unavailable ({exc}); exporting regular GLB')
-            bpy.ops.export_scene.gltf(**kwargs)
+        bpy.ops.export_scene.gltf(
+            **kwargs,
+            export_draco_mesh_compression_enable=True,
+            export_draco_mesh_compression_level=7,
+            export_draco_position_quantization=14,
+            export_draco_normal_quantization=10,
+            export_draco_texcoord_quantization=12,
+            export_draco_color_quantization=10,
+            export_draco_generic_quantization=12,
+        )
+    except Exception as exc:
+        print(f'Draco export unavailable ({exc}); exporting regular GLB')
+        bpy.ops.export_scene.gltf(**kwargs)
+
+
+def export_glb(path: Path, objects, decimate_ratio):
+    original_scene = bpy.context.window.scene
+    export_scene = bpy.data.scenes.new('FTR isolated export')
+    export_collection = bpy.data.collections.new('FTR isolated meshes')
+    export_scene.collection.children.link(export_collection)
+    isolated_objects = []
+    for source in objects:
+        world_matrix = source.matrix_world.copy()
+        duplicate = source.copy()
+        duplicate.data = source.data.copy()
+        duplicate.parent = None
+        duplicate.matrix_world = world_matrix
+        duplicate.animation_data_clear()
+        duplicate.constraints.clear()
+        duplicate.modifiers.clear()
+        duplicate.hide_set(False)
+        duplicate.hide_viewport = False
+        duplicate.hide_render = False
+        add_mobile_decimate(duplicate, decimate_ratio)
+        export_collection.objects.link(duplicate)
+        isolated_objects.append(duplicate)
+
+    expected_names = Counter(obj.name for obj in isolated_objects)
+    bpy.context.window.scene = export_scene
+    bpy.context.view_layer.update()
+    try:
+        run_gltf_export(path)
     finally:
         bpy.context.window.scene = original_scene
         bpy.data.scenes.remove(export_scene)
-        bpy.data.collections.remove(export_collection)
         for duplicate in isolated_objects:
+            mesh = duplicate.data
             bpy.data.objects.remove(duplicate, do_unlink=True)
+            if mesh and mesh.users == 0:
+                bpy.data.meshes.remove(mesh)
+        if export_collection.users == 0:
+            bpy.data.collections.remove(export_collection)
 
     actual = Counter(glb_mesh_names(path))
-    if actual != expected:
-        missing = list((expected - actual).elements())[:20]
-        extra = list((actual - expected).elements())[:20]
+    if sum(actual.values()) < 1:
+        raise RuntimeError(f'No exported mesh in {path.name}')
+    # Blender may normalize duplicate names during export, therefore validate
+    # physical isolation by count rather than exact suffix spelling.
+    if sum(actual.values()) != sum(expected_names.values()):
         raise RuntimeError(
-            f'GLB isolation failed for {path.name}: expected={sum(expected.values())} '
-            f'actual={sum(actual.values())} missing={missing} extra={extra}'
+            f'GLB isolation failed for {path.name}: expected={sum(expected_names.values())} actual={sum(actual.values())}'
         )
     return sum(actual.values())
 
-structures = {'muscle': {}, 'ligament': {}, 'vessel': {}, 'bone': {}}
-report = {'systems': {}, 'policy': {'excluded_unrelated_noncommercial_submodels': True}}
-for system, collection, name_filter, filename in SYSTEMS:
-    objects = select_objects(collection, name_filter)
+
+def export_reference_skeleton(path: Path, bone_objects):
+    original_scene = bpy.context.window.scene
+    export_scene = bpy.data.scenes.new('FTR skeleton reference export')
+    export_collection = bpy.data.collections.new('FTR skeleton reference')
+    export_scene.collection.children.link(export_collection)
+    duplicates = []
+    for source in bone_objects:
+        duplicate = source.copy()
+        duplicate.data = source.data.copy()
+        duplicate.parent = None
+        duplicate.matrix_world = source.matrix_world.copy()
+        duplicate.animation_data_clear()
+        duplicate.constraints.clear()
+        duplicate.modifiers.clear()
+        duplicate.hide_set(False)
+        duplicate.hide_viewport = False
+        duplicate.hide_render = False
+        export_collection.objects.link(duplicate)
+        duplicates.append(duplicate)
+
+    bpy.context.window.scene = export_scene
+    bpy.context.view_layer.update()
+    try:
+        bpy.ops.object.select_all(action='DESELECT')
+        for duplicate in duplicates:
+            duplicate.select_set(True)
+        bpy.context.view_layer.objects.active = duplicates[0]
+        bpy.ops.object.join()
+        merged = bpy.context.view_layer.objects.active
+        merged.name = 'FTR_REFERENCE_SKELETON'
+        add_mobile_decimate(merged, 0.16)
+        run_gltf_export(path)
+    finally:
+        bpy.context.window.scene = original_scene
+        bpy.data.scenes.remove(export_scene)
+        for duplicate in list(duplicates):
+            try:
+                mesh = duplicate.data
+                if duplicate.name in bpy.data.objects:
+                    bpy.data.objects.remove(duplicate, do_unlink=True)
+                if mesh and mesh.users == 0:
+                    bpy.data.meshes.remove(mesh)
+            except Exception:
+                pass
+        if export_collection.users == 0:
+            bpy.data.collections.remove(export_collection)
+
+    count = len(glb_mesh_names(path))
+    if count != 1:
+        raise RuntimeError(f'Reference skeleton must be one mesh, got {count}')
+    return count
+
+
+structures = {key: {} for key, *_ in SYSTEMS}
+report = {
+    'systems': {},
+    'reference': {},
+    'policy': {
+        'source': 'Z-Anatomy / BodyParts3D',
+        'isolated_system_exports': True,
+        'mobile_decimation': True,
+        'one_detailed_system_loaded_at_a_time': True,
+    },
+}
+
+resolved = {}
+for system, candidates, name_filter, filename, ratio in SYSTEMS:
+    collection = resolve_collection(candidates)
+    resolved[system] = collection
+    objects = collection_objects(collection, name_filter)
     output = MODELS / filename
-    print(f'Exporting {system}: {len(objects)} objects -> {output}')
-    exported_mesh_count = export_glb(output, objects)
+    before_polygons = polygon_count(objects)
+    print(f'Exporting {system}: {len(objects)} objects, {before_polygons} source polygons -> {output}')
+    exported_mesh_count = export_glb(output, objects, ratio)
     report['systems'][system] = {
-        'collection': collection,
+        'collection': collection.name,
         'mesh_count': len(objects),
         'exported_mesh_count': exported_mesh_count,
         'isolated': exported_mesh_count == len(objects),
         'file': filename,
         'bytes': output.stat().st_size,
+        'source_polygons': before_polygons,
+        'decimate_ratio': ratio,
     }
-    if system in structures:
-        for obj in objects:
-            fields = safe_object_fields(obj)
-            if fields is None:
-                continue
-            _, obj_name = fields
-            label = display_name(obj_name)
-            if len(label) < 3:
-                continue
-            key = norm(label)
-            if key and key not in structures[system]:
-                structures[system][key] = {'name': label, 'system': system}
+    for obj in objects:
+        fields = safe_object_fields(obj)
+        if fields is None:
+            continue
+        _, obj_name = fields
+        label = display_name(obj_name)
+        if len(label) < 3:
+            continue
+        key = norm(label)
+        if key and key not in structures[system]:
+            structures[system][key] = {'name': label, 'system': system}
 
-biceps_key = norm('Biceps brachii')
-structures['muscle'].setdefault(biceps_key, {'name': 'Biceps brachii', 'system': 'muscle'})
-structures['muscle'][biceps_key].update({
-    'tr': 'İki başlı kol kası',
-    'general': 'Biceps brachii, ön kolun supinasyonunda ve dirseğin fleksiyonunda görev alan iki başlı bir kastır.',
-    'origin': 'Caput longum: tuberculum supraglenoidale; caput breve: processus coracoideus.',
-    'insertion': 'Tuberositas radii ve aponeurosis bicipitalis.',
-    'innervation': 'N. musculocutaneus (C5–C6).',
-    'function': 'Dirsek fleksiyonu ve ön kol supinasyonunun güçlü kasıdır; omuz fleksiyonuna yardımcı olur.'
-})
-
-fibula_key = norm('Fibula')
-structures['bone'].setdefault(fibula_key, {'name': 'Fibula', 'system': 'bone'})
-structures['bone'][fibula_key].update({
-    'tr': 'Fibula (Kamış kemiği)',
-    'general': 'Fibula, bacağın lateralinde yer alan ince uzun kemiktir. Tibia ile birlikte ayak bileği stabilitesine, kas ve ligament tutunmalarına katkı sağlar; vücut ağırlığının yalnız küçük bir bölümünü taşır.',
-    'origin': 'Fibularis longus ve brevis, extensor digitorum longus, extensor hallucis longus, flexor hallucis longus, soleus ve tibialis posterior kasları fibulanın farklı yüzlerinden kısmen başlar.',
-    'insertion': 'Biceps femoris tendonu fibula başına tutunur. Fibula başı ayrıca lateral kollateral ligament için önemli bir tutunma alanıdır.',
-    'innervation': 'Fibula motor innervasyon almaz. Periostu bölgesel duyusal sinir lifleriyle innerve edilir; fibula boynu çevresinde n. fibularis communis yüzeyel seyrettiği için klinik olarak önemlidir.',
-    'function': 'Ayak bileğinin lateral stabilitesini destekler, kas ve ligamentler için tutunma yüzeyi sağlar ve alt ekstremite yükünün küçük bir bölümünü iletir.'
-})
+bone_objects = collection_objects(resolved['bone'])
+reference_path = MODELS / 'skeleton-reference.glb'
+reference_mesh_count = export_reference_skeleton(reference_path, bone_objects)
+report['reference'] = {
+    'file': reference_path.name,
+    'mesh_count': reference_mesh_count,
+    'bytes': reference_path.stat().st_size,
+    'purpose': 'low-poly anatomical context for ligament/vessel/nerve',
+}
 
 (DATA / 'structures.json').write_text(json.dumps(structures, ensure_ascii=False, indent=2), encoding='utf-8')
 (DATA / 'export-report.json').write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding='utf-8')
