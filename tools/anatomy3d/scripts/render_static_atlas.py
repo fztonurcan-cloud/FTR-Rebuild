@@ -2,6 +2,7 @@ import bpy
 import json
 import os
 import re
+from collections import Counter
 from pathlib import Path
 from mathutils import Vector
 
@@ -16,11 +17,14 @@ HEIGHT = int(os.environ.get('FTR_ATLAS_HEIGHT', '1120'))
 ASPECT = WIDTH / HEIGHT
 
 SYSTEMS = [
-    ('muscle', ('4: Muscular system', 'Muscular system'), None),
-    ('bone', ('1: Skeletal system', 'Skeletal system'), None),
-    ('ligament', ('3: Joints', 'Joints'), re.compile(r'(ligament|retinacul)', re.I)),
-    ('vessel', ('5: Cardiovascular system', 'Cardiovascular system'), None),
-    ('nerve', ('6: Nervous system', 'Nervous system'), None),
+    ('muscle', ('4: Muscular system', 'Muscular system'), None, ('MESH',)),
+    ('bone', ('1: Skeletal system', 'Skeletal system'), None, ('MESH',)),
+    ('ligament', ('3: Joints', 'Joints'), re.compile(r'(ligament|retinacul)', re.I), ('MESH',)),
+    # Z-Anatomy stores most peripheral vessels and nerves as CURVE objects. The
+    # old mesh-only path therefore reduced the vascular system to a handful of
+    # cardiac structures and omitted the peripheral neural tree entirely.
+    ('vessel', ('5: Cardiovascular system', 'Cardiovascular system'), None, ('MESH', 'CURVE')),
+    ('nerve', ('6: Nervous system', 'Nervous system'), None, ('MESH', 'CURVE')),
 ]
 REFERENCE_SYSTEMS = {'ligament', 'vessel', 'nerve'}
 BONE_CANDIDATES = ('1: Skeletal system', 'Skeletal system')
@@ -51,7 +55,18 @@ def resolve_collection(candidates):
     raise RuntimeError(f'Collection not found. Tried: {candidates}')
 
 
-def collection_objects(collection, name_filter=None):
+def has_renderable_geometry(obj):
+    try:
+        if obj.type == 'MESH':
+            return bool(obj.data and len(obj.data.polygons) > 0)
+        if obj.type == 'CURVE':
+            return bool(obj.data and len(obj.data.splines) > 0)
+    except Exception:
+        return False
+    return False
+
+
+def collection_objects(collection, name_filter=None, allowed_types=('MESH',), exclude_keys=None):
     try:
         candidates = list(collection.all_objects)
     except Exception:
@@ -62,21 +77,32 @@ def collection_objects(collection, name_filter=None):
             except Exception:
                 pass
 
+    allowed_types = set(allowed_types)
+    exclude_keys = exclude_keys or set()
     rows = []
     seen = set()
+    skipped_excluded = 0
     for obj in candidates:
         try:
             ptr = obj.as_pointer()
-            if ptr in seen or obj.type != 'MESH' or not obj.data or not obj.data.polygons:
+            if ptr in seen:
                 continue
             seen.add(ptr)
+            if obj.type not in allowed_types or not has_renderable_geometry(obj):
+                continue
             if name_filter and not name_filter.search(obj.name):
+                continue
+            key = norm(display_name(obj.name))
+            if key and key in exclude_keys:
+                skipped_excluded += 1
                 continue
             rows.append(obj)
         except Exception:
             continue
     if not rows:
-        raise RuntimeError(f'No mesh objects for {collection.name}')
+        raise RuntimeError(f'No renderable objects for {collection.name} / types={sorted(allowed_types)}')
+    counts = Counter(obj.type for obj in rows)
+    print(f'[STATIC ATLAS] {collection.name}: selected types={dict(counts)} excluded_context={skipped_excluded}')
     return rows
 
 
@@ -111,11 +137,11 @@ def beauty_rgba(system, raw_name):
     if system == 'ligament':
         return (0.92, 0.89, 0.80, 1.0)
     if system == 'vessel':
-        if re.search(r'vein|vena|venous|saphen', n):
+        if re.search(r'vein|vena|venous|saphen|sinus', n):
             return (0.045, 0.20, 0.84, 1.0)
         return (0.88, 0.035, 0.055, 1.0)
     if system == 'nerve':
-        if re.search(r'brain|cerebr|spinal cord|medulla', n):
+        if re.search(r'brain|cerebr|spinal cord|medulla|pons|thalam|cortex|gyrus|sulcus', n):
             return (0.66, 0.47, 0.28, 1.0)
         return (1.00, 0.64, 0.02, 1.0)
     return (0.72, 0.72, 0.72, 1.0)
@@ -306,8 +332,8 @@ def render_pass(system, source_objects, bone_objects, id_pass=False):
         except Exception:
             pass
 
-        # Unlinking/removing only the temporary scene/collection keeps source meshes in
-        # place and avoids the invalid-RNA cleanup failures from the old copy-heavy path.
+        # Unlinking/removing only the temporary scene/collection keeps source geometry
+        # in place and avoids the invalid-RNA cleanup failures from the old copy-heavy path.
         scene_name = scene.name
         coll_name = coll.name
         scene_ref = bpy.data.scenes.get(scene_name)
@@ -327,9 +353,16 @@ def render_pass(system, source_objects, bone_objects, id_pass=False):
 
 
 def run():
-    bone_objects = collection_objects(resolve_collection(BONE_CANDIDATES))
+    resolved = {system: resolve_collection(candidates) for system, candidates, _, _ in SYSTEMS}
+    bone_objects = collection_objects(resolved['bone'])
+    muscle_objects = collection_objects(resolved['muscle'])
+    # Some Z-Anatomy system collections cross-link muscles as innervation/context
+    # objects. Remove those exact structures from vessel/nerve atlases while keeping
+    # central nervous meshes, cardiac structures and the actual CURVE trees.
+    muscle_keys = {norm(display_name(obj.name)) for obj in muscle_objects if display_name(obj.name)}
+
     manifest = {
-        'version': 2,
+        'version': 3,
         'render_mode': 'static-layered-atlas',
         'width': WIDTH,
         'height': HEIGHT,
@@ -341,13 +374,26 @@ def run():
             'selection': 'id-map + 2d highlight mask',
             'low_end_phone_first': True,
             'atlas_renderer': 'Blender Workbench linked-object render',
+            'vascular_neural_curves': True,
+            'muscle_context_removed_from_vessel_nerve': True,
         },
     }
 
-    for system, candidates, name_filter in SYSTEMS:
-        collection = resolve_collection(candidates)
-        source_objects = collection_objects(collection, name_filter)
-        print(f'[STATIC ATLAS] {system}: {len(source_objects)} structures')
+    for system, _, name_filter, allowed_types in SYSTEMS:
+        if system == 'bone':
+            source_objects = bone_objects
+        elif system == 'muscle':
+            source_objects = muscle_objects
+        else:
+            exclude = muscle_keys if system in {'vessel', 'nerve'} else set()
+            source_objects = collection_objects(
+                resolved[system],
+                name_filter,
+                allowed_types=allowed_types,
+                exclude_keys=exclude,
+            )
+        type_counts = Counter(obj.type for obj in source_objects)
+        print(f'[STATIC ATLAS] {system}: {len(source_objects)} structures / {dict(type_counts)}')
 
         anchors = render_pass(system, source_objects, bone_objects, id_pass=False)
         render_pass(system, source_objects, bone_objects, id_pass=True)
@@ -363,12 +409,23 @@ def run():
                 'name': label,
                 'raw': source.name,
                 'key': norm(label),
+                'object_type': source.type,
                 'anchor': anchors[index],
             })
+
+        # These two structures are release-gate sentinels: if they are absent, the
+        # atlas has silently fallen back to the old incomplete mesh-only extraction.
+        labels = [row['name'] for row in rows]
+        if system == 'vessel' and not any(re.search(r'anterior\s+tibial\s+arter', label, re.I) for label in labels):
+            raise RuntimeError('Vascular curve extraction incomplete: Anterior tibial artery missing')
+        if system == 'nerve' and not any(re.search(r'median\s+nerve|medianus', label, re.I) for label in labels):
+            raise RuntimeError('Neural curve extraction incomplete: Median nerve missing')
+
         manifest['systems'][system] = {
             'beauty': f'atlas/{system}-front.png',
             'id_map': f'atlas/{system}-id.png',
             'structure_count': len(rows),
+            'object_types': dict(type_counts),
             'structures': rows,
         }
 
