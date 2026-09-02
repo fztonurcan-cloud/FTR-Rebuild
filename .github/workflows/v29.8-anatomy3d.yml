@@ -1,9 +1,10 @@
-name: v29.8 3D anatomy module
+name: v29.8.1 simplified 3D anatomy module
 
 on:
   push:
     branches:
       - v29.8-3d-anatomy
+      - v29.8.1-3d-simple
     paths:
       - 'tools/anatomy3d/**'
       - '.github/workflows/v29.8-anatomy3d.yml'
@@ -52,7 +53,7 @@ jobs:
             https://raw.githubusercontent.com/Z-Anatomy/Models-of-human-anatomy/master/License.txt
           ls -lh /tmp/Z-Anatomy.zip "$BLEND"
 
-      - name: Export skeleton muscle nerve ligament vessel GLBs
+      - name: Export isolated muscle ligament vessel bone GLBs
         env:
           FTR_ANATOMY_OUT: ${{ github.workspace }}/tools/anatomy3d/public
         run: |
@@ -69,12 +70,14 @@ jobs:
           import json, pathlib
           p = pathlib.Path('tools/anatomy3d/public/data/export-report.json')
           d = json.loads(p.read_text())
-          required = ['skeleton','muscle','nerve','ligament','vessel']
+          required = ['muscle','ligament','vessel','bone']
           for key in required:
               row = d['systems'].get(key)
-              if not row or row['mesh_count'] < 1 or row['bytes'] < 1000:
+              if not row or row['mesh_count'] < 1 or row['bytes'] < 1000 or not row.get('isolated'):
                   raise SystemExit(f'Invalid export for {key}: {row}')
-              print(key, row['mesh_count'], row['bytes'])
+              if row['exported_mesh_count'] != row['mesh_count']:
+                  raise SystemExit(f'Contaminated GLB for {key}: {row}')
+              print(key, row['mesh_count'], row['exported_mesh_count'], row['bytes'])
           if not d.get('policy',{}).get('excluded_unrelated_noncommercial_submodels'):
               raise SystemExit('Commercial-safe export policy flag missing')
           PY
@@ -97,16 +100,17 @@ jobs:
           test -f tools/anatomy3d/dist/index.html
           test -f tools/anatomy3d/dist/models/skeleton.glb
           test -f tools/anatomy3d/dist/models/muscular.glb
-          test -f tools/anatomy3d/dist/models/nervous.glb
           test -f tools/anatomy3d/dist/models/ligaments.glb
           test -f tools/anatomy3d/dist/models/cardiovascular.glb
           test -f tools/anatomy3d/dist/licenses/ATTRIBUTION.txt
           test -f tools/anatomy3d/dist/licenses/Z-Anatomy-License.txt
           grep -R "3D ANATOM" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
           grep -R "Biceps brachii" tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Ligament Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Damar Sistemi" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
-          grep -R "Karma Sınav" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Fibula" tools/anatomy3d/dist/data tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Ligamentler" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Damarlar" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          grep -R "Kemikler" tools/anatomy3d/dist/index.html tools/anatomy3d/dist/assets >/dev/null
+          ! grep -E "Sınav Modu|Karma Sınav|Öğrenme Modu|Sinir Sistemi" tools/anatomy3d/dist/index.html
           du -sh tools/anatomy3d/dist
 
       - name: Create module manifest
@@ -122,7 +126,7 @@ jobs:
               if p.is_file():
                   h=hashlib.sha256(p.read_bytes()).hexdigest()
                   rows.append({'path':str(p.relative_to(root)).replace('\\','/'),'bytes':p.stat().st_size,'sha256':h})
-          out={'module':'FTR Akademi 3D Anatomi','version':'v29.8-work','locked_reference':'3D anatomy screen approved 2026-09-02','files':rows}
+          out={'module':'FTR Akademi 3D Anatomi','version':'v29.8.1-simple','locked_reference':'Simplified 3D anatomy decision 2026-09-02','files':rows}
           pathlib.Path('ANATOMY3D-MANIFEST.json').write_text(json.dumps(out,indent=2,ensure_ascii=False),encoding='utf-8')
           PY
 
@@ -186,7 +190,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v29.8-anatomy3d-module
+          name: v29.8.1-anatomy3d-simple-module
           path: |
             tools/anatomy3d/dist
             tools/anatomy3d/integration

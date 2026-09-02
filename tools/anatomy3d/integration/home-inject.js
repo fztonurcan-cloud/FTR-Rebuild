@@ -10,8 +10,8 @@
       <button id="${CARD_ID}" class="ftr-a3d-v56-card" type="button" aria-label="3D Anatomi modülünü aç">
         <span class="ftr-a3d-v56-copy">
           <span class="ftr-a3d-v56-title">3D ANATOMİ <em>YENİ</em></span>
-          <span class="ftr-a3d-v56-sub">Kaslar • Sinirler • Ligamentler • Damarlar</span>
-          <span class="ftr-a3d-v56-note">3D model üzerinde keşfet, öğren ve sınav ol!</span>
+          <span class="ftr-a3d-v56-sub">Kaslar • Ligamentler • Damarlar • Kemikler</span>
+          <span class="ftr-a3d-v56-note">Merak ettiğin yapıya dokun, bilgisini hemen incele!</span>
           <span class="ftr-a3d-v56-cta">Keşfetmeye Başla <b>→</b></span>
         </span>
         <span class="ftr-a3d-v56-figure" aria-hidden="true">
@@ -23,9 +23,9 @@
         </span>
         <span class="ftr-a3d-v56-systems" aria-hidden="true">
           <span><i class="muscle">◒</i>Kas Sistemi <b>›</b></span>
-          <span><i class="nerve">✳</i>Sinir Sistemi <b>›</b></span>
           <span><i class="ligament">✦</i>Ligament Sistemi <b>›</b></span>
           <span><i class="vessel">⌬</i>Damar Sistemi <b>›</b></span>
+          <span><i class="bone">◇</i>Kemik Sistemi <b>›</b></span>
         </span>
       </button>`;
   }

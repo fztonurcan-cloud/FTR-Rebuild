@@ -11,31 +11,24 @@
 <body>
   <main id="anatomy-app" class="anatomy-app">
     <header class="topbar">
-      <button id="backBtn" class="icon-btn back-btn" type="button" aria-label="Geri">←</button>
-      <h1>3D ANATOMİ</h1>
-      <button id="examBtn" class="top-action" type="button"><span>⌘</span> Sınav Modu</button>
+      <button id="backBtn" class="back-btn" type="button" aria-label="Geri">←</button>
+      <div>
+        <h1>3D ANATOMİ</h1>
+        <p>Merak ettiğin yapıya dokun, bilgisini incele</p>
+      </div>
     </header>
 
     <section class="workspace">
-      <aside class="rail rail-left" aria-label="Anatomi kontrolleri">
+      <aside class="rail-left" aria-label="Anatomi sistem ve model kontrolleri">
         <div class="rail-title">SİSTEM SEÇİMİ</div>
         <div class="panel system-panel">
-          <button class="system-btn active" data-system="muscle" type="button"><span class="sys-icon muscle">◒</span><span>Kas Sistemi</span></button>
-          <button class="system-btn" data-system="nerve" type="button"><span class="sys-icon nerve">✳</span><span>Sinir Sistemi</span></button>
-          <button class="system-btn" data-system="ligament" type="button"><span class="sys-icon ligament">✦</span><span>Ligament Sistemi</span></button>
-          <button class="system-btn" data-system="vessel" type="button"><span class="sys-icon vessel">⌬</span><span>Damar Sistemi</span></button>
+          <button class="system-btn active" data-system="muscle" type="button"><span class="sys-icon muscle">◒</span><span>Kaslar</span></button>
+          <button class="system-btn" data-system="ligament" type="button"><span class="sys-icon ligament">✦</span><span>Ligamentler</span></button>
+          <button class="system-btn" data-system="vessel" type="button"><span class="sys-icon vessel">⌬</span><span>Damarlar</span></button>
+          <button class="system-btn" data-system="bone" type="button"><span class="sys-icon bone">◇</span><span>Kemikler</span></button>
         </div>
 
-        <div class="rail-title view-title">GÖRÜNÜM</div>
-        <div class="panel view-panel">
-          <button class="view-btn active" data-view="all" type="button"><span>◉</span><span>Tümü</span></button>
-          <button class="view-btn" data-view="muscle" type="button"><span>◒</span><span>Kaslar</span></button>
-          <button class="view-btn" data-view="bone" type="button"><span>♙</span><span>Kemikler</span></button>
-          <button class="view-btn" data-view="vessel" type="button"><span>⌬</span><span>Damarlar</span></button>
-          <button class="view-btn" data-view="nerve" type="button"><span>✳</span><span>Sinirler</span></button>
-        </div>
-
-        <div class="rail-title controls-title">KONTROLLER</div>
+        <div class="rail-title controls-title">MODEL KONTROLLERİ</div>
         <div class="panel controls-panel">
           <button id="rotateBtn" type="button"><span>↻</span><span>Döndür</span></button>
           <button id="zoomInBtn" type="button"><span>⌕+</span><span>Yakınlaştır</span></button>
@@ -44,62 +37,39 @@
         </div>
       </aside>
 
-      <section class="viewer-column">
+      <section class="content-column">
         <div class="viewer-heading">
           <div>
-            <h2 id="systemHeading">Kas Sistemi</h2>
-            <p>3D modeli döndür, yapıları keşfet ve öğren</p>
+            <h2 id="systemHeading">Kaslar</h2>
+            <p id="systemHint">Modeli döndür veya bilgi için bir yapıya dokun</p>
           </div>
-          <div class="learn-chip">💡 <span>Öğrenme Modu</span></div>
+          <span id="performanceBadge" class="performance-badge">Mobil uyumlu</span>
         </div>
 
         <div id="viewer" class="viewer" aria-label="Etkileşimli 3D anatomi modeli">
           <canvas id="anatomyCanvas"></canvas>
           <div id="loading" class="loading-card"><div class="spinner"></div><span>3D anatomi yükleniyor…</span></div>
-          <div class="model-hint">Tek parmakla döndür • İki parmakla yakınlaştır</div>
+          <div id="selectionHint" class="selection-hint">Yapıya dokun → bilgi kartını aç</div>
         </div>
-      </section>
 
-      <aside class="rail rail-right" aria-label="Anatomi araçları">
-        <div class="panel tool-panel">
-          <button id="labelsBtn" type="button"><span>◇</span><span>Etiketler</span></button>
-          <button id="noteBtn" type="button"><span>□</span><span>Not Ekle</span></button>
-          <button id="shotBtn" type="button"><span>▣</span><span>Ekran<br>Görüntüsü</span></button>
-          <button id="shareBtn" type="button"><span>⌯</span><span>Bilgiyi<br>Paylaş</span></button>
-        </div>
-      </aside>
-
-      <section id="infoCard" class="info-card" aria-live="polite">
-        <div class="info-head">
-          <div>
-            <div class="info-name-row"><h3 id="structureName">Biceps brachii</h3><button id="speakBtn" type="button" aria-label="Sesli oku">🔊</button></div>
-            <p id="structureSubtitle">İki başlı kol kası</p>
+        <section id="infoCard" class="info-card" aria-live="polite">
+          <div class="info-head">
+            <div>
+              <h3 id="structureName">Biceps brachii</h3>
+              <p id="structureSubtitle">İki başlı kol kası</p>
+            </div>
+            <span id="structureSystem" class="structure-system">KAS</span>
           </div>
-          <button id="favoriteBtn" class="favorite-btn" type="button">Favorilere Ekle ♡</button>
-        </div>
-        <div class="tabs" role="tablist">
-          <button class="tab active" data-tab="general" type="button">Genel Bilgi</button>
-          <button class="tab" data-tab="origin" type="button">Origo</button>
-          <button class="tab" data-tab="insertion" type="button">Insertio</button>
-          <button class="tab" data-tab="innervation" type="button">İnnervasyon</button>
-          <button class="tab" data-tab="function" type="button">Fonksiyon</button>
-        </div>
-        <div class="info-body">
-          <p id="structureText">Biceps brachii, ön kolun supinasyonunda ve dirseğin fleksiyonunda görev alan iki başlı bir kastır.</p>
-          <div class="mini-preview"><div class="mini-arm">◢</div></div>
-        </div>
-        <div class="license-line">3D model: Z-Anatomy / BodyParts3D • CC BY-SA 4.0</div>
-      </section>
-
-      <section id="quizCard" class="quiz-card hidden" aria-live="polite">
-        <div class="quiz-top">
-          <div><span id="quizSystem">KAS SİSTEMİ</span><strong id="quizProgress">Soru 1 / 20</strong></div>
-          <div class="quiz-actions"><button id="mixedExamBtn" class="mixed-exam-btn" type="button">Karma Sınav</button><div id="quizScore">0 doğru</div></div>
-        </div>
-        <h3>İşaretlenen yapı hangisidir?</h3>
-        <div id="quizOptions" class="quiz-options"></div>
-        <div id="quizFeedback" class="quiz-feedback"></div>
-        <button id="nextQuestionBtn" class="primary-btn" type="button">Sonraki Soru →</button>
+          <div class="tabs" role="tablist" aria-label="Anatomik bilgi başlıkları">
+            <button class="tab active" data-tab="general" type="button">Genel Bilgi</button>
+            <button class="tab" data-tab="origin" type="button">Origo</button>
+            <button class="tab" data-tab="insertion" type="button">Insertio</button>
+            <button class="tab" data-tab="innervation" type="button">İnnervasyon</button>
+            <button class="tab" data-tab="function" type="button">Fonksiyon</button>
+          </div>
+          <p id="structureText" class="structure-text">Model hazırlanıyor…</p>
+          <div class="license-line">3D model: Z-Anatomy / BodyParts3D • CC BY-SA 4.0</div>
+        </section>
       </section>
     </section>
 

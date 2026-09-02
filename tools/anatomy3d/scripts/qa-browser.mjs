@@ -35,8 +35,12 @@ async function runFunctionQa(page) {
     { timeout: 120_000 }
   );
 
+  record('simplified_controls_only', await page.evaluate(() =>
+    !document.querySelector('#examBtn, #quizCard, .learn-chip, .view-panel, .tool-panel') &&
+    document.querySelectorAll('.system-btn').length === 4
+  ));
   record('initial_biceps', (await text('#structureName')).toLowerCase().includes('biceps brachii'));
-  record('initial_muscle_system', (await text('.system-btn.active')).includes('Kas Sistemi'));
+  record('initial_muscle_system', (await text('.system-btn.active')).includes('Kaslar'));
 
   const generalText = await text('#structureText');
   await page.click('.tab[data-tab="origin"]');
@@ -50,10 +54,11 @@ async function runFunctionQa(page) {
   record('zoom_in_changes_model_view', stateAfterZoom.cameraDistance < stateBeforeZoom.cameraDistance, `${stateBeforeZoom.cameraDistance} -> ${stateAfterZoom.cameraDistance}`);
   await page.click('#zoomOutBtn');
   await page.click('#resetBtn');
+  const rotationBefore = (await page.evaluate(() => window.__FTR_ANATOMY_QA__.state())).activeRotationY;
   await page.click('#rotateBtn');
-  await page.waitForFunction(() => document.getElementById('anatomyToast')?.textContent.includes('açık'));
-  record('rotate_toggle', true, await text('#anatomyToast'));
-  await page.click('#rotateBtn');
+  await new Promise(resolve => setTimeout(resolve, 350));
+  const rotationAfter = (await page.evaluate(() => window.__FTR_ANATOMY_QA__.state())).activeRotationY;
+  record('single_step_rotate', rotationAfter > rotationBefore + 0.5, `${rotationBefore} -> ${rotationAfter}`);
 
   const initialStructure = await text('#structureName');
   const pickedState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pickDifferentStructure());
@@ -61,10 +66,10 @@ async function runFunctionQa(page) {
   record('selected_structure_highlight', pickedState.selectedHighlighted, pickedState.selectedStructure);
 
   const systems = [
-    ['nerve', 'Sinir Sistemi'],
-    ['ligament', 'Ligament Sistemi'],
-    ['vessel', 'Damar Sistemi'],
-    ['muscle', 'Kas Sistemi']
+    ['ligament', 'Ligamentler'],
+    ['vessel', 'Damarlar'],
+    ['bone', 'Kemikler'],
+    ['muscle', 'Kaslar']
   ];
   for (const [key, label] of systems) {
     await page.click(`.system-btn[data-system="${key}"]`);
@@ -79,38 +84,27 @@ async function runFunctionQa(page) {
     record(`system_${key}`, (await text('#systemHeading')).includes(label) && systemState.activeSystem === key && systemState.activeMeshCount > 0, `${await text('#structureName')} (${systemState.activeMeshCount} mesh)`);
   }
 
-  await page.click('#examBtn');
-  await page.waitForFunction(() => !document.getElementById('quizCard')?.classList.contains('hidden') && document.querySelectorAll('.quiz-option').length >= 4);
-  record('exam_mode_opens', (await text('#examBtn')).includes('Öğrenme Modu'));
-  const regularProgress = await text('#quizProgress');
-  await page.click('.quiz-option');
-  record('exam_answer_feedback', (await text('#quizFeedback')).length > 0);
-  await page.click('#nextQuestionBtn');
-  await page.waitForFunction(previous => document.getElementById('quizProgress')?.textContent !== previous, {}, regularProgress);
-  record('exam_next_question', true, await text('#quizProgress'));
+  await page.click('.system-btn[data-system="bone"]');
+  await waitForLoading();
+  const fibula = await page.evaluate(() => window.__FTR_ANATOMY_QA__.pick('^fibula$'));
+  record('fibula_click_target', fibula.selectedStructure.toLowerCase() === 'fibula', fibula.selectedStructure);
+  record('fibula_general_info', (await text('#structureText')).toLowerCase().includes('bacağın lateralinde'));
+  await page.click('.tab[data-tab="origin"]');
+  record('fibula_origin_info', (await text('#structureText')).toLowerCase().includes('fibularis longus'));
+  await page.click('.tab[data-tab="insertion"]');
+  record('fibula_insertion_info', (await text('#structureText')).toLowerCase().includes('biceps femoris'));
+  await page.click('.tab[data-tab="innervation"]');
+  record('fibula_innervation_info', (await text('#structureText')).toLowerCase().includes('motor innervasyon almaz'));
+  await page.click('.tab[data-tab="function"]');
+  record('fibula_function_info', (await text('#structureText')).toLowerCase().includes('ayak bileğinin lateral stabilitesini'));
 
-  await page.click('#mixedExamBtn');
-  await page.waitForFunction(
-    () => window.__FTR_ANATOMY_QA__?.state().mixedExamMode === true &&
-      document.getElementById('mixedExamBtn')?.classList.contains('active') &&
-      document.getElementById('quizProgress')?.textContent.startsWith('Soru 1') &&
-      document.getElementById('loading')?.classList.contains('hidden') &&
-      document.querySelectorAll('.quiz-option').length >= 4,
-    { timeout: 120_000 }
-  );
-  const mixedSystemOne = await text('#quizSystem');
-  await page.click('.quiz-option');
-  await page.click('#nextQuestionBtn');
-  await page.waitForFunction(
-    previous => document.getElementById('quizSystem')?.textContent !== previous && document.getElementById('quizProgress')?.textContent.startsWith('Soru 2'),
-    { timeout: 120_000 },
-    mixedSystemOne
-  );
-  record('mixed_exam_cross_system', true, `${mixedSystemOne} -> ${await text('#quizSystem')}`);
-
-  await page.click('#examBtn');
-  await page.waitForFunction(() => !document.getElementById('infoCard')?.classList.contains('hidden'));
-  record('learning_mode_returns', (await text('#examBtn')).includes('Sınav Modu'));
+  await page.click('.system-btn[data-system="ligament"]');
+  await page.click('.system-btn[data-system="vessel"]');
+  await page.click('.system-btn[data-system="bone"]');
+  await waitForLoading();
+  const raceState = await page.evaluate(() => window.__FTR_ANATOMY_QA__.state());
+  record('rapid_switch_keeps_latest_system', raceState.activeSystem === 'bone' && raceState.selectedStructure.toLowerCase() === 'fibula', `${raceState.activeSystem} / ${raceState.selectedStructure}`);
+  record('mobile_render_budget', raceState.pixelRatio <= 1 && raceState.continuousAnimation === false, `pixelRatio=${raceState.pixelRatio}`);
 
   return { pass: checks.every(check => check.pass), checks };
 }

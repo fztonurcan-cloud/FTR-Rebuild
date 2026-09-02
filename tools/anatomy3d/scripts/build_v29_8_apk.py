@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the isolated v29.8 APK from the immutable v29.7 APK.
+"""Build the isolated v29.8.1 simple 3D APK from the immutable v29.7 APK.
 
 The script refuses any base APK that does not match the locked v29.7 size and
 SHA-256. It changes only the host HTML bootstrap, adds the home-card bootstrap,
@@ -68,8 +68,8 @@ def signing_values(path: Path) -> tuple[str, str]:
 
 
 def inject_host_bootstrap(source: str) -> str:
-    css_tag = '<link rel="stylesheet" href="./anatomy3d-home-card.css" data-ftr-anatomy3d="v29.8">'
-    js_tag = '<script defer src="./anatomy3d-home-inject.js" data-ftr-anatomy3d="v29.8"></script>'
+    css_tag = '<link rel="stylesheet" href="./anatomy3d-home-card.css" data-ftr-anatomy3d="v29.8.1">'
+    js_tag = '<script defer src="./anatomy3d-home-inject.js" data-ftr-anatomy3d="v29.8.1"></script>'
     if "data-ftr-anatomy3d" in source:
         raise SystemExit("Host index already contains a 3D Anatomy bootstrap")
     if "</head>" not in source or "</body>" not in source:
@@ -80,8 +80,8 @@ def inject_host_bootstrap(source: str) -> str:
 
 
 def inject_module_bootstrap(source: str) -> str:
-    fetch_tag = '<script src="./android-asset-fetch.js" data-ftr-android-asset-fetch="v29.8-phone-fix"></script>'
-    css_tag = '<link rel="stylesheet" href="./module-phone-fix.css" data-ftr-phone-layout="v29.8-phone-fix">'
+    fetch_tag = '<script src="./android-asset-fetch.js" data-ftr-android-asset-fetch="v29.8.1-simple"></script>'
+    css_tag = '<link rel="stylesheet" href="./module-phone-fix.css" data-ftr-phone-layout="v29.8.1-simple">'
     if "android-asset-fetch.js" not in source:
         source = source.replace("</head>", f"  {fetch_tag}\n</head>", 1)
     if "module-phone-fix.css" not in source:
@@ -103,7 +103,6 @@ def validate_module(module_root: Path) -> list[Path]:
         "index.html",
         "models/skeleton.glb",
         "models/muscular.glb",
-        "models/nervous.glb",
         "models/ligaments.glb",
         "models/cardiovascular.glb",
         "data/structures.json",
@@ -269,7 +268,7 @@ def main() -> None:
         raise SystemExit("Added payload does not exactly match the locked 3D Anatomy integration")
 
     report = {
-        "version": "v29.8-3d-anatomy",
+        "version": "v29.8.1-3d-simple",
         "status": "BUILD_STATIC_QA_PASS_PHONE_QA_REQUIRED",
         "base": {"file": BASE_NAME, "bytes": BASE_SIZE, "sha256": BASE_SHA256, "modified": False},
         "output": {"file": output.name, "bytes": output.stat().st_size, "sha256": sha256(output)},

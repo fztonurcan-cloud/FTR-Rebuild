@@ -5,25 +5,19 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 const BASE = import.meta.env.BASE_URL || './';
 const QA_MODE = new URLSearchParams(window.location.search).get('qa') === '1';
+const IS_COMPACT = matchMedia('(max-width: 760px)').matches;
+const LOW_POWER = IS_COMPACT || (navigator.deviceMemory && navigator.deviceMemory <= 4);
+
 const MODEL_FILES = {
-  skeleton: `${BASE}models/skeleton.glb`,
   muscle: `${BASE}models/muscular.glb`,
-  nerve: `${BASE}models/nervous.glb`,
   ligament: `${BASE}models/ligaments.glb`,
-  vessel: `${BASE}models/cardiovascular.glb`
+  vessel: `${BASE}models/cardiovascular.glb`,
+  bone: `${BASE}models/skeleton.glb`
 };
-const SYSTEM_LABELS = {
-  muscle: 'Kas Sistemi',
-  nerve: 'Sinir Sistemi',
-  ligament: 'Ligament Sistemi',
-  vessel: 'Damar Sistemi'
-};
-const SYSTEM_COLORS = {
-  muscle: 0xd65b45,
-  nerve: 0xf0c433,
-  ligament: 0x9a5cff,
-  vessel: 0x1c9fff
-};
+const SYSTEM_LABELS = { muscle: 'Kaslar', ligament: 'Ligamentler', vessel: 'Damarlar', bone: 'Kemikler' };
+const SYSTEM_BADGES = { muscle: 'KAS', ligament: 'LİGAMENT', vessel: 'DAMAR', bone: 'KEMİK' };
+const SYSTEM_COLORS = { muscle: 0xe16450, ligament: 0xa765ff, vessel: 0x22a9ef, bone: 0xe8eff8 };
+
 const BICEPS = {
   subtitle: 'İki başlı kol kası',
   general: 'Biceps brachii, ön kolun supinasyonunda ve dirseğin fleksiyonunda görev alan iki başlı bir kastır.',
@@ -36,87 +30,93 @@ const BICEPS = {
 const canvas = document.getElementById('anatomyCanvas');
 const viewer = document.getElementById('viewer');
 const loading = document.getElementById('loading');
-const infoCard = document.getElementById('infoCard');
-const quizCard = document.getElementById('quizCard');
 const structureName = document.getElementById('structureName');
 const structureSubtitle = document.getElementById('structureSubtitle');
 const structureText = document.getElementById('structureText');
+const structureSystem = document.getElementById('structureSystem');
 const systemHeading = document.getElementById('systemHeading');
-const examBtn = document.getElementById('examBtn');
-const quizSystem = document.getElementById('quizSystem');
-const quizProgress = document.getElementById('quizProgress');
-const quizScore = document.getElementById('quizScore');
-const quizOptions = document.getElementById('quizOptions');
-const quizFeedback = document.getElementById('quizFeedback');
-const nextQuestionBtn = document.getElementById('nextQuestionBtn');
-const mixedExamBtn = document.getElementById('mixedExamBtn');
 
-let scene, camera, renderer, controls, raycaster, pointer;
-let skeletonRoot = null;
+let scene;
+let camera;
+let renderer;
+let controls;
+let raycaster;
+let pointer;
 let activeRoot = null;
 let activeSystem = 'muscle';
 let activeMeshes = [];
 let selectedMesh = null;
 let selectedOriginalMaterial = null;
-let autoRotate = false;
-let labelsOn = false;
 let currentTab = 'general';
-let examMode = false;
-let quizIndex = 0;
-let quizScoreValue = 0;
-let quizTarget = null;
-let answered = false;
-let quizPool = [];
-let mixedExamMode = false;
-let mixedPlan = [];
 let metadata = {};
+let loadSequence = 0;
+let renderHandle = 0;
+let renderFrames = 0;
 
 const highlightMaterial = new THREE.MeshStandardMaterial({
-  color: 0x307dff,
-  emissive: 0x0f48ff,
-  emissiveIntensity: 1.65,
-  roughness: 0.42,
-  metalness: 0.02,
-  transparent: true,
-  opacity: 0.96
+  color: 0x2f83ff,
+  emissive: 0x0c45c9,
+  emissiveIntensity: 1.25,
+  roughness: 0.46,
+  metalness: 0.01
 });
+
+function requestRender(frames = 1) {
+  renderFrames = Math.max(renderFrames, frames);
+  if (!renderHandle) renderHandle = requestAnimationFrame(renderFrame);
+}
+
+function renderFrame() {
+  renderHandle = 0;
+  if (!renderer || !scene || !camera) return;
+  controls.update();
+  renderer.render(scene, camera);
+  renderFrames--;
+  if (renderFrames > 0) renderHandle = requestAnimationFrame(renderFrame);
+}
 
 function initThree() {
   scene = new THREE.Scene();
-  scene.background = null;
-  camera = new THREE.PerspectiveCamera(35, 1, 0.01, 1000);
+  camera = new THREE.PerspectiveCamera(34, 1, 0.01, 1000);
   camera.position.set(2.8, 1.2, 4.6);
-
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: !LOW_POWER,
+    alpha: true,
+    powerPreference: 'high-performance',
+    preserveDrawingBuffer: false
+  });
+  renderer.setPixelRatio(LOW_POWER ? 1 : Math.min(devicePixelRatio || 1, 1.5));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMappingExposure = 1.08;
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-  controls.minDistance = 0.35;
-  controls.maxDistance = 10;
+  controls.dampingFactor = 0.1;
+  controls.enablePan = false;
+  controls.zoomToCursor = true;
+  controls.minDistance = 0.25;
+  controls.maxDistance = 14;
   controls.target.set(0, 1.05, 0);
+  controls.addEventListener('start', () => requestRender(40));
+  controls.addEventListener('change', () => requestRender(2));
+  controls.addEventListener('end', () => requestRender(20));
 
-  scene.add(new THREE.HemisphereLight(0xcfe6ff, 0x170d0a, 2.3));
-  const key = new THREE.DirectionalLight(0xffffff, 3.2);
+  scene.add(new THREE.HemisphereLight(0xd8ecff, 0x1b1010, 2.15));
+  const key = new THREE.DirectionalLight(0xffffff, 2.9);
   key.position.set(4, 6, 5);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(0x6e82ff, 2.0);
+  const rim = new THREE.DirectionalLight(0x718cff, 1.5);
   rim.position.set(-5, 3, -4);
   scene.add(rim);
-  const fill = new THREE.PointLight(0x7d46ff, 1.7, 10);
-  fill.position.set(0, 2.5, 3);
-  scene.add(fill);
 
   raycaster = new THREE.Raycaster();
   pointer = new THREE.Vector2();
   resize();
-  window.addEventListener('resize', resize);
+  addEventListener('resize', resize);
   canvas.addEventListener('pointerup', handlePick);
-  animate();
+  requestRender(2);
 }
 
 function resize() {
@@ -125,143 +125,121 @@ function resize() {
   renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
   camera.aspect = Math.max(0.2, rect.width / Math.max(1, rect.height));
   camera.updateProjectionMatrix();
-}
-
-function animate() {
-  if (autoRotate && activeRoot) activeRoot.rotation.y += 0.004;
-  controls.update();
-  renderer.render(scene, camera);
-  if (QA_MODE) setTimeout(() => requestAnimationFrame(animate), 250);
-  else requestAnimationFrame(animate);
-}
-
-function gltfLoader() {
-  const draco = new DRACOLoader();
-  draco.setDecoderPath(`${BASE}draco/`);
-  const loader = new GLTFLoader();
-  loader.setDRACOLoader(draco);
-  return loader;
+  requestRender(2);
 }
 
 async function loadMetadata() {
   try {
-    const res = await fetch(`${BASE}data/structures.json`, { cache: 'no-store' });
-    if (res.ok) metadata = await res.json();
+    const response = await fetch(`${BASE}data/structures.json`, { cache: 'no-store' });
+    if (response.ok) metadata = await response.json();
   } catch (_) {
     metadata = {};
   }
 }
 
-async function loadModel(url) {
-  const loader = gltfLoader();
-  return new Promise((resolve, reject) => loader.load(url, g => resolve(g.scene), undefined, reject));
+function loadModel(url) {
+  const draco = new DRACOLoader();
+  draco.setDecoderPath(`${BASE}draco/`);
+  const loader = new GLTFLoader();
+  loader.setDRACOLoader(draco);
+  return new Promise((resolve, reject) => loader.load(
+    url,
+    gltf => { draco.dispose(); resolve(gltf.scene); },
+    undefined,
+    error => { draco.dispose(); reject(error); }
+  ));
 }
 
 function prepRoot(root, system) {
-  root.traverse(obj => {
-    if (!obj.isMesh) return;
-    obj.castShadow = false;
-    obj.receiveShadow = false;
-    obj.userData.system = system;
-    obj.userData.displayName = prettyName(obj.name);
-    if (Array.isArray(obj.material)) obj.material = obj.material.map(m => m.clone());
-    else if (obj.material) obj.material = obj.material.clone();
+  root.traverse(object => {
+    if (!object.isMesh) return;
+    object.castShadow = false;
+    object.receiveShadow = false;
+    object.userData.system = system;
+    object.userData.displayName = prettyName(object.name);
+    if (Array.isArray(object.material)) object.material = object.material.map(material => material.clone());
+    else if (object.material) object.material = object.material.clone();
   });
 }
 
-async function loadSkeleton() {
-  skeletonRoot = await loadModel(MODEL_FILES.skeleton);
-  prepRoot(skeletonRoot, 'bone');
-  skeletonRoot.traverse(obj => {
-    if (!obj.isMesh || !obj.material) return;
-    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-    mats.forEach(m => {
-      if ('roughness' in m) m.roughness = 0.7;
-      if ('metalness' in m) m.metalness = 0;
-    });
+function disposeRoot(root) {
+  root?.traverse(object => {
+    if (!object.isMesh) return;
+    object.geometry?.dispose?.();
+    if (Array.isArray(object.material)) object.material.forEach(material => material?.dispose?.());
+    else object.material?.dispose?.();
   });
-  scene.add(skeletonRoot);
-  fitWholeBody();
 }
 
-async function switchSystem(system, initial = false, examTransition = false) {
+async function switchSystem(system, initial = false) {
+  const sequence = ++loadSequence;
   activeSystem = system;
   systemHeading.textContent = SYSTEM_LABELS[system];
-  document.querySelectorAll('.system-btn').forEach(b => b.classList.toggle('active', b.dataset.system === system));
-  quizSystem.textContent = SYSTEM_LABELS[system].toLocaleUpperCase('tr-TR');
+  structureSystem.textContent = SYSTEM_BADGES[system];
+  document.querySelectorAll('.system-btn').forEach(button => button.classList.toggle('active', button.dataset.system === system));
   restoreSelection();
   if (activeRoot) {
     scene.remove(activeRoot);
     disposeRoot(activeRoot);
+    activeRoot = null;
   }
   activeMeshes = [];
+  loading.innerHTML = '<div class="spinner"></div><span>3D anatomi yükleniyor…</span>';
   loading.classList.remove('hidden');
+  requestRender(2);
+
   try {
-    activeRoot = await loadModel(MODEL_FILES[system]);
-    prepRoot(activeRoot, system);
-    scene.add(activeRoot);
-    activeMeshes = collectEligible(activeRoot);
+    const root = await loadModel(MODEL_FILES[system]);
+    if (sequence !== loadSequence) {
+      disposeRoot(root);
+      return;
+    }
+    prepRoot(root, system);
+    activeRoot = root;
+    scene.add(root);
+    activeMeshes = collectEligible(root);
     loading.classList.add('hidden');
-    if (initial && system === 'muscle') {
-      const biceps = findMesh(/biceps[_ .-]*brachii/i) || activeMeshes[0];
-      if (biceps) {
-        selectMesh(biceps, false);
-        focusMesh(biceps, 2.65);
-      } else fitWholeBody();
-    } else {
-      fitWholeBody();
-      const first = activeMeshes[0];
-      if (first && !examMode) selectMesh(first, false);
-    }
-    if (examMode && !examTransition) {
-      mixedExamMode = false;
-      mixedExamBtn.classList.remove('active');
-      startExam(true);
-    }
-  } catch (err) {
-    console.error(err);
-    loading.innerHTML = '<span>3D model yüklenemedi. Paket dosyalarını kontrol edin.</span>';
+    fitWholeBody();
+
+    const preferred = system === 'muscle'
+      ? findMesh(/^biceps brachii$/i)
+      : system === 'bone'
+        ? findMesh(/^fibula$/i)
+        : activeMeshes[0];
+    if (preferred) selectMesh(preferred, !initial && system === 'bone');
+    requestRender(8);
+  } catch (error) {
+    console.error(error);
+    if (sequence === loadSequence) loading.innerHTML = '<span>3D model yüklenemedi.</span>';
   }
 }
 
 function collectEligible(root) {
-  const seen = new Set();
-  const list = [];
-  root.traverse(obj => {
-    if (!obj.isMesh || !obj.visible) return;
-    const name = prettyName(obj.name);
-    const key = normalizeName(name);
-    if (!name || name.length < 3 || name.length > 72 || seen.has(key)) return;
-    if (/collection|object|mesh|default|material/i.test(name)) return;
-    seen.add(key);
-    list.push(obj);
+  const meshes = [];
+  root.traverse(object => {
+    if (!object.isMesh || !object.visible) return;
+    const name = prettyName(object.name);
+    if (!name || name.length < 2 || name.length > 90 || /collection|object|mesh|default|material/i.test(name)) return;
+    meshes.push(object);
   });
-  return list;
-}
-
-function disposeRoot(root) {
-  root.traverse(obj => {
-    if (!obj.isMesh) return;
-    obj.geometry?.dispose?.();
-    if (Array.isArray(obj.material)) obj.material.forEach(m => m?.dispose?.());
-    else obj.material?.dispose?.();
-  });
+  return meshes;
 }
 
 function prettyName(raw = '') {
-  let name = String(raw).replace(/_/g, ' ').trim();
-  name = name.replace(/\.(00\d|0\d\d|\d\d\d)$/i, '');
-  name = name.replace(/\.(l|r)$/i, '');
-  name = name.replace(/\s{2,}/g, ' ').trim();
-  return name;
+  return String(raw)
+    .replace(/_/g, ' ')
+    .replace(/\.(00\d|0\d\d|\d\d\d)$/i, '')
+    .replace(/\.(l|r)$/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
-function normalizeName(name) {
-  return String(name || '').toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/g, ' ').trim();
+function normalizeName(value) {
+  return String(value || '').toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/g, ' ').trim();
 }
 
 function findMesh(regex) {
-  return activeMeshes.find(m => regex.test(prettyName(m.name))) || null;
+  return activeMeshes.find(mesh => regex.test(prettyName(mesh.name))) || null;
 }
 
 function restoreSelection() {
@@ -276,299 +254,155 @@ function selectMesh(mesh, shouldFocus = true) {
   selectedMesh = mesh;
   selectedOriginalMaterial = mesh.material;
   mesh.material = highlightMaterial;
-  updateInfo(mesh);
-  if (shouldFocus) focusMesh(mesh, 2.2);
+  currentTab = 'general';
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.tab === 'general'));
+  updateInfo();
+  if (shouldFocus) focusMesh(mesh);
+  requestRender(5);
 }
 
-function updateInfo(mesh) {
-  const name = prettyName(mesh.name) || 'Anatomik yapı';
-  structureName.textContent = name;
-  const isBiceps = /biceps\s*brachii/i.test(name);
-  const info = getInfo(name, activeSystem, isBiceps);
+function updateInfo() {
+  if (!selectedMesh) return;
+  const name = prettyName(selectedMesh.name) || 'Anatomik yapı';
+  const info = getInfo(name, activeSystem);
+  structureName.textContent = info.title || name;
   structureSubtitle.textContent = info.subtitle;
+  structureSystem.textContent = SYSTEM_BADGES[activeSystem];
   structureText.textContent = info[currentTab] || info.general;
-  if (labelsOn) showToast(name);
 }
 
-function getInfo(name, system, isBiceps = false) {
-  if (isBiceps) return BICEPS;
+function getInfo(name, system) {
+  if (system === 'muscle' && /biceps\s*brachii/i.test(name)) return { title: 'Biceps brachii', ...BICEPS };
   const key = normalizeName(name);
-  const systemData = metadata?.[system] || {};
-  const entry = systemData[key] || systemData[name] || null;
-  if (entry) {
-    return {
-      subtitle: entry.tr || entry.subtitle || SYSTEM_LABELS[system],
-      general: entry.general || entry.description || `${name}, ${SYSTEM_LABELS[system].toLocaleLowerCase('tr-TR')} içinde yer alan anatomik bir yapıdır.`,
-      origin: entry.origin || 'Origo bilgisi akademik veri kartında gösterilir.',
-      insertion: entry.insertion || 'Insertio bilgisi akademik veri kartında gösterilir.',
-      innervation: entry.innervation || (system === 'muscle' ? 'İnnervasyon bilgisi akademik veri kartında gösterilir.' : 'Bu yapı için innervasyon alanı uygulanabilir değildir.'),
-      function: entry.function || 'Fonksiyon ve klinik ilişki bilgisi akademik veri kartında gösterilir.'
-    };
-  }
-  const subtitles = { muscle: 'Kas sistemi yapısı', nerve: 'Sinir sistemi yapısı', ligament: 'Ligament yapısı', vessel: 'Damar sistemi yapısı' };
+  const entry = metadata?.[system]?.[key] || metadata?.[system]?.[name] || null;
+  const fallback = fallbackInfo(name, system);
+  if (!entry) return fallback;
   return {
-    subtitle: subtitles[system],
-    general: `${name}, 3D model üzerinde seçilmiş anatomik yapıdır. Yapıyı döndürerek farklı açılardan inceleyebilir veya sınav modunda tanımlayabilirsiniz.`,
-    origin: system === 'muscle' ? 'Origo bilgisi FTR Akademi anatomi veri kartında gösterilir.' : 'Bu yapı için origo alanı uygulanabilir değildir.',
-    insertion: system === 'muscle' ? 'Insertio bilgisi FTR Akademi anatomi veri kartında gösterilir.' : 'Bu yapı için insertio alanı uygulanabilir değildir.',
-    innervation: system === 'muscle' ? 'İnnervasyon bilgisi FTR Akademi anatomi veri kartında gösterilir.' : 'Bu yapı için innervasyon alanı uygulanabilir değildir.',
-    function: 'Fonksiyon ve klinik ilişki bilgisi FTR Akademi anatomi veri kartında gösterilir.'
+    title: entry.tr || entry.name || name,
+    subtitle: entry.subtitle || fallback.subtitle,
+    general: entry.general || entry.description || fallback.general,
+    origin: entry.origin || fallback.origin,
+    insertion: entry.insertion || fallback.insertion,
+    innervation: entry.innervation || fallback.innervation,
+    function: entry.function || fallback.function
   };
 }
 
-function handlePick(ev) {
-  if (examMode || !activeRoot) return;
+function fallbackInfo(name, system) {
+  if (system === 'bone') return {
+    subtitle: 'İskelet sistemi yapısı',
+    general: `${name}, iskelet sisteminin bir parçasıdır. Kemik; destek, eklem mekaniği ve yumuşak doku tutunmaları açısından incelenir.`,
+    origin: 'Kemiklerde Origo sekmesi, bu kemikten başlayan kasların anatomik tutunma alanlarını ifade eder.',
+    insertion: 'Kemiklerde Insertio sekmesi, bu kemiğe sonlanan kas ve ligament tutunmalarını ifade eder.',
+    innervation: 'Kemik motor innervasyon almaz; periost ve eklem çevresi bölgesel duyusal sinir lifleriyle innerve edilir.',
+    function: 'İskelet desteğine, hareket zincirine ve kas-ligament kuvvetlerinin aktarılmasına katkı sağlar.'
+  };
+  if (system === 'ligament') return {
+    subtitle: 'Ligament yapısı',
+    general: `${name}, eklem veya kemikler arasında pasif stabilite sağlayan bağ dokusu yapısıdır.`,
+    origin: 'Ligamentlerde Origo, birinci kemik tutunma alanını ifade eder.',
+    insertion: 'Ligamentlerde Insertio, karşı taraftaki kemik tutunma alanını ifade eder.',
+    innervation: 'Ligamentler propriosepsiyon ve ağrı duyusuna katkı veren duyusal sinir uçları içerir.',
+    function: 'Aşırı eklem hareketini sınırlar ve pasif stabiliteye katkı sağlar.'
+  };
+  if (system === 'vessel') return {
+    subtitle: 'Damar sistemi yapısı',
+    general: `${name}, dolaşım sisteminde kanın taşınmasına katılan anatomik damar yapısıdır.`,
+    origin: 'Damar anatomisinde Origo, damarın kaynaklandığı ana damar veya başlangıç bölgesini ifade eder.',
+    insertion: 'Damar anatomisinde Insertio yerine seyir, dallanma ve sonlanma ilişkileri değerlendirilir.',
+    innervation: 'Damar duvarı otonom sinir sistemi tarafından düzenlenen düz kas lifleri içerir.',
+    function: 'İlgili bölgenin arteriyel beslenmesine veya venöz drenajına katkı sağlar.'
+  };
+  return {
+    subtitle: 'Kas sistemi yapısı',
+    general: `${name}, kas sistemi içinde yer alan ve hareket üretimine katkı sağlayan anatomik yapıdır.`,
+    origin: 'Origo, kasın görece daha sabit başlangıç tutunma alanıdır.',
+    insertion: 'Insertio, kasın kasılma sırasında daha hareketli olan sonlanma tutunma alanıdır.',
+    innervation: 'Kasın motor kontrolü periferik sinir sistemi üzerinden sağlanır.',
+    function: 'Kasın fonksiyonu eklem konumuna, lif yönüne ve birlikte çalıştığı kaslara bağlıdır.'
+  };
+}
+
+function handlePick(event) {
+  if (!activeRoot || loading.classList.contains('hidden') === false) return;
   const rect = canvas.getBoundingClientRect();
-  pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(activeMeshes, false);
-  if (hits[0]?.object) selectMesh(hits[0].object, false);
+  const hit = raycaster.intersectObjects(activeMeshes, false)[0];
+  if (hit?.object) selectMesh(hit.object, false);
 }
 
 function fitWholeBody() {
-  const root = skeletonRoot || activeRoot;
-  if (!root) return;
-  const box = new THREE.Box3().setFromObject(root);
+  if (!activeRoot) return;
+  const box = new THREE.Box3().setFromObject(activeRoot);
   if (box.isEmpty()) return;
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z);
-  controls.target.copy(center.clone().add(new THREE.Vector3(0, size.y * 0.03, 0)));
-  camera.position.set(center.x + maxDim * 1.15, center.y + size.y * 0.05, center.z + maxDim * 2.1);
-  camera.near = Math.max(0.001, maxDim / 200);
-  camera.far = maxDim * 30;
+  const maxDim = Math.max(size.x, size.y, size.z, .1);
+  controls.target.copy(center.clone().add(new THREE.Vector3(0, size.y * .02, 0)));
+  camera.position.set(center.x + maxDim * .9, center.y + size.y * .04, center.z + maxDim * 1.85);
+  camera.near = Math.max(.002, maxDim / 200);
+  camera.far = maxDim * 35;
+  controls.minDistance = Math.max(.18, maxDim * .08);
+  controls.maxDistance = maxDim * 8;
   camera.updateProjectionMatrix();
   controls.update();
+  requestRender(8);
 }
 
-function focusMesh(mesh, distanceFactor = 2.2) {
+function focusMesh(mesh) {
   const box = new THREE.Box3().setFromObject(mesh);
   if (box.isEmpty()) return;
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
-  const maxDim = Math.max(size.x, size.y, size.z, 0.08);
+  const maxDim = Math.max(size.x, size.y, size.z, .08);
   controls.target.copy(center);
-  const dir = new THREE.Vector3(1.15, 0.38, 1.5).normalize();
-  camera.position.copy(center).add(dir.multiplyScalar(maxDim * distanceFactor + 0.7));
-  camera.near = Math.max(0.002, maxDim / 100);
-  camera.far = Math.max(50, maxDim * 80);
+  camera.position.copy(center).add(new THREE.Vector3(1.1, .34, 1.55).normalize().multiplyScalar(maxDim * 2.1 + .45));
+  camera.near = Math.max(.002, maxDim / 120);
+  camera.far = Math.max(40, maxDim * 70);
   camera.updateProjectionMatrix();
   controls.update();
+  requestRender(12);
 }
 
-function setView(view) {
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  if (view === 'all') {
-    if (skeletonRoot) skeletonRoot.visible = true;
-    if (activeRoot) activeRoot.visible = true;
-    return;
-  }
-  if (view === 'bone') {
-    if (skeletonRoot) skeletonRoot.visible = true;
-    if (activeRoot) activeRoot.visible = false;
-    return;
-  }
-  if (skeletonRoot) skeletonRoot.visible = true;
-  if (view !== activeSystem) switchSystem(view);
-  else if (activeRoot) activeRoot.visible = true;
+function zoom(multiplier) {
+  const direction = camera.position.clone().sub(controls.target);
+  const next = direction.length() * multiplier;
+  const limited = THREE.MathUtils.clamp(next, controls.minDistance, controls.maxDistance);
+  camera.position.copy(controls.target).add(direction.normalize().multiplyScalar(limited));
+  controls.update();
+  requestRender(12);
 }
 
-function toggleExam() {
-  examMode = !examMode;
-  if (examMode) {
-    mixedExamMode = false;
-    mixedExamBtn.classList.remove('active');
-    examBtn.innerHTML = '<span>💡</span> Öğrenme Modu';
-    infoCard.classList.add('hidden');
-    quizCard.classList.remove('hidden');
-    startExam(true);
-  } else {
-    mixedExamMode = false;
-    mixedExamBtn.classList.remove('active');
-    examBtn.innerHTML = '<span>⌘</span> Sınav Modu';
-    quizCard.classList.add('hidden');
-    infoCard.classList.remove('hidden');
-    restoreSelection();
-    const biceps = activeSystem === 'muscle' ? findMesh(/biceps[_ .-]*brachii/i) : activeMeshes[0];
-    if (biceps) selectMesh(biceps, false);
-  }
-}
-
-async function startExam(reset = false) {
-  if (!activeMeshes.length) return;
-  if (reset) {
-    quizIndex = 0;
-    quizScoreValue = 0;
-    if (mixedExamMode) {
-      const systems = Object.keys(SYSTEM_LABELS);
-      const offset = Math.floor(Math.random() * systems.length);
-      mixedPlan = Array.from({ length: 20 }, (_, index) => systems[(index + offset) % systems.length]);
-      quizPool = [];
-    } else {
-      mixedPlan = [];
-      quizPool = shuffle([...activeMeshes]).slice(0, Math.min(20, activeMeshes.length));
-    }
-  }
-  await nextQuestion();
-}
-
-async function nextQuestion() {
-  if (!examMode) return;
-  restoreSelection();
-  answered = false;
-  quizFeedback.textContent = '';
-  const total = mixedExamMode ? mixedPlan.length : quizPool.length;
-  if (quizIndex >= total) {
-    quizFeedback.textContent = `Sınav tamamlandı: ${quizScoreValue} / ${total} doğru.`;
-    quizOptions.innerHTML = '';
-    nextQuestionBtn.textContent = 'Sınavı Yeniden Başlat';
-    nextQuestionBtn.dataset.restart = '1';
-    return;
-  }
-  nextQuestionBtn.textContent = 'Sonraki Soru →';
-  delete nextQuestionBtn.dataset.restart;
-  if (mixedExamMode) {
-    const questionSystem = mixedPlan[quizIndex];
-    if (activeSystem !== questionSystem || !activeMeshes.length) {
-      await switchSystem(questionSystem, false, true);
-    }
-    quizTarget = activeMeshes[Math.floor(Math.random() * activeMeshes.length)];
-  } else {
-    quizTarget = quizPool[quizIndex];
-  }
-  if (!quizTarget) throw new Error('Sınav sorusu için anatomik yapı bulunamadı');
-  selectedMesh = quizTarget;
-  selectedOriginalMaterial = quizTarget.material;
-  quizTarget.material = highlightMaterial;
-  focusMesh(quizTarget, 2.4);
-  const correct = prettyName(quizTarget.name);
-  const choices = makeChoices(correct);
-  quizOptions.innerHTML = '';
-  choices.forEach(label => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'quiz-option';
-    btn.textContent = label;
-    btn.addEventListener('click', () => answerQuestion(btn, label, correct));
-    quizOptions.appendChild(btn);
-  });
-  quizProgress.textContent = `Soru ${quizIndex + 1} / ${total}`;
-  quizScore.textContent = `${quizScoreValue} doğru`;
-}
-
-function makeChoices(correct) {
-  const names = activeMeshes.map(m => prettyName(m.name)).filter(n => n && normalizeName(n) !== normalizeName(correct));
-  const unique = [...new Map(names.map(n => [normalizeName(n), n])).values()];
-  const distractors = shuffle(unique).slice(0, 3);
-  return shuffle([correct, ...distractors]);
-}
-
-function answerQuestion(button, answer, correct) {
-  if (answered) return;
-  answered = true;
-  const ok = normalizeName(answer) === normalizeName(correct);
-  if (ok) {
-    quizScoreValue++;
-    button.classList.add('correct');
-    quizFeedback.textContent = `✓ Doğru: ${correct}`;
-  } else {
-    button.classList.add('wrong');
-    quizFeedback.textContent = `✕ Yanlış. Doğru cevap: ${correct}`;
-    [...quizOptions.children].forEach(b => {
-      if (normalizeName(b.textContent) === normalizeName(correct)) b.classList.add('correct');
-    });
-  }
-  quizScore.textContent = `${quizScoreValue} doğru`;
-}
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function showToast(message) {
-  let toast = document.getElementById('anatomyToast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'anatomyToast';
-    Object.assign(toast.style, { position:'fixed', left:'50%', top:'82px', transform:'translateX(-50%)', zIndex:'99', background:'rgba(10,18,31,.96)', border:'1px solid #34445f', color:'#fff', padding:'9px 13px', borderRadius:'11px', fontSize:'12px', boxShadow:'0 10px 28px rgba(0,0,0,.35)' });
-    document.body.appendChild(toast);
-  }
-  toast.textContent = message;
-  toast.style.display = 'block';
-  clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => { toast.style.display = 'none'; }, 1800);
+function rotateQuarter() {
+  if (!activeRoot) return;
+  const start = activeRoot.rotation.y;
+  const target = start + Math.PI / 4;
+  const began = performance.now();
+  const tick = now => {
+    const t = Math.min(1, (now - began) / 260);
+    activeRoot.rotation.y = THREE.MathUtils.lerp(start, target, 1 - Math.pow(1 - t, 3));
+    requestRender(1);
+    if (t < 1) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 
 function bindUi() {
-  document.querySelectorAll('.system-btn').forEach(btn => btn.addEventListener('click', () => switchSystem(btn.dataset.system)));
-  document.querySelectorAll('.view-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
-  document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
-    currentTab = btn.dataset.tab;
-    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === btn));
-    if (selectedMesh) updateInfo(selectedMesh);
+  document.querySelectorAll('.system-btn').forEach(button => button.addEventListener('click', () => switchSystem(button.dataset.system)));
+  document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+    currentTab = tab.dataset.tab;
+    document.querySelectorAll('.tab').forEach(item => item.classList.toggle('active', item === tab));
+    updateInfo();
   }));
-  document.getElementById('rotateBtn').addEventListener('click', () => { autoRotate = !autoRotate; showToast(autoRotate ? 'Otomatik döndürme açık' : 'Otomatik döndürme kapalı'); });
-  document.getElementById('zoomInBtn').addEventListener('click', () => { camera.position.lerp(controls.target, 0.18); });
-  document.getElementById('zoomOutBtn').addEventListener('click', () => { camera.position.sub(controls.target).multiplyScalar(1.22).add(controls.target); });
+  document.getElementById('rotateBtn').addEventListener('click', rotateQuarter);
+  document.getElementById('zoomInBtn').addEventListener('click', () => zoom(.78));
+  document.getElementById('zoomOutBtn').addEventListener('click', () => zoom(1.28));
   document.getElementById('resetBtn').addEventListener('click', fitWholeBody);
-  document.getElementById('labelsBtn').addEventListener('click', () => { labelsOn = !labelsOn; showToast(labelsOn ? 'Etiketler açık' : 'Etiketler kapalı'); });
-  document.getElementById('noteBtn').addEventListener('click', () => {
-    const name = selectedMesh ? prettyName(selectedMesh.name) : '3D Anatomi';
-    const note = window.prompt(`${name} için not:`);
-    if (note) {
-      localStorage.setItem(`ftr_anatomy_note_${normalizeName(name)}`, note);
-      showToast('Not kaydedildi');
-    }
-  });
-  document.getElementById('shotBtn').addEventListener('click', () => {
-    try {
-      const a = document.createElement('a');
-      a.href = renderer.domElement.toDataURL('image/png');
-      a.download = 'FTR-Akademi-3D-Anatomi.png';
-      a.click();
-      showToast('3D ekran görüntüsü hazırlandı');
-    } catch (_) { showToast('Ekran görüntüsü bu cihazda desteklenmiyor'); }
-  });
-  document.getElementById('shareBtn').addEventListener('click', async () => {
-    const text = selectedMesh ? `FTR Akademi 3D Anatomi: ${prettyName(selectedMesh.name)}` : 'FTR Akademi 3D Anatomi';
-    try { if (navigator.share) await navigator.share({ title:'FTR Akademi', text }); else showToast(text); } catch (_) {}
-  });
-  document.getElementById('speakBtn').addEventListener('click', () => {
-    if (!('speechSynthesis' in window)) return showToast('Sesli okuma desteklenmiyor');
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(`${structureName.textContent}. ${structureText.textContent}`);
-    u.lang = 'tr-TR';
-    speechSynthesis.speak(u);
-  });
-  document.getElementById('favoriteBtn').addEventListener('click', ev => {
-    const name = selectedMesh ? prettyName(selectedMesh.name) : structureName.textContent;
-    const key = `ftr_anatomy_fav_${normalizeName(name)}`;
-    const on = localStorage.getItem(key) !== '1';
-    localStorage.setItem(key, on ? '1' : '0');
-    ev.currentTarget.textContent = on ? 'Favorilere Eklendi ♥' : 'Favorilere Ekle ♡';
-    showToast(on ? 'Favorilere eklendi' : 'Favorilerden çıkarıldı');
-  });
-  examBtn.addEventListener('click', toggleExam);
-  mixedExamBtn.addEventListener('click', async () => {
-    mixedExamMode = true;
-    mixedExamBtn.classList.add('active');
-    await startExam(true);
-  });
-  nextQuestionBtn.addEventListener('click', async () => {
-    if (nextQuestionBtn.dataset.restart) return startExam(true);
-    if (!answered) return showToast('Önce bir cevap seç');
-    quizIndex++;
-    await nextQuestion();
-  });
   document.getElementById('backBtn').addEventListener('click', () => history.back());
-  document.querySelectorAll('.bottom-nav button').forEach((btn, i) => btn.addEventListener('click', () => {
-    if (i === 0) history.back();
-    else showToast('Ana uygulama menüsüne dönülüyor');
+  document.querySelectorAll('.bottom-nav button').forEach((button, index) => button.addEventListener('click', () => {
+    if (index === 0) history.back();
   }));
 }
 
@@ -576,13 +410,7 @@ async function init() {
   bindUi();
   initThree();
   await loadMetadata();
-  try {
-    await loadSkeleton();
-    await switchSystem('muscle', true);
-  } catch (err) {
-    console.error(err);
-    loading.innerHTML = '<span>3D anatomi verileri yüklenemedi.</span>';
-  }
+  await switchSystem('muscle', true);
 }
 
 if (QA_MODE) {
@@ -594,14 +422,20 @@ if (QA_MODE) {
         selectedStructure: selectedMesh ? prettyName(selectedMesh.name) : '',
         selectedHighlighted: Boolean(selectedMesh && selectedMesh.material === highlightMaterial),
         cameraDistance: camera && controls ? camera.position.distanceTo(controls.target) : null,
-        autoRotate,
-        examMode,
-        mixedExamMode
+        pixelRatio: renderer?.getPixelRatio?.() || null,
+        continuousAnimation: false,
+        activeRotationY: activeRoot?.rotation?.y || 0,
+        loadSequence
       };
     },
+    pick(regexText) {
+      const mesh = findMesh(new RegExp(regexText, 'i')) || activeMeshes[0];
+      if (mesh) selectMesh(mesh, false);
+      return this.state();
+    },
     pickDifferentStructure() {
-      const next = activeMeshes.find(mesh => mesh !== selectedMesh);
-      if (next) selectMesh(next, false);
+      const mesh = activeMeshes.find(item => item !== selectedMesh);
+      if (mesh) selectMesh(mesh, false);
       return this.state();
     }
   };
