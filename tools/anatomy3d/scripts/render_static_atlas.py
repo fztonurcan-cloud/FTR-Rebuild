@@ -241,24 +241,69 @@ def project_anchor(center, camera_center, ortho_scale):
 
 
 def cleanup_scene(scene):
+    """Remove only temporary atlas datablocks without retaining invalid Blender RNA refs."""
     objects = list(scene.objects)
-    meshes = [obj.data for obj in objects if getattr(obj, 'type', None) == 'MESH' and obj.data]
-    materials = []
-    for mesh in meshes:
-        materials.extend(list(mesh.materials))
-    world = scene.world
-    bpy.data.scenes.remove(scene)
+    object_names = [obj.name for obj in objects]
+    mesh_names = set()
+    material_names = set()
+    camera_names = set()
+    light_names = set()
+
     for obj in objects:
-        if obj.name in bpy.data.objects:
+        data = getattr(obj, 'data', None)
+        obj_type = getattr(obj, 'type', None)
+        if obj_type == 'MESH' and data:
+            mesh_names.add(data.name)
+            for mat in list(data.materials):
+                if mat:
+                    material_names.add(mat.name)
+        elif obj_type == 'CAMERA' and data:
+            camera_names.add(data.name)
+        elif obj_type == 'LIGHT' and data:
+            light_names.add(data.name)
+
+    world_name = scene.world.name if scene.world else None
+    child_collection_names = [coll.name for coll in list(scene.collection.children)]
+
+    bpy.data.scenes.remove(scene)
+
+    for name in object_names:
+        obj = bpy.data.objects.get(name)
+        if obj is not None:
             bpy.data.objects.remove(obj, do_unlink=True)
-    for mesh in meshes:
-        if mesh.users == 0:
+
+    for name in mesh_names:
+        mesh = bpy.data.meshes.get(name)
+        if mesh is not None and mesh.users == 0:
             bpy.data.meshes.remove(mesh)
-    for mat in materials:
-        if mat and mat.users == 0:
+
+    # Material names are captured before mesh deletion. Looking them up again avoids
+    # dereferencing a StructRNA that was already removed when a shared material name
+    # appeared in multiple mesh slots (the previous CI failure).
+    for name in material_names:
+        mat = bpy.data.materials.get(name)
+        if mat is not None and mat.users == 0:
             bpy.data.materials.remove(mat)
-    if world and world.users == 0:
-        bpy.data.worlds.remove(world)
+
+    for name in camera_names:
+        camera = bpy.data.cameras.get(name)
+        if camera is not None and camera.users == 0:
+            bpy.data.cameras.remove(camera)
+
+    for name in light_names:
+        light = bpy.data.lights.get(name)
+        if light is not None and light.users == 0:
+            bpy.data.lights.remove(light)
+
+    for name in child_collection_names:
+        coll = bpy.data.collections.get(name)
+        if coll is not None and coll.users == 0:
+            bpy.data.collections.remove(coll)
+
+    if world_name:
+        world = bpy.data.worlds.get(world_name)
+        if world is not None and world.users == 0:
+            bpy.data.worlds.remove(world)
 
 
 def render_beauty(system, source_objects, bone_objects):
