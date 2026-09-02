@@ -1,0 +1,118 @@
+name: v29.9 fail-closed APK guards
+
+on:
+  push:
+    branches:
+      - v29.9-3d-premium
+    paths:
+      - 'tools/anatomy3d/scripts/assemble_v29_7_base.py'
+      - 'tools/anatomy3d/scripts/build_v29_8_apk.py'
+      - '.github/workflows/v29.9-apk-guards.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-apk-guards:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout v29.9 anatomy branch
+        uses: actions/checkout@v4
+
+      - name: Compile APK guard scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile \
+            tools/anatomy3d/scripts/assemble_v29_7_base.py \
+            tools/anatomy3d/scripts/build_v29_8_apk.py
+          python3 tools/anatomy3d/scripts/assemble_v29_7_base.py --help >/dev/null
+          python3 tools/anatomy3d/scripts/build_v29_8_apk.py --help >/dev/null
+
+      - name: Assert immutable v29.7 contract and builder agreement
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import pathlib
+
+          root = pathlib.Path('tools/anatomy3d/scripts')
+
+          def load(name, path):
+              spec = importlib.util.spec_from_file_location(name, path)
+              module = importlib.util.module_from_spec(spec)
+              assert spec and spec.loader
+              spec.loader.exec_module(module)
+              return module
+
+          assembler = load('v297_assembler', root / 'assemble_v29_7_base.py')
+          builder = load('v299_builder', root / 'build_v29_8_apk.py')
+
+          assembler.validate_contract()
+          assert assembler.BASE_NAME == 'FTR-Akademi-v29.7-BILDIRIM.apk'
+          assert assembler.BASE_SIZE == 1_133_611_894
+          assert assembler.BASE_SHA256 == 'f541b238e40113c02de101a9b7059f6b192f8381eaffbd0357314ce25bdd715c'
+          assert len(assembler.PARTS) == 5
+          assert sum(row[1] for row in assembler.PARTS) == assembler.BASE_SIZE
+          assert builder.BASE_NAME == assembler.BASE_NAME
+          assert builder.BASE_SIZE == assembler.BASE_SIZE
+          assert builder.BASE_SHA256 == assembler.BASE_SHA256
+          assert builder.EXPECTED_CERT_SHA256 == '8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2'
+          assert builder.HOST_INDEX == 'assets/app/index.html'
+          assert builder.MODULE_PREFIX == 'assets/app/anatomy3d/'
+          print('v29.7 immutable contract + v29.9 builder agreement PASS')
+          PY
+
+      - name: Assert assembler fails closed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import pathlib
+          import tempfile
+
+          script = pathlib.Path('tools/anatomy3d/scripts/assemble_v29_7_base.py')
+          spec = importlib.util.spec_from_file_location('v297_assembler', script)
+          assembler = importlib.util.module_from_spec(spec)
+          assert spec and spec.loader
+          spec.loader.exec_module(assembler)
+
+          with tempfile.TemporaryDirectory() as tmp:
+              root = pathlib.Path(tmp)
+              parts = root / 'parts'
+              parts.mkdir()
+
+              # Missing locked parts must abort without creating an output.
+              missing_output = root / 'missing.apk'
+              try:
+                  assembler.assemble(parts, missing_output)
+              except SystemExit:
+                  pass
+              else:
+                  raise AssertionError('missing parts did not fail closed')
+              assert not missing_output.exists()
+
+              # Existing output must never be overwritten, even before part reads.
+              protected_output = root / 'protected.apk'
+              protected_output.write_bytes(b'DO-NOT-OVERWRITE')
+              before = protected_output.read_bytes()
+              try:
+                  assembler.assemble(parts, protected_output)
+              except SystemExit:
+                  pass
+              else:
+                  raise AssertionError('existing output did not fail closed')
+              assert protected_output.read_bytes() == before
+
+          print('assembler missing-part + no-overwrite fail-closed behavior PASS')
+          PY
+
+      - name: Print locked v29.7 contract for audit log
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/anatomy3d/scripts/assemble_v29_7_base.py --print-contract
