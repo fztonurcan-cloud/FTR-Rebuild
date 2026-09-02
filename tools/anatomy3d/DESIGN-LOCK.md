@@ -1,30 +1,79 @@
-# FTR Akademi 3D Anatomi — SADE DESIGN LOCK
+# FTR Akademi 3D Anatomi — PREMIUM DESIGN LOCK
 
-Status: **LOCKED BY USER — 2026-09-02 / v29.8.1**
+Status: **USER REFERENCE LOCK — 2026-09-02 / v29.9 development line**
 
-## Required composition
+## Absolute scope rule
 
-- Dark navy/black FTR Akademi visual language with purple accent.
-- Top bar: back arrow and `3D ANATOMİ`; no exam or learning mode.
-- Left rail contains only `SİSTEM SEÇİMİ` and `MODEL KONTROLLERİ`.
-- Systems: `Kaslar`, `Ligamentler`, `Damarlar`, `Kemikler`.
-- Removed permanently from this design: Sinir Sistemi, Görünüm panel, Etiketler, Not Ekle, Ekran Görüntüsü, Bilgiyi Paylaş, Sınav Modu, Karma Sınav and Öğrenme Modu.
-- Center: large, realistic, interactive 3D anatomy model.
-- Controls: one-step rotate, zoom in, zoom out and reset.
-- Any selectable structure opens the information card and receives a blue highlight.
-- Information tabs remain: Genel Bilgi / Origo / Insertio / İnnervasyon / Fonksiyon.
-- Bone cards interpret Origo and Insertio as muscular/ligamentous attachment information; bones are not described as motor-innervated structures.
-- Fibula is a mandatory selectable QA structure with completed information across all five tabs.
-- Bottom app navigation remains visually compatible with FTR Akademi.
+- The only active development area is **3D Anatomi**.
+- No lesson, quiz, auth, Supabase, Hareket Stüdyosu, Programım, favorite, note, notification, FTR AI, drawer or unrelated home component may be changed.
+- `FTR-Akademi-v29.7-BILDIRIM.apk` is the untouched safe checkpoint and must never be overwritten or repackaged in place.
+- v29.8.1 remains an earlier test candidate; v29.9 work is isolated on its own branch.
+
+## Visual reference lock
+
+The six user-approved reference images supplied on 2026-09-02 define the target visual language for:
+
+1. Home-page 3D Anatomi card
+2. Kas Sistemi
+3. Kemik Sistemi
+4. Ligament Sistemi
+5. Damar Sistemi
+6. Sinir Sistemi
+
+The implementation must reproduce their hierarchy and premium medical-atlas character rather than the low-quality white/raw-model appearance of v29.8.1.
+
+## Required 3D systems
+
+- Kaslar
+- Kemikler
+- Ligamentler
+- Damarlar
+- Sinirler
+
+Only the selected detailed system is resident at a time. Ligament, vessel and nerve views may load a **single heavily optimized merged skeleton reference mesh** for anatomical context.
+
+## System-specific information semantics
+
+- **Kas:** Genel Bilgi / Origo / Insertio / İnnervasyon / Fonksiyon
+- **Kemik:** Genel Bilgi / Anatomik Özellikler / Eklemleşmeler / Kas-Ligament Tutunmaları / Klinik Önemi
+- **Ligament:** Genel Bilgi / Başlangıç-Tutunma / Bağladığı Yapılar / Fonksiyon / Klinik Önemi
+- **Damar:** Genel Bilgi / Başlangıç / Seyir / Dalları / Beslediği Bölge / Klinik Önemi
+- **Sinir:** Genel Bilgi / Anatomi / Seyir / Dalları / İnnervasyon / Fonksiyon / Klinik Önemi
+
+Mandatory curated QA examples: Biceps brachii, Fibula, anterior talofibular ligament (ATFL), anterior tibial artery and median nerve.
+
+## Premium model presentation
+
+- Muscle tissue: anatomical red; tendon/aponeurosis: pale ivory.
+- Bone: warm ivory/off-white with depth-preserving medical lighting.
+- Ligament: pale fibrous material over a contextual skeleton; selected ligament highlighted purple.
+- Vessels: arteries red, veins blue; selected vessel receives a stronger system-color highlight.
+- Nerves: warm yellow/gold; selected nerve receives a bright yellow highlight.
+- Raw Blender suffixes such as `001` / `.001` must never be shown to the learner.
+- Structure selection must visually highlight the selected anatomy and update the matching information card.
+
+## Controls and interaction
+
+- Rotate, zoom in, zoom out and reset remain available.
+- Automatic rotation is **off by default** and may render continuously only after explicit user activation.
+- Searchable structure browser, layer isolation and transparency controls are allowed because they are part of the approved premium references; each visible control must work.
+- Full-screen icon operates as an in-module focus mode if platform fullscreen is unavailable.
 
 ## Performance lock
 
-- Each GLB must physically contain only its own system meshes.
-- Only one system GLB may be resident at a time.
-- No continuous render loop; rendering is event-driven.
-- Mobile pixel ratio is capped at 1 and screenshot framebuffer preservation is disabled.
-- Rapid system switching must never display an earlier system under the latest system label.
+- Mobile pixel ratio: `1`.
+- Mobile antialias: off.
+- `preserveDrawingBuffer: false`.
+- No default continuous animation/render loop.
+- No shadows.
+- Models are Draco-compressed and mobile-decimated during export.
+- Fast system switching uses a load sequence so stale loads cannot replace the latest selected system.
+- Low-end Android physical QA remains mandatory; static QA never equals FINAL approval.
 
-## Home placement and protection
+## Home placement lock
 
-The card remains `Derslerim -> 3D Anatomi -> Hareket Stüdyosu`, never in the drawer. `v29.6`, the original `v29.7` APK and the failed physical-QA `v29.8` delivery remain unchanged. Work continues only as a new `v29.8.1-3d-simple` line until user phone QA is approved.
+3D Anatomi stays exactly between `Derslerim` and `Hareket Stüdyosu`. The surrounding home layout does not move. The 3D card lists five unique systems: Kas, Sinir, Ligament, Damar and Kemik. It is not added to the drawer.
+
+## Release rule
+
+No v29.9 APK is `FINAL` or `LOCKED` until the user physically tests it, including a low-end device test. The safe rollback remains `FTR-Akademi-v29.7-BILDIRIM.apk`.
