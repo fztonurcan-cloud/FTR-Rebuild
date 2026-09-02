@@ -121,6 +121,7 @@ def export_glb(path: Path, objects):
         filepath=str(path),
         export_format='GLB',
         use_selection=False,
+        use_active_scene=True,
         export_apply=True,
         export_yup=True,
         export_materials='EXPORT',
