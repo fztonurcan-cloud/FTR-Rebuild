@@ -1,14 +1,11 @@
 {
   "name": "ftr-akademi-anatomy3d",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "module",
   "scripts": {
     "build": "vite build",
     "dev": "vite --host 0.0.0.0"
-  },
-  "dependencies": {
-    "three": "^0.180.0"
   },
   "devDependencies": {
     "puppeteer-core": "^24.18.0",
