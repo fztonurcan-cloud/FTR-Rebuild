@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 
 const BASE = import.meta.env.BASE_URL || './';
+const QA_MODE = new URLSearchParams(window.location.search).get('qa') === '1';
 const MODEL_FILES = {
   skeleton: `${BASE}models/skeleton.glb`,
   muscle: `${BASE}models/muscular.glb`,
@@ -127,10 +128,11 @@ function resize() {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
   if (autoRotate && activeRoot) activeRoot.rotation.y += 0.004;
   controls.update();
   renderer.render(scene, camera);
+  if (QA_MODE) setTimeout(() => requestAnimationFrame(animate), 250);
+  else requestAnimationFrame(animate);
 }
 
 function gltfLoader() {
@@ -583,7 +585,7 @@ async function init() {
   }
 }
 
-if (new URLSearchParams(window.location.search).get('qa') === '1') {
+if (QA_MODE) {
   window.__FTR_ANATOMY_QA__ = {
     state() {
       return {
