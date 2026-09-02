@@ -2,21 +2,21 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="theme-color" content="#040914" />
   <title>FTR Akademi - 3D Anatomi</title>
   <script src="./android-asset-fetch.js"></script>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <main id="anatomy-app" class="anatomy-app">
+  <main id="anatomy-app" class="anatomy-app" data-system="muscle">
     <header class="topbar">
-      <button id="backBtn" class="icon-btn back-btn" type="button" aria-label="Geri">←</button>
+      <button id="backBtn" class="icon-btn" type="button" aria-label="Geri">←</button>
       <div class="topbar-title">
         <h1>3D ANATOMİ</h1>
         <p id="systemSubtitle">KAS SİSTEMİ</p>
       </div>
-      <button id="focusModeBtn" class="icon-btn focus-btn" type="button" aria-label="Odak görünümü">⛶</button>
+      <button id="focusModeBtn" class="icon-btn" type="button" aria-label="Tam ekran">⛶</button>
     </header>
 
     <nav class="system-tabs" aria-label="Anatomi sistemleri">
@@ -35,38 +35,23 @@
           <input id="structureSearch" type="search" autocomplete="off" placeholder="Kas ara..." />
           <span aria-hidden="true">⌕</span>
         </label>
-        <div class="browser-section-title" id="browserSectionTitle">YAPILAR</div>
+        <div id="browserSectionTitle" class="browser-section-title">YAPILAR</div>
         <div id="structureList" class="structure-list" role="listbox" aria-label="Anatomik yapılar"></div>
-        <div class="browser-actions">
-          <button id="layersBtn" type="button"><span>▱</span><span>Katmanlar</span></button>
-          <button id="transparencyBtn" type="button"><span>◌</span><span>Şeffaflık</span></button>
-        </div>
+        <div class="browser-note"><span>◌</span><span>Bir yapıya dokununca model üzerinde vurgulanır.</span></div>
       </aside>
 
       <section class="model-column">
-        <div id="viewer" class="viewer" aria-label="Etkileşimli 3D anatomi modeli">
-          <canvas id="anatomyCanvas"></canvas>
-          <div id="loading" class="loading-card"><div class="spinner"></div><span>3D anatomi yükleniyor…</span></div>
+        <div id="viewer" class="viewer" aria-label="Katmanlı 3D görünümlü anatomi atlası">
+          <canvas id="anatomyCanvas" width="720" height="1120"></canvas>
+          <div id="loading" class="loading-card"><div class="spinner"></div><span>Anatomi atlası yükleniyor…</span></div>
           <div id="modelLabel" class="model-label hidden"><span id="modelLabelText"></span></div>
-          <div class="selection-hint">Yapıya dokun → bilgisini incele</div>
+          <div class="selection-hint">Yapı seç → modelde vurgula • İki parmakla yakınlaştır</div>
         </div>
       </section>
-
-      <aside class="viewer-controls panel" aria-label="Model kontrolleri">
-        <button id="rotateBtn" type="button"><span class="control-label">Döndür</span><b>↻</b></button>
-        <button id="zoomInBtn" type="button"><span class="control-label">Yakınlaştır</span><b>＋</b></button>
-        <button id="zoomOutBtn" type="button"><span class="control-label">Uzaklaştır</span><b>−</b></button>
-        <button id="resetBtn" type="button"><span class="control-label">Sıfırla</span><b>⌾</b></button>
-        <div class="control-separator"></div>
-        <button id="autoRotateBtn" type="button" aria-pressed="false"><span class="control-label">Otomatik<br>Döndür</span><b>▷</b></button>
-      </aside>
     </section>
 
     <section id="infoCard" class="info-card panel" aria-live="polite">
-      <div class="info-preview" aria-hidden="true">
-        <div id="previewIcon" class="preview-icon">◒</div>
-        <div id="previewCaption" class="preview-caption">SEÇİLİ YAPI</div>
-      </div>
+      <div id="previewVisual" class="info-preview" aria-hidden="true"><span id="previewIcon">◒</span></div>
       <div class="info-main">
         <div class="info-head">
           <div>
@@ -76,10 +61,10 @@
           <span id="structureSystem" class="structure-system">KAS</span>
         </div>
         <div id="tabs" class="tabs" role="tablist" aria-label="Anatomik bilgi başlıkları"></div>
-        <p id="structureText" class="structure-text">Model hazırlanıyor…</p>
+        <p id="structureText" class="structure-text">Atlas hazırlanıyor…</p>
         <div id="factGrid" class="fact-grid"></div>
       </div>
-      <div class="license-line">3D model: Z-Anatomy / BodyParts3D • CC BY-SA 4.0</div>
+      <div class="license-line">Anatomi kaynağı: Z-Anatomy / BodyParts3D • CC BY-SA 4.0</div>
     </section>
   </main>
   <script type="module" src="/src/main.js"></script>
