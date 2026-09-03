@@ -55,7 +55,7 @@ jobs:
             tools/anatomy3d/src/brand-nav.js; do
             node --check "$js"
           done
-          python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py tools/v30/build_v30_three_plan_apk.py
+          python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py tools/v30/build_v30_three_plan_apk.py tools/v30/derive_plan1_ligament_from_v299.py
           echo 'SOURCE SYNTAX PASS'
 
       - name: Validate clinical catalogue evidence rights and scoring
@@ -77,10 +77,10 @@ jobs:
           if (!db) throw new Error('database missing');
           if (db.categories.length !== 8 || db.scales.length !== 29) throw new Error('8-category/29-instrument lock failed');
           if (db.evidenceVersion !== '2026-09-03-authoritative-pass-2') throw new Error('authoritative evidence pass missing');
-          if (db.turkishEvidenceVersion !== '2026-09-03-pubmed-pass-2') throw new Error('Turkey evidence pass missing');
+          if (db.turkishEvidenceVersion !== '2026-09-03-pubmed-pass-3') throw new Error('Turkey evidence pass missing');
           if (db.scoringEvidenceVersion !== '2026-09-03-deep-scoring-pass-1') throw new Error('deep scoring pass missing');
           if (!db.evidencePolicy?.populationSpecificCutoffs || !db.evidencePolicy?.exactEditionLabels || !db.evidencePolicy?.proprietaryFormsNotEmbeddedWithoutPermission) throw new Error('evidence policy incomplete');
-          if (!db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.turkeyCohortEvidenceSeparatedFromTranslationLicense) throw new Error('Turkey evidence rights separation missing');
+          if (!db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.turkeyCohortEvidenceSeparatedFromTranslationLicense || !db.turkishEvidencePolicy?.languageValidationSeparatedFromPopulationReferenceValues) throw new Error('Turkey evidence rights/reference separation missing');
           if (!db.scoringEvidencePolicy?.protectedItemWordingExcluded || !db.scoringEvidencePolicy?.classificationVersusOutcomeSeparated) throw new Error('deep scoring policy incomplete');
           const ids = new Set(db.scales.map(x=>x.id));
           const required = ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt'];
@@ -105,8 +105,13 @@ jobs:
           if (!x.womac.scoringArchitecture.some(v=>/5/.test(v)&&/2/.test(v)&&/17/.test(v))) throw new Error('WOMAC 5+2+17 lock missing');
           if (!x.hhs.scoringArchitecture.some(v=>/44/.test(v)&&/47/.test(v)&&/4/.test(v)&&/5/.test(v))) throw new Error('HHS 44+47+4+5 lock missing');
           if (!x.purdue.scoringArchitecture.some(v=>/30 sn/.test(v)&&/60 sn/.test(v))) throw new Error('Purdue timing lock missing');
-          const turkey = ['barthel','fim','katz','lawton','berg','mas','tardieu','odi','ndi','dash','womac','hhs','gmfm','gmfcs','dgi','jebsen','purdue','mmse'];
-          for (const id of turkey) if (!Array.isArray(x[id].turkishEvidence) || !x[id].turkishEvidence.length || !x[id].sources.some(p=>/pubmed\.ncbi\.nlm\.nih\.gov/.test(p[1]))) throw new Error(`${id}: Turkey/PubMed evidence missing`);
+
+          const turkeyPubmed = ['barthel','fim','katz','lawton','berg','mas','tardieu','odi','ndi','dash','womac','hhs','gmfm','gmfcs','dgi','jebsen','purdue','sf36','mmse','6mwt'];
+          for (const id of turkeyPubmed) if (!Array.isArray(x[id].turkishEvidence) || !x[id].turkishEvidence.length || !x[id].sources.some(p=>/pubmed\.ncbi\.nlm\.nih\.gov/.test(p[1]))) throw new Error(`${id}: Turkey/PubMed evidence missing`);
+          if (!Array.isArray(x.tinetti.turkishEvidence) || !x.tinetti.turkishEvidence.length || !x.tinetti.sources.some(p=>/10\.1007\/s11556-012-0096-2/.test(p[1]))) throw new Error('Tinetti/POMA-I Turkish validation source missing');
+          if (!/65 yaş/i.test(x.tinetti.turkish) || !/28 puan/i.test(x.tinetti.turkish)) throw new Error('Tinetti/POMA-I population/version context missing');
+          if (!/SF-36v2/.test(x.sf36.turkish) || !/RAND-36/.test(x.sf36.turkish)) throw new Error('SF-36/SF-36v2/RAND-36 distinction missing');
+          if (!/referans veri/i.test(x['6mwt'].turkish) || !/pediatrik/i.test(x['6mwt'].turkish) || !/genellenmez/i.test(x['6mwt'].turkish)) throw new Error('6MWT Turkey reference-value context missing');
           console.log('CLINICAL EVIDENCE + RIGHTS + SCORING PASS', {categories:db.categories.length, scales:db.scales.length});
           NODE
 
@@ -146,6 +151,7 @@ jobs:
           grep -Fq 'ligament_high_visibility_red' tools/anatomy3d/scripts/postprocess_reference_groups.py
           grep -Fq 'ligament_id_map_unchanged_by_recolor' tools/anatomy3d/scripts/postprocess_reference_groups.py
           grep -Fq 'ligament_skeleton_reference_preserved' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          grep -Fq 'EXPECTED_BASELINE_LIGAMENT_ID_SHA256' tools/v30/derive_plan1_ligament_from_v299.py
           echo 'PLAN 1 LIGAMENT SOURCE PASS'
 
       - name: Validate Plan 3 exact-brand navigation and release lock
