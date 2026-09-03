@@ -55,6 +55,7 @@ jobs:
           set -euo pipefail
           node --check tools/clinical-scales/data.js
           node --check tools/clinical-scales/evidence-overrides.js
+          node --check tools/clinical-scales/turkish-evidence.js
           node --check tools/clinical-scales/app.js
           node --check tools/clinical-scales/visual-enhancer.js
           node --check tools/anatomy3d/src/brand-nav.js
@@ -68,7 +69,7 @@ jobs:
           const vm = require('vm');
           const context = { window: {} };
           vm.createContext(context);
-          for (const file of ['tools/clinical-scales/data.js','tools/clinical-scales/evidence-overrides.js']) {
+          for (const file of ['tools/clinical-scales/data.js','tools/clinical-scales/evidence-overrides.js','tools/clinical-scales/turkish-evidence.js']) {
             vm.runInContext(fs.readFileSync(file,'utf8'), context, {filename:file});
           }
           const db = context.window.FTR_CLINICAL_SCALES;
@@ -76,8 +77,12 @@ jobs:
           if (db.categories.length !== 8) throw new Error(`Expected 8 categories, got ${db.categories.length}`);
           if (db.scales.length !== 29) throw new Error(`Expected 29 instruments, got ${db.scales.length}`);
           if (db.evidenceVersion !== '2026-09-03-authoritative-pass-2') throw new Error(`Evidence pass missing: ${db.evidenceVersion}`);
+          if (db.turkishEvidenceVersion !== '2026-09-03-pubmed-pass-1') throw new Error(`Turkish evidence pass missing: ${db.turkishEvidenceVersion}`);
           if (!db.evidencePolicy?.populationSpecificCutoffs || !db.evidencePolicy?.exactEditionLabels || !db.evidencePolicy?.proprietaryFormsNotEmbeddedWithoutPermission || !db.evidencePolicy?.originalOfflineProcedureIllustrations) {
             throw new Error('Authoritative evidence policy incomplete');
+          }
+          if (!db.turkishEvidencePolicy?.populationNamed || !db.turkishEvidencePolicy?.editionNamed || !db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.noUniversalCutoffInference) {
+            throw new Error('Turkish evidence policy incomplete');
           }
           const categoryIds = new Set(db.categories.map(x => x.id));
           if (categoryIds.size !== 8) throw new Error('Duplicate category id');
@@ -114,7 +119,15 @@ jobs:
           if (!/PDMS-3/.test(byId.pdms.format) || !/Pearson/.test(byId.pdms.interpretation) || byId.pdms.rights.mode !== 'restricted') throw new Error('PDMS-3 edition/rights contract missing');
           if (!byId.pdms.sources.some(pair => /pearsonassessments\.com/.test(pair[1]))) throw new Error('PDMS-3 Pearson source missing');
           if (!/commercial|ticari/i.test(byId.dash.rights.note)) throw new Error('DASH commercial-license guard missing');
-          console.log('CLINICAL CATALOGUE + EVIDENCE PASS', {categories: db.categories.length, scales: db.scales.length, evidenceVersion: db.evidenceVersion});
+          const turkishRequired = ['barthel','fim','katz','lawton','berg','odi','ndi','dash','womac','hhs','gmfm','gmfcs','dgi','mmse'];
+          for (const id of turkishRequired) {
+            if (!Array.isArray(byId[id].turkishEvidence) || byId[id].turkishEvidence.length < 1) throw new Error(`${id}: Turkish evidence source missing`);
+            if (!byId[id].sources.some(pair => /pubmed\.ncbi\.nlm\.nih\.gov/.test(pair[1]))) throw new Error(`${id}: PubMed Turkish source missing`);
+          }
+          if (!/Modifiye Barthel/.test(byId.barthel.turkish)) throw new Error('Barthel/Modified Barthel edition distinction missing');
+          if (!/Modified Dynamic Gait Index|mDGI/.test(byId.dgi.turkish)) throw new Error('DGI/mDGI edition distinction missing');
+          if (!/eğitim|education/i.test(byId.mmse.turkish) || !/evrensel/i.test(byId.mmse.turkish)) throw new Error('MMSE education/cutoff context missing');
+          console.log('CLINICAL CATALOGUE + EVIDENCE PASS', {categories: db.categories.length, scales: db.scales.length, evidenceVersion: db.evidenceVersion, turkishEvidenceVersion: db.turkishEvidenceVersion});
           NODE
 
       - name: Validate Clinical Scales script order and visual coverage
@@ -123,12 +136,13 @@ jobs:
           set -euo pipefail
           grep -Fq '<script src="./data.js"></script>' tools/clinical-scales/index.html
           grep -Fq '<script src="./evidence-overrides.js"></script>' tools/clinical-scales/index.html
+          grep -Fq '<script src="./turkish-evidence.js"></script>' tools/clinical-scales/index.html
           grep -Fq '<script src="./app.js"></script>' tools/clinical-scales/index.html
           grep -Fq '<script src="./visual-enhancer.js"></script>' tools/clinical-scales/index.html
           python3 - <<'PY'
           from pathlib import Path
           html = Path('tools/clinical-scales/index.html').read_text(encoding='utf-8')
-          order = ['./data.js','./evidence-overrides.js','./app.js','./visual-enhancer.js']
+          order = ['./data.js','./evidence-overrides.js','./turkish-evidence.js','./app.js','./visual-enhancer.js']
           positions = [html.index(item) for item in order]
           assert positions == sorted(positions), positions
           visuals = Path('tools/clinical-scales/visual-enhancer.js').read_text(encoding='utf-8')
