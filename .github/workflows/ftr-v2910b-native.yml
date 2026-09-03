@@ -12,9 +12,9 @@ permissions:
   contents: read
 
 jobs:
-  decompile-native:
+  build-native-patch:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,24 +23,96 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Decode current v29.10b classes.dex
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install Android build tools
         run: |
-          mkdir -p work
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Reconstruct locked v29.10b native dex and billing sources
+        run: |
+          mkdir -p work/src/com/ftrakademi/preview3/billing
           cat tools/v2910b-native/classes.dex.xz.b64.part* | base64 -d | xz -d > work/classes.dex
           echo '65410b64a3ba86871521d94c9bd145b3577eb6902f1fc9b6df34c291e41fafc7  work/classes.dex' | sha256sum -c -
-      - name: Download JADX 1.5.6
+          base64 -d tools/v2910b-native/BillingBootstrap.java.xz.b64 | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBootstrap.java
+          cat tools/v2910b-native/BillingBridge.java.xz.b64.part* | base64 -d | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBridge.java
+          grep -q 'class BillingBridge' work/src/com/ftrakademi/preview3/billing/BillingBridge.java
+      - name: Download APKTool and Play Billing 9.1.0
         run: |
-          curl -fL --retry 3 -o work/jadx.zip https://github.com/skylot/jadx/releases/download/v1.5.6/jadx-1.5.6.zip
-          unzip -q work/jadx.zip -d work/jadx
-      - name: Decompile native wrapper
+          curl -fL --retry 3 -o work/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.12.0/apktool_2.12.0.jar
+          curl -fL --retry 3 -o work/billing.aar https://dl.google.com/dl/android/maven2/com/android/billingclient/billing/9.1.0/billing-9.1.0.aar
+          mkdir -p work/billing
+          unzip -q work/billing.aar -d work/billing
+          jar tf work/apktool.jar | grep -E 'smali/.*/Main.class|smali.*Main.class' | sort | tee work/smali-entrypoints.txt
+      - name: Disassemble locked MainActivity dex
         run: |
-          mkdir -p work/decompiled
-          work/jadx/bin/jadx --show-bad-code -d work/decompiled work/classes.dex
-          find work/decompiled -type f | sort
-      - name: Upload decompiled native wrapper
+          mkdir -p work/smali
+          java -cp work/apktool.jar com.android.tools.smali.baksmali.Main disassemble work/classes.dex -o work/smali
+          test -f work/smali/com/ftrakademi/preview3/MainActivity.smali
+          grep -n 'addJavascriptInterface' work/smali/com/ftrakademi/preview3/MainActivity.smali | tee work/main-bridge-lines.txt
+      - name: Patch exactly one Billing bootstrap call into onCreate
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('work/smali/com/ftrakademi/preview3/MainActivity.smali')
+          s=p.read_text()
+          marker='Landroid/webkit/WebView;->setWebChromeClient(Landroid/webkit/WebChromeClient;)V'
+          i=s.find(marker)
+          if i < 0: raise SystemExit('web chrome marker missing')
+          line_end=s.find('\n', i)+1
+          injection='\n    invoke-static {p0}, Lcom/ftrakademi/preview3/billing/BillingBootstrap;->install(Landroid/app/Activity;)V\n'
+          if 'BillingBootstrap;->install' in s: raise SystemExit('billing bootstrap already present')
+          s=s[:line_end]+injection+s[line_end:]
+          p.write_text(s)
+          print('Billing bootstrap injections:', s.count('BillingBootstrap;->install'))
+          PY
+          grep -n -C 5 'BillingBootstrap' work/smali/com/ftrakademi/preview3/MainActivity.smali
+      - name: Reassemble patched locked native dex
+        run: |
+          java -cp work/apktool.jar com.android.tools.smali.smali.Main assemble work/smali -o work/classes-patched.dex
+          test -s work/classes-patched.dex
+          sha256sum work/classes.dex work/classes-patched.dex
+      - name: Compile isolated FTRBilling bridge with Play Billing 9.1.0
+        run: |
+          ANDROID_JAR="$ANDROID_HOME/platforms/android-36/android.jar"
+          mkdir -p work/javac work/dex
+          javac -encoding UTF-8 -source 8 -target 8 -cp "$ANDROID_JAR:work/billing/classes.jar" -d work/javac $(find work/src -name '*.java' -print)
+          jar cf work/ftr-billing-patch.jar -C work/javac .
+          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 23 --lib "$ANDROID_JAR" --output work/dex work/ftr-billing-patch.jar work/billing/classes.jar
+          test -s work/dex/classes.dex
+          mv work/dex/classes.dex work/classes5.dex
+          strings work/classes5.dex | grep -q 'FTRBilling'
+          strings work/classes5.dex | grep -q 'BillingClient'
+          sha256sum work/classes5.dex
+      - name: Patch contract report
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os
+          def sha(p):
+              h=hashlib.sha256()
+              with open(p,'rb') as f:
+                  for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+              return h.hexdigest()
+          report={
+            'base_classes_sha256':sha('work/classes.dex'),
+            'patched_classes_sha256':sha('work/classes-patched.dex'),
+            'billing_classes5_sha256':sha('work/classes5.dex'),
+            'billing_library':'com.android.billingclient:billing:9.1.0',
+            'mainactivity_patch':'single BillingBootstrap.install(Activity) call after WebChromeClient setup',
+            'base_mainactivity_recompiled':False,
+          }
+          open('work/native-patch-report.json','w').write(json.dumps(report,indent=2,ensure_ascii=False))
+          print(json.dumps(report,indent=2,ensure_ascii=False))
+          PY
+      - name: Upload native patch
         uses: actions/upload-artifact@v4
         with:
-          name: v2910b-native-decompiled
-          path: work/decompiled
+          name: v2910b-billing-native-patch
+          path: |
+            work/classes-patched.dex
+            work/classes5.dex
+            work/native-patch-report.json
+            work/main-bridge-lines.txt
+            work/smali-entrypoints.txt
           if-no-files-found: error
           retention-days: 7
