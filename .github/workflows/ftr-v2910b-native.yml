@@ -35,7 +35,8 @@ jobs:
           cat tools/v2910b-native/classes.dex.xz.b64.part* | base64 -d | xz -d > work/classes.dex
           echo '65410b64a3ba86871521d94c9bd145b3577eb6902f1fc9b6df34c291e41fafc7  work/classes.dex' | sha256sum -c -
           base64 -d tools/v2910b-native/BillingBootstrap.java.xz.b64 | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBootstrap.java
-          cat tools/v2910b-native/BillingBridge.java.xz.b64.part* | base64 -d | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBridge.java
+          base64 -d tools/v2910b-native/BillingBridge.java.xz.b64 | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBridge.java
+          echo '8d3a06ae1f651b82c59672f4277c3aa361829e2f10d68af56e80a4dc632b3058  work/src/com/ftrakademi/preview3/billing/BillingBridge.java' | sha256sum -c -
           grep -q 'class BillingBridge' work/src/com/ftrakademi/preview3/billing/BillingBridge.java
       - name: Download Play Billing 9.1.0
         run: |
@@ -113,6 +114,7 @@ jobs:
             'base_classes_sha256':sha('work/classes.dex'),
             'patched_classes_sha256':sha('work/classes-patched.dex'),
             'billing_classes5_sha256':sha('work/classes5.dex'),
+            'billing_bridge_source_sha256':sha('work/src/com/ftrakademi/preview3/billing/BillingBridge.java'),
             'billing_library':'com.android.billingclient:billing:9.1.0',
             'smali_toolchain':'org.smali 2.5.2 from Maven Central',
             'mainactivity_patch':'single BillingBootstrap.install(Activity) call after WebChromeClient setup',
