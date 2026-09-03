@@ -1,0 +1,20 @@
+{
+  "plan": 1,
+  "name": "v30-plan1-derived-from-v29.9",
+  "artifact_id": 9891447400,
+  "artifact_digest": "sha256:8cb6fa86d6cc5cae3a4ee1e81d57a163ca85acc3384bdf9e3a0803f89b99c76d",
+  "artifact_size_bytes": 4449561,
+  "workflow_run_id": 33750809629,
+  "head_sha": "54ea5d604757b3eddbf7eb00b6f751bb8011cb41",
+  "baseline_artifact_id": 9872460705,
+  "baseline_artifact_digest": "sha256:48e48fdd5c22428dc73ed7a9df758d60f85b79ca1d15bd2f20539122a4abb235",
+  "baseline_apk_sha256": "acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809",
+  "ligament_id_sha256": "171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7",
+  "ligament_id_byte_identical_to_v29_9": true,
+  "ligament_structure_count": 292,
+  "render_mode": "static-layered-atlas",
+  "runtime_webgl": false,
+  "runtime_glb": false,
+  "continuous_render_loop": false,
+  "status": "PLAN1_DERIVED_ARTIFACT_QA_PASS"
+}
