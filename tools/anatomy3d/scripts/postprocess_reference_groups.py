@@ -7,6 +7,8 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1] / 'public'
 MANIFEST_PATH = ROOT / 'data' / 'atlas-map.json'
 ID_MAP_PATH = ROOT / 'atlas' / 'muscle-id.png'
+LIGAMENT_ID_MAP_PATH = ROOT / 'atlas' / 'ligament-id.png'
+LIGAMENT_BEAUTY_PATH = ROOT / 'atlas' / 'ligament-front.png'
 
 
 def is_biceps_head(row):
@@ -75,6 +77,52 @@ def recolor_id_map(groups, composites):
     return {str(rgb): count for rgb, count in counts.items()}
 
 
+def high_visibility_ligament_red(data):
+    """Tint only ligament pixels red while preserving Workbench shading/depth.
+
+    The skeleton/reference layer stays ivory. The invisible ID map is unchanged,
+    so tapping accuracy and structure identity remain exactly the same.
+    """
+    ligament = data['systems']['ligament']
+    structure_rgbs = {tuple(int(channel) for channel in row['rgb']) for row in ligament['structures']}
+    if not structure_rgbs:
+        raise RuntimeError('Ligament atlas has no structure RGB IDs')
+
+    beauty = Image.open(LIGAMENT_BEAUTY_PATH).convert('RGB')
+    ids = Image.open(LIGAMENT_ID_MAP_PATH).convert('RGB')
+    if beauty.size != ids.size:
+        raise RuntimeError(f'Ligament beauty/ID size mismatch: {beauty.size} vs {ids.size}')
+
+    beauty_pixels = beauty.load()
+    id_pixels = ids.load()
+    width, height = beauty.size
+    changed = 0
+
+    for y in range(height):
+        for x in range(width):
+            if id_pixels[x, y] not in structure_rgbs:
+                continue
+            r, g, b = beauty_pixels[x, y]
+            # Preserve local lighting/cavity information, but remap the structure
+            # into a saturated clinical red that remains obvious on the ivory skeleton.
+            luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255.0
+            beauty_pixels[x, y] = (
+                max(0, min(255, round(178 + 72 * luminance))),
+                max(0, min(255, round(22 + 28 * luminance))),
+                max(0, min(255, round(30 + 34 * luminance))),
+            )
+            changed += 1
+
+    if changed < 100:
+        raise RuntimeError(f'Ligament high-visibility recolor touched too few pixels: {changed}')
+
+    beauty.save(LIGAMENT_BEAUTY_PATH, optimize=True)
+    data.setdefault('policy', {})['ligament_high_visibility_red'] = True
+    data['policy']['ligament_skeleton_reference_preserved'] = True
+    data['policy']['ligament_id_map_unchanged_by_recolor'] = True
+    return changed
+
+
 def run():
     data = json.loads(MANIFEST_PATH.read_text(encoding='utf-8'))
     muscle = data['systems']['muscle']
@@ -117,6 +165,7 @@ def run():
 
     data.setdefault('policy', {})['reference_composite_groups'] = True
     data['policy']['biceps_brachii_whole_muscle_selection'] = True
+    ligament_pixels = high_visibility_ligament_red(data)
     MANIFEST_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8')
 
     print(json.dumps({
@@ -125,6 +174,7 @@ def run():
         'left': composites['l'],
         'recolored_pixels': recolor_counts,
         'muscle_structure_count': len(remaining),
+        'ligament_high_visibility_red_pixels': ligament_pixels,
     }, ensure_ascii=False, indent=2))
 
 
