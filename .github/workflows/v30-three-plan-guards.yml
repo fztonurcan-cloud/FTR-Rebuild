@@ -54,24 +54,31 @@ jobs:
         run: |
           set -euo pipefail
           node --check tools/clinical-scales/data.js
+          node --check tools/clinical-scales/evidence-overrides.js
           node --check tools/clinical-scales/app.js
+          node --check tools/clinical-scales/visual-enhancer.js
           node --check tools/anatomy3d/src/brand-nav.js
 
-      - name: Validate Clinical Scales catalogue contract
+      - name: Validate Clinical Scales catalogue and evidence contract
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs = require('fs');
           const vm = require('vm');
-          const source = fs.readFileSync('tools/clinical-scales/data.js','utf8');
           const context = { window: {} };
           vm.createContext(context);
-          vm.runInContext(source, context, {filename:'data.js'});
+          for (const file of ['tools/clinical-scales/data.js','tools/clinical-scales/evidence-overrides.js']) {
+            vm.runInContext(fs.readFileSync(file,'utf8'), context, {filename:file});
+          }
           const db = context.window.FTR_CLINICAL_SCALES;
           if (!db) throw new Error('Database global missing');
           if (db.categories.length !== 8) throw new Error(`Expected 8 categories, got ${db.categories.length}`);
           if (db.scales.length !== 29) throw new Error(`Expected 29 instruments, got ${db.scales.length}`);
+          if (db.evidenceVersion !== '2026-09-03-authoritative-pass-2') throw new Error(`Evidence pass missing: ${db.evidenceVersion}`);
+          if (!db.evidencePolicy?.populationSpecificCutoffs || !db.evidencePolicy?.exactEditionLabels || !db.evidencePolicy?.proprietaryFormsNotEmbeddedWithoutPermission || !db.evidencePolicy?.originalOfflineProcedureIllustrations) {
+            throw new Error('Authoritative evidence policy incomplete');
+          }
           const categoryIds = new Set(db.categories.map(x => x.id));
           if (categoryIds.size !== 8) throw new Error('Duplicate category id');
           const ids = new Set();
@@ -99,8 +106,37 @@ jobs:
           for (const required of ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt']) {
             if (!ids.has(required)) throw new Error(`Required instrument missing: ${required}`);
           }
-          console.log('CLINICAL CATALOGUE PASS', {categories: db.categories.length, scales: db.scales.length});
+          const byId = Object.fromEntries(db.scales.map(scale => [scale.id, scale]));
+          if (!/popülasyon|evrensel değildir/i.test(byId.berg.interpretation)) throw new Error('Berg population-specific interpretation guard missing');
+          if (!/≥12 sn/.test(byId.tug.interpretation) || !/evrensel değildir/i.test(byId.tug.interpretation)) throw new Error('TUG older-adult/context guard missing');
+          if (!/V1/.test(byId.tardieu.format) || !/V2/.test(byId.tardieu.format) || !/V3/.test(byId.tardieu.format) || !/R1/.test(byId.tardieu.format) || !/R2/.test(byId.tardieu.format)) throw new Error('Tardieu R1/R2 velocity contract missing');
+          if (!/0–4/.test(byId.penn.format) || !/1–3/.test(byId.penn.format)) throw new Error('Penn two-part score contract missing');
+          if (!/PDMS-3/.test(byId.pdms.format) || !/Pearson/.test(byId.pdms.interpretation) || byId.pdms.rights.mode !== 'restricted') throw new Error('PDMS-3 edition/rights contract missing');
+          if (!byId.pdms.sources.some(pair => /pearsonassessments\.com/.test(pair[1]))) throw new Error('PDMS-3 Pearson source missing');
+          if (!/commercial|ticari/i.test(byId.dash.rights.note)) throw new Error('DASH commercial-license guard missing');
+          console.log('CLINICAL CATALOGUE + EVIDENCE PASS', {categories: db.categories.length, scales: db.scales.length, evidenceVersion: db.evidenceVersion});
           NODE
+
+      - name: Validate Clinical Scales script order and visual coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '<script src="./data.js"></script>' tools/clinical-scales/index.html
+          grep -Fq '<script src="./evidence-overrides.js"></script>' tools/clinical-scales/index.html
+          grep -Fq '<script src="./app.js"></script>' tools/clinical-scales/index.html
+          grep -Fq '<script src="./visual-enhancer.js"></script>' tools/clinical-scales/index.html
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path('tools/clinical-scales/index.html').read_text(encoding='utf-8')
+          order = ['./data.js','./evidence-overrides.js','./app.js','./visual-enhancer.js']
+          positions = [html.index(item) for item in order]
+          assert positions == sorted(positions), positions
+          visuals = Path('tools/clinical-scales/visual-enhancer.js').read_text(encoding='utf-8')
+          required = ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt']
+          missing = [key for key in required if key not in visuals]
+          assert not missing, missing
+          print('CLINICAL SCRIPT ORDER + 29 VISUAL KEYS PASS')
+          PY
 
       - name: Enforce offline privacy and clinical module boundaries
         shell: bash
