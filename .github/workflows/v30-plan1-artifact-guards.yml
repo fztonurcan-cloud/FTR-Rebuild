@@ -1,0 +1,139 @@
+name: v30 plan1 ligament artifact fail-closed guards
+
+on:
+  push:
+    branches: [v30-three-plan-premium]
+  pull_request:
+    branches: [v30-three-plan-premium]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  compare-ligament-artifacts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      BASELINE_ARTIFACT_ID: '9872460705'
+      RED_ARTIFACT_ID: '9890887247'
+    steps:
+      - name: Download physically verified baseline and red-ligament artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/ftr/base /tmp/ftr/red
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -o /tmp/ftr/base.zip \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${BASELINE_ARTIFACT_ID}/zip"
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -o /tmp/ftr/red.zip \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${RED_ARTIFACT_ID}/zip"
+          unzip -q /tmp/ftr/base.zip -d /tmp/ftr/base
+          unzip -q /tmp/ftr/red.zip -d /tmp/ftr/red
+          test -f /tmp/ftr/base/dist/atlas/ligament-id.png
+          test -f /tmp/ftr/red/dist/atlas/ligament-id.png
+          test -f /tmp/ftr/base/dist/atlas/ligament-front.png
+          test -f /tmp/ftr/red/dist/atlas/ligament-front.png
+          test -f /tmp/ftr/base/dist/data/atlas-map.json
+          test -f /tmp/ftr/red/dist/data/atlas-map.json
+          echo 'PLAN1 ARTIFACT DOWNLOAD PASS'
+
+      - name: Invisible ligament ID map must be byte-identical
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(sha256sum /tmp/ftr/base/dist/atlas/ligament-id.png | awk '{print $1}')"
+          red_sha="$(sha256sum /tmp/ftr/red/dist/atlas/ligament-id.png | awk '{print $1}')"
+          echo "BASELINE_LIGAMENT_ID_SHA256=${base_sha}"
+          echo "RED_LIGAMENT_ID_SHA256=${red_sha}"
+          test "$base_sha" = "$red_sha"
+          cmp -s /tmp/ftr/base/dist/atlas/ligament-id.png /tmp/ftr/red/dist/atlas/ligament-id.png
+          echo 'LIGAMENT ID MAP BYTE-IDENTICAL PASS'
+
+      - name: Visible ligament beauty layer must actually change
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(sha256sum /tmp/ftr/base/dist/atlas/ligament-front.png | awk '{print $1}')"
+          red_sha="$(sha256sum /tmp/ftr/red/dist/atlas/ligament-front.png | awk '{print $1}')"
+          echo "BASELINE_LIGAMENT_FRONT_SHA256=${base_sha}"
+          echo "RED_LIGAMENT_FRONT_SHA256=${red_sha}"
+          test "$base_sha" != "$red_sha"
+          test "$(stat -c '%s' /tmp/ftr/red/dist/atlas/ligament-front.png)" -gt 10000
+          echo 'LIGAMENT BEAUTY LAYER CHANGED PASS'
+
+      - name: Ligament structure identity and static-runtime contract must remain unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          def load(path):
+              return json.loads(Path(path).read_text(encoding='utf-8'))
+
+          def normalized(data):
+              system=(data.get('systems') or {}).get('ligament') or {}
+              structures=system.get('structures') or []
+              return {
+                  'structure_count': int(system.get('structure_count', len(structures))),
+                  'structures': [
+                      {
+                          'id': row.get('id'),
+                          'rgb': row.get('rgb'),
+                          'name': row.get('name'),
+                          'raw': row.get('raw'),
+                          'key': row.get('key'),
+                          'object_type': row.get('object_type'),
+                          'anchor': row.get('anchor'),
+                      }
+                      for row in structures
+                  ],
+              }
+
+          base=load('/tmp/ftr/base/dist/data/atlas-map.json')
+          red=load('/tmp/ftr/red/dist/data/atlas-map.json')
+          assert normalized(base) == normalized(red), 'ligament structure contract changed'
+          assert normalized(red)['structure_count'] == 292, normalized(red)['structure_count']
+          assert red.get('render_mode') == 'static-layered-atlas'
+          policy=red.get('policy') or {}
+          assert policy.get('webgl') is False
+          assert policy.get('runtime_3d_models') is False
+          assert policy.get('continuous_render_loop') is False
+          assert policy.get('ligament_high_visibility_red') is True
+          assert policy.get('ligament_skeleton_reference_preserved') is True
+          assert policy.get('ligament_id_map_unchanged_by_recolor') is True
+          print('LIGAMENT STRUCTURE + STATIC RUNTIME CONTRACT PASS', normalized(red)['structure_count'])
+          PY
+
+      - name: Red artifact provenance lock
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          meta="$(curl --fail --silent --show-error --retry 3 \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${RED_ARTIFACT_ID}")"
+          python3 - "$meta" <<'PY'
+          import json, sys
+          m=json.loads(sys.argv[1])
+          assert m['id'] == 9890887247
+          assert m['workflow_run']['head_sha'] == 'b8cbd14c6a83d80f3040af67cc735b768fd4117d'
+          assert m['digest'] == 'sha256:2ff4bbd37940c73987979a3c427253b31e5b63d3191dc7d3f329c0702c5582a3'
+          assert m['size_in_bytes'] == 4448176
+          assert not m['expired']
+          print('RED ARTIFACT PROVENANCE PASS')
+          PY
