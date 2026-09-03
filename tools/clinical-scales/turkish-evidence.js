@@ -44,9 +44,10 @@
     'https://pubmed.ncbi.nlm.nih.gov/41500923/');
 
   add('rivermead',
-    'Rivermead Mobility Index Türkiye’de inme çalışmalarında yapı/yakınsak geçerlilik karşılaştırıcısı olarak kullanılmaktadır. Türkçe Trunk Impairment Scale çalışmasında RMI ile anlamlı ilişkiler; Türkçe Stroke Activity Scale çalışmasında RMI ile güçlü yakınsak ilişki bildirilmiştir. Bunlar RMI için bağımsız Türkçe çeviri validasyonu değildir.',
-    'PubMed — Turkish stroke study using RMI as convergent measure',
-    'https://pubmed.ncbi.nlm.nih.gov/31297483/');
+    'Rivermead Mobilite İndeksi’nin Türkçe formu 2007’de yaşlı bireylerde doğrudan geçerlilik ve güvenilirlik açısından incelenmiştir. Kurumda yaşayan dolaşabilen/yatağa bağımlı yaşlılar ile toplumda yaşayan yaşlıları içeren örneklemde test-tekrar test katsayısı r=0.98, KR-20 iç tutarlılık katsayısı 0.91 ve Brief Disability Questionnaire ile korelasyon r=0.66 bildirilmiştir. Bu doğrudan Türkçe validasyon kanıtı yaşlı popülasyona aittir; inme popülasyonuna otomatik genellenmez.',
+    'Turkish Journal of Geriatrics — Turkish RMI validity/reliability in elderly',
+    'https://geriatri.dergisi.org/abstract.php?id=362');
+  byId.rivermead.sources.push(['PubMed — Turkish stroke TIS study using RMI as convergent measure','https://pubmed.ncbi.nlm.nih.gov/31297483/']);
   byId.rivermead.sources.push(['PubMed — Turkish Stroke Activity Scale validation using RMI','https://pubmed.ncbi.nlm.nih.gov/38536807/']);
 
   add('berg',
