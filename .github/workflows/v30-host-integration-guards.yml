@@ -24,15 +24,17 @@ jobs:
           test -f tools/v30/integration/v30-three-plan.js
           test -f tools/v30/integration/v30-three-plan.css
           test -f tools/v30/build_v30_three_plan_apk.py
+          test -f tools/v30/verify_v30_release_inputs.py
           echo 'V30 HOST INPUTS PRESENT'
 
-      - name: Host bridge JavaScript syntax
+      - name: Host and preflight syntax
         shell: bash
         run: |
           set -euo pipefail
           node --check tools/v30/integration/v30-three-plan.js
           node --check tools/clinical-scales/app.js
-          echo 'V30 HOST + CLINICAL JS SYNTAX PASS'
+          python3 -m py_compile tools/v30/verify_v30_release_inputs.py
+          echo 'V30 HOST + CLINICAL JS + PREFLIGHT PY SYNTAX PASS'
 
       - name: Preserve physically verified v29.9 composition
         shell: bash
@@ -112,6 +114,23 @@ jobs:
           grep -Fq "Standart fiziksel kit gereklidir" "$app"
           grep -Fq "Tek bir evrensel düşme-risk eşiği yoktur" "$app"
           echo 'CLINICAL INTERACTIVE SCORE CONTRACTS PASS'
+
+      - name: Release preflight fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          gate='tools/v30/verify_v30_release_inputs.py'
+          grep -Fq 'acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809' "$gate"
+          grep -Fq '9891447400' "$gate"
+          grep -Fq 'f6d50400ddbdd31805a82c5b020040ca3c5fcc864fe83be32fa65c81f6ad2028' "$gate"
+          grep -Fq '171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7' "$gate"
+          grep -Fq 'plan1_derived_from_physically_verified_v29_9' "$gate"
+          grep -Fq 'scoring-evidence.js' "$gate"
+          grep -Fq 'detail-evidence-enhancer.js' "$gate"
+          grep -Fq 'evidence-enhancer.css' "$gate"
+          grep -Fq 'BRAND_EXPECTED_DIMS = (112, 112)' "$gate"
+          grep -Fq 'exact Plan 3 brand PNG/SHA lock is still missing' "$gate"
+          echo 'V30 RELEASE PREFLIGHT CONTRACT PASS'
 
       - name: Offline and scope safety
         shell: bash
