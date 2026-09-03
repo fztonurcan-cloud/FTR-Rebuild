@@ -56,6 +56,7 @@ jobs:
             node --check "$js"
           done
           python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py tools/v30/build_v30_three_plan_apk.py tools/v30/derive_plan1_ligament_from_v299.py
+          pwsh -NoProfile -Command '$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile("tools/brand/extract_exact_logo_from_reference.ps1", [ref]$tokens, [ref]$errors) | Out-Null; if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }'
           echo 'SOURCE SYNTAX PASS'
 
       - name: Validate clinical catalogue evidence rights and scoring
@@ -80,7 +81,7 @@ jobs:
           if (db.turkishEvidenceVersion !== '2026-09-03-pubmed-pass-3') throw new Error('Turkey evidence pass missing');
           if (db.scoringEvidenceVersion !== '2026-09-03-deep-scoring-pass-1') throw new Error('deep scoring pass missing');
           if (!db.evidencePolicy?.populationSpecificCutoffs || !db.evidencePolicy?.exactEditionLabels || !db.evidencePolicy?.proprietaryFormsNotEmbeddedWithoutPermission) throw new Error('evidence policy incomplete');
-          if (!db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.turkeyCohortEvidenceSeparatedFromTranslationLicense || !db.turkishEvidencePolicy?.languageValidationSeparatedFromPopulationReferenceValues) throw new Error('Turkey evidence rights/reference separation missing');
+          if (!db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.turkeyCohortEvidenceSeparatedFromTranslationLicense || !db.turkishEvidencePolicy?.languageValidationSeparatedFromPopulationReferenceValues || !db.turkishEvidencePolicy?.indirectComparatorEvidenceExplicitlyLabeled) throw new Error('Turkey evidence rights/reference separation missing');
           if (!db.scoringEvidencePolicy?.protectedItemWordingExcluded || !db.scoringEvidencePolicy?.classificationVersusOutcomeSeparated) throw new Error('deep scoring policy incomplete');
           const ids = new Set(db.scales.map(x=>x.id));
           const required = ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt'];
@@ -144,7 +145,7 @@ jobs:
           grep -Fq 'Tanı aracı değildir' tools/clinical-scales/index.html
           echo 'OFFLINE / NO-PATIENT-IDENTITY PASS'
 
-      - name: Validate Plan 1 ligament contract
+      - name: Validate Plan 1 locked artifact and ligament contract
         shell: bash
         run: |
           set -euo pipefail
@@ -152,9 +153,21 @@ jobs:
           grep -Fq 'ligament_id_map_unchanged_by_recolor' tools/anatomy3d/scripts/postprocess_reference_groups.py
           grep -Fq 'ligament_skeleton_reference_preserved' tools/anatomy3d/scripts/postprocess_reference_groups.py
           grep -Fq 'EXPECTED_BASELINE_LIGAMENT_ID_SHA256' tools/v30/derive_plan1_ligament_from_v299.py
-          echo 'PLAN 1 LIGAMENT SOURCE PASS'
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          lock=json.loads(Path('tools/v30/PLAN1-ARTIFACT-LOCK.json').read_text(encoding='utf-8'))
+          assert lock['artifact_id']==9891447400
+          assert lock['artifact_digest']=='sha256:8cb6fa86d6cc5cae3a4ee1e81d57a163ca85acc3384bdf9e3a0803f89b99c76d'
+          assert lock['derived_ligament_front_sha256']=='f6d50400ddbdd31805a82c5b020040ca3c5fcc864fe83be32fa65c81f6ad2028'
+          assert lock['ligament_id_sha256']=='171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7'
+          assert lock['ligament_id_byte_identical_to_v29_9'] is True
+          assert lock['ligament_structure_count']==292
+          assert lock['status']=='PLAN1_DERIVED_ARTIFACT_QA_PASS'
+          print('PLAN 1 LOCKED ARTIFACT CONTRACT PASS')
+          PY
 
-      - name: Validate Plan 3 exact-brand navigation and release lock
+      - name: Validate Plan 3 exact-brand navigation extraction and release lock
         shell: bash
         run: |
           set -euo pipefail
@@ -165,6 +178,15 @@ jobs:
           grep -Fq "location.href = '../index.html'" tools/clinical-scales/app.js
           grep -Fq 'Do **not** replace it with AI regeneration' tools/brand/EXACT-BRAND-ASSET-LOCK.md
           grep -Fq 'ftr-logo-exact.sha256' tools/brand/EXACT-BRAND-ASSET-LOCK.md
+          grep -Fq '$sourceImage.Width -ne 1536' tools/brand/extract_exact_logo_from_reference.ps1
+          grep -Fq '$sourceImage.Height -ne 1024' tools/brand/extract_exact_logo_from_reference.ps1
+          grep -Fq '$cropX = 137' tools/brand/extract_exact_logo_from_reference.ps1
+          grep -Fq '$cropY = 468' tools/brand/extract_exact_logo_from_reference.ps1
+          grep -Fq '$cropW = 112' tools/brand/extract_exact_logo_from_reference.ps1
+          grep -Fq '$cropH = 112' tools/brand/extract_exact_logo_from_reference.ps1
+          grep -Fq '$sourceBitmap.Clone($rect' tools/brand/extract_exact_logo_from_reference.ps1
+          ! grep -Fq '.DrawImage(' tools/brand/extract_exact_logo_from_reference.ps1
+          ! grep -Fq '.GetThumbnailImage(' tools/brand/extract_exact_logo_from_reference.ps1
           if test -f tools/brand/ftr-logo-exact.png; then
             test -f tools/brand/ftr-logo-exact.sha256
             expected="$(tr -d '\r\n ' < tools/brand/ftr-logo-exact.sha256)"
@@ -181,6 +203,11 @@ jobs:
           set -euo pipefail
           grep -Fq 'BASE_SIZE = 1_137_460_262' tools/v30/build_v30_three_plan_apk.py
           grep -Fq 'BASE_SHA256 = "acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809"' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'EXPECTED_PLAN1_FRONT_SHA256 = "f6d50400ddbdd31805a82c5b020040ca3c5fcc864fe83be32fa65c81f6ad2028"' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'PLAN1-ARTIFACT-LOCK.json' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'scoring-evidence.js' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'detail-evidence-enhancer.js' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'evidence-enhancer.css' tools/v30/build_v30_three_plan_apk.py
           grep -Fq 'ftr-logo-exact.sha256' tools/v30/build_v30_three_plan_apk.py
           grep -Fq 'ligament invisible ID map differs from physically verified v29.9' tools/v30/build_v30_three_plan_apk.py
           grep -Fq 'expected_changed = {HOST_INDEX, LIGAMENT_FRONT}' tools/v30/build_v30_three_plan_apk.py
