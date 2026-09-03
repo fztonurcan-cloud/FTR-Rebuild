@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#03111f">
+  <title>FTR Akademi — Klinik Ölçekler</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main id="clinicalApp" class="clinical-app">
+    <header class="topbar">
+      <button id="backBtn" class="icon-button" type="button" aria-label="Geri">←</button>
+      <button id="homeBrand" class="brand-button" type="button" aria-label="FTR Akademi ana sayfasına dön">
+        <img class="brand-logo" src="../brand/ftr-logo-exact.png" alt="" aria-hidden="true">
+        <span>FTR AKADEMİ</span>
+      </button>
+      <button id="favBtn" class="icon-button" type="button" aria-label="Favoriye ekle">☆</button>
+    </header>
+
+    <section id="catalogView" class="view active" aria-labelledby="catalogTitle">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">FİZYOTERAPİ DEĞERLENDİRME MERKEZİ</p>
+          <h1 id="catalogTitle">Klinik Ölçekler</h1>
+          <p>Testler • Skorlamalar • Değerlendirme Araçları</p>
+        </div>
+        <div class="hero-badge"><b>29</b><span>doğrulanmış<br>başlangıç aracı</span></div>
+      </div>
+
+      <label class="search-box">
+        <span aria-hidden="true">⌕</span>
+        <input id="searchInput" type="search" placeholder="Ölçek, hastalık veya bölge ara…" autocomplete="off">
+        <button id="clearSearch" type="button" aria-label="Aramayı temizle">×</button>
+      </label>
+
+      <div class="catalog-tools">
+        <button id="showRecent" type="button">◷ Son Kullanılanlar</button>
+        <button id="showFavorites" type="button">☆ Favorilerim</button>
+      </div>
+
+      <div id="resultSummary" class="result-summary" aria-live="polite"></div>
+      <section id="categoryList" class="category-list" aria-label="Klinik ölçek kategorileri"></section>
+      <section id="searchResults" class="scale-list hidden" aria-label="Arama sonuçları"></section>
+    </section>
+
+    <section id="categoryView" class="view" aria-labelledby="categoryTitle">
+      <div class="section-heading">
+        <p class="eyebrow">KLİNİK ÖLÇEKLER</p>
+        <h1 id="categoryTitle">Kategori</h1>
+        <p id="categorySubtitle"></p>
+      </div>
+      <div id="categoryScales" class="scale-list"></div>
+    </section>
+
+    <section id="detailView" class="view" aria-labelledby="scaleTitle">
+      <div class="scale-hero">
+        <div id="scaleVisual" class="scale-visual" aria-hidden="true"></div>
+        <div class="scale-hero-copy">
+          <p id="scaleShort" class="eyebrow"></p>
+          <h1 id="scaleTitle"></h1>
+          <div class="chip-row"><span id="rightsChip" class="chip"></span><span id="durationChip" class="chip"></span></div>
+        </div>
+      </div>
+      <nav id="detailTabs" class="detail-tabs" aria-label="Ölçek bilgileri">
+        <button class="active" data-tab="about" type="button">Hakkında</button>
+        <button data-tab="apply" type="button">Uygulama</button>
+        <button data-tab="score" type="button">Puanlama</button>
+        <button data-tab="interpret" type="button">Yorumlama</button>
+        <button data-tab="sources" type="button">Kaynaklar</button>
+      </nav>
+      <article id="detailBody" class="detail-body"></article>
+      <div id="actionArea" class="action-area"></div>
+    </section>
+
+    <section id="assessmentView" class="view" aria-labelledby="assessmentTitle">
+      <div class="section-heading compact">
+        <p id="assessmentShort" class="eyebrow"></p>
+        <h1 id="assessmentTitle"></h1>
+        <p id="assessmentProgress"></p>
+      </div>
+      <div id="assessmentBody" class="assessment-body"></div>
+      <div id="assessmentActions" class="assessment-actions"></div>
+    </section>
+
+    <section id="resultView" class="view" aria-labelledby="resultTitle">
+      <div class="result-panel">
+        <p class="eyebrow">DEĞERLENDİRME SONUCU</p>
+        <h1 id="resultTitle"></h1>
+        <div id="resultValue" class="result-value"></div>
+        <p id="resultInterpretation" class="result-interpretation"></p>
+        <div id="resultMeta" class="result-meta"></div>
+      </div>
+      <div class="result-actions">
+        <button id="repeatAssessment" class="primary" type="button">Yeni Değerlendirme</button>
+        <button id="backToScale" type="button">Ölçek Bilgisine Dön</button>
+        <button id="resultHome" type="button">Ana Sayfa</button>
+      </div>
+    </section>
+
+    <div class="clinical-note">Klinik karar desteği • Tanı aracı değildir • Popülasyona özgü yorumlama</div>
+  </main>
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
