@@ -1,0 +1,31 @@
+{
+  "status": "PIXEL_PRESERVING_CROP_CREATED_PHONE_VISUAL_QA_REQUIRED",
+  "approved_source_filename": "ChatGPT Image 3 Eyl 2026 13_01_16.png",
+  "approved_source_library_file_id": "file_000000000bb881f6b8e5378761e1e4aa",
+  "approved_source_sha256": "5ed581158210e861af0ce93c0bc804372398b595765388ed6842d79784407792",
+  "approved_source_dimensions": "1536x1024",
+  "crop": {
+    "x": 137,
+    "y": 468,
+    "width": 112,
+    "height": 112
+  },
+  "output_filename": "ftr-logo-exact.png",
+  "output_sha256": "4168f34bfee9a8cfe240758561a3c94845206ada891da5b9730b6fc1e4702d75",
+  "output_git_blob_sha1": "4439b92096d04d6d90e277371826029ffb8091fd",
+  "operations": [
+    "rectangular_crop_only",
+    "lossless_png_save"
+  ],
+  "forbidden_operations_confirmed_absent": [
+    "resize",
+    "recolor",
+    "filter",
+    "sharpen",
+    "trace",
+    "AI_regeneration",
+    "upscale"
+  ],
+  "physical_phone_visual_qa": "PENDING",
+  "final_locked": false
+}
