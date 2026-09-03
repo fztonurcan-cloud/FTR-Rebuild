@@ -3,8 +3,14 @@ name: v30 plan1 ligament artifact fail-closed guards
 on:
   push:
     branches: [v30-three-plan-premium]
+    paths:
+      - '.github/workflows/v30-plan1-artifact-guards.yml'
+      - 'tools/v30/derive_plan1_ligament_from_v299.py'
   pull_request:
     branches: [v30-three-plan-premium]
+    paths:
+      - '.github/workflows/v30-plan1-artifact-guards.yml'
+      - 'tools/v30/derive_plan1_ligament_from_v299.py'
 
 permissions:
   contents: read
