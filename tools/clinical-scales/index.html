@@ -7,6 +7,7 @@
   <title>FTR Akademi — Klinik Ölçekler</title>
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./evidence-enhancer.css">
+  <link rel="stylesheet" href="./premium-reference.css">
 </head>
 <body>
   <main id="clinicalApp" class="clinical-app">
@@ -24,18 +25,21 @@
         <div>
           <p class="eyebrow">FİZYOTERAPİ DEĞERLENDİRME MERKEZİ</p>
           <h1 id="catalogTitle">Klinik Ölçekler</h1>
-          <p>Testler • Skorlamalar • Değerlendirme Araçları</p>
+          <p>Testler, skorlamalar ve değerlendirme araçları</p>
         </div>
         <div class="hero-badge"><b>29</b><span>doğrulanmış<br>başlangıç aracı</span></div>
       </div>
 
-      <label class="search-box">
-        <span aria-hidden="true">⌕</span>
-        <input id="searchInput" type="search" placeholder="Ölçek, hastalık veya bölge ara…" autocomplete="off">
-        <button id="clearSearch" type="button" aria-label="Aramayı temizle">×</button>
-      </label>
+      <div class="catalog-search-row">
+        <label class="search-box">
+          <span aria-hidden="true">⌕</span>
+          <input id="searchInput" type="search" placeholder="Ölçek ara…" autocomplete="off">
+          <button id="clearSearch" type="button" aria-label="Aramayı temizle">×</button>
+        </label>
+        <button id="filterBtn" class="catalog-filter-button" type="button" aria-label="Filtreleri aç" aria-expanded="false">☷</button>
+      </div>
 
-      <div class="catalog-tools">
+      <div id="catalogTools" class="catalog-tools">
         <button id="showRecent" type="button">◷ Son Kullanılanlar</button>
         <button id="showFavorites" type="button">☆ Favorilerim</button>
       </div>
@@ -100,6 +104,13 @@
     </section>
 
     <div class="clinical-note">Klinik karar desteği • Tanı aracı değildir • Popülasyona özgü yorumlama</div>
+
+    <nav class="clinical-bottom-nav" aria-label="Ana navigasyon">
+      <button class="active" type="button" data-host-nav="home"><span>⌂</span><small>Ana Sayfa</small></button>
+      <button type="button" data-host-nav="courses"><span>▣</span><small>Dersler</small></button>
+      <button type="button" data-host-nav="workspace"><span>♧</span><small>Çalışma Alanım</small></button>
+      <button type="button" data-host-nav="profile"><span>♙</span><small>Profilim</small></button>
+    </nav>
   </main>
   <script src="./data.js"></script>
   <script src="./evidence-overrides.js"></script>
