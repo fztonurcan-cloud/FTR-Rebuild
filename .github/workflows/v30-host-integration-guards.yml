@@ -31,7 +31,8 @@ jobs:
         run: |
           set -euo pipefail
           node --check tools/v30/integration/v30-three-plan.js
-          echo 'V30 HOST JS SYNTAX PASS'
+          node --check tools/clinical-scales/app.js
+          echo 'V30 HOST + CLINICAL JS SYNTAX PASS'
 
       - name: Preserve physically verified v29.9 composition
         shell: bash
@@ -92,6 +93,25 @@ jobs:
           grep -Fq './detail-evidence-enhancer.js' tools/clinical-scales/index.html
           grep -Fq './evidence-enhancer.css' tools/clinical-scales/index.html
           echo 'CLINICAL RELEASE PAYLOAD PASS'
+
+      - name: Interactive clinical scoring contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          app='tools/clinical-scales/app.js'
+          grep -Fq "const BERG = [" "$app"
+          grep -Fq "const DGI = [" "$app"
+          grep -Fq "const TINETTI = [" "$app"
+          grep -Fq "{label:'Adım uzunluğu ve yüksekliği — sağ/sol dört gözlem toplamı', max:4, section:'Yürüyüş'}" "$app"
+          grep -Fq "tinettiBalance !== 16 || tinettiGait !== 12 || tinettiTotal !== 28" "$app"
+          grep -Fq "BERG.length !== 14 || BERG.length * 4 !== 56" "$app"
+          grep -Fq "DGI.length !== 8 || DGI.length * 3 !== 24" "$app"
+          grep -Fq "const expectedMax = {berg:56, tinetti:28, dgi:24}" "$app"
+          grep -Fq "Denge: ${balance} / 16" "$app"
+          grep -Fq "Yürüyüş: ${gait} / 12" "$app"
+          grep -Fq "Standart fiziksel kit gereklidir" "$app"
+          grep -Fq "Tek bir evrensel düşme-risk eşiği yoktur" "$app"
+          echo 'CLINICAL INTERACTIVE SCORE CONTRACTS PASS'
 
       - name: Offline and scope safety
         shell: bash
