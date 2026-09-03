@@ -10,6 +10,7 @@ Status is fail-closed. A checked source/CI item is not equivalent to physical-ph
 - [x] Package expected: `com.ftrakademi.preview3`.
 - [x] Locked signing certificate SHA-256: `8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2`.
 - [x] Builder refuses any other base and refuses output overwrite.
+- [x] Dedicated rollback branch: `rollback-v29.9-phone-verified`.
 
 ## Plan 1 — Ligament visibility only
 
@@ -17,10 +18,14 @@ Status is fail-closed. A checked source/CI item is not equivalent to physical-ph
 - [x] Ivory skeleton/reference context preserved by source policy.
 - [x] Selected structure remains the existing purple/bright interaction layer.
 - [x] Static layered atlas architecture; no runtime WebGL/GLB/continuous loop.
-- [ ] Fresh successful red-ligament render artifact exists.
-- [ ] Artifact `ligament-id.png` SHA-256 equals physically verified v29.9 `ligament-id.png`.
-- [ ] Artifact ligament structure IDs, names and anchors equal physically verified v29.9 atlas map.
-- [ ] New `ligament-front.png` is visually reviewed for high-visibility red ligaments and preserved ivory skeleton.
+- [x] Risky fresh-render artifact rejected because its invisible ID map was not byte-identical to v29.9.
+- [x] Safe artifact is derived only from physically verified v29.9 Run #68 atlas; invisible ID map is never re-rendered.
+- [x] Verified safe artifact: `v30-plan1-derived-from-v29.9`, artifact ID `9891447400`.
+- [x] Artifact digest: `sha256:8cb6fa86d6cc5cae3a4ee1e81d57a163ca85acc3384bdf9e3a0803f89b99c76d`.
+- [x] Artifact `ligament-id.png` SHA-256 equals physically verified v29.9: `171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7`.
+- [x] Artifact ligament structure IDs, names and anchors equal physically verified v29.9 atlas map; count = 292.
+- [x] CI proves only `ligament-front.png` plus Plan-1 policy metadata differ inside the derived atlas artifact.
+- [ ] Final APK phone visual review: high-visibility red ligaments, preserved ivory skeleton and correct purple selection.
 
 ## Plan 2 — Clinical Scales
 
@@ -29,11 +34,13 @@ Status is fail-closed. A checked source/CI item is not equivalent to physical-ph
 - [x] Rights modes prevent protected/reference forms from exposing full interactive item wording.
 - [x] Population-specific cut-off policy.
 - [x] Edition/version distinctions: PDMS-3, DGI/mDGI, GMFM-88/66, GMFCS E&R, MMSE context, etc.
-- [x] Deep scoring architecture layer present.
-- [x] Turkey psychometric evidence separated from translation/copyright licence.
+- [x] Deep scoring architecture layer present (`scoring-evidence.js`).
+- [x] Turkey psychometric evidence separated from translation/copyright licence (`turkish-evidence.js`).
+- [x] Detailed evidence rendering layer present (`detail-evidence-enhancer.js`).
 - [x] 29 original offline procedure/domain illustrations.
 - [x] Clinical home card host bridge present.
 - [x] Source and host-integration CI guards pass.
+- [ ] Final editorial spot-check of all 29 detail pages after packaging.
 - [ ] Physical-phone navigation/content/scroll/performance test.
 
 ## Plan 3 — Exact approved FTR brand
@@ -68,7 +75,7 @@ New payload is restricted to the v30 host bridge, Clinical Scales module and has
 - [ ] Existing-payload diff exactly `{index.html, ligament-front.png}`.
 - [ ] `ligament-id.png` byte-identical to base.
 - [ ] Exact brand SHA survives packaging unchanged.
-- [ ] Clinical release payload complete.
+- [ ] Clinical release payload includes core data, authoritative evidence, Turkish evidence, deep scoring evidence, detail evidence UI and all 29 visuals.
 - [ ] No runtime WebGL/GLB regression.
 
 ## Physical phone gate
