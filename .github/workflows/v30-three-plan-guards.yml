@@ -49,7 +49,7 @@ jobs:
           test "$bad" -eq 0
           echo 'THREE-PLAN SCOPE PASS'
 
-      - name: JavaScript syntax QA
+      - name: Source syntax QA
         shell: bash
         run: |
           set -euo pipefail
@@ -59,6 +59,21 @@ jobs:
           node --check tools/clinical-scales/app.js
           node --check tools/clinical-scales/visual-enhancer.js
           node --check tools/anatomy3d/src/brand-nav.js
+          python3 -m py_compile tools/v30/build_v30_three_plan_apk.py
+
+      - name: Validate v30 builder fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'BASE_SIZE = 1_137_460_262' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'BASE_SHA256 = "acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809"' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'ftr-logo-exact.sha256' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'Do not substitute an AI regeneration or approximation' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'ligament invisible ID map differs from physically verified v29.9' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'expected_changed = {HOST_INDEX, LIGAMENT_FRONT}' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'OUT-OF-SCOPE existing APK payload changed' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'PENDING_USER_RETEST' tools/v30/build_v30_three_plan_apk.py
+          echo 'V30 BUILDER FAIL-CLOSED CONTRACT PASS'
 
       - name: Validate Clinical Scales catalogue and evidence contract
         shell: bash
@@ -182,9 +197,14 @@ jobs:
           grep -Fq "window.location.href = '../index.html'" tools/anatomy3d/src/brand-nav.js
           grep -Fq "location.href = '../index.html'" tools/clinical-scales/app.js
           grep -Fq 'Do **not** replace it with AI regeneration' tools/brand/EXACT-BRAND-ASSET-LOCK.md
+          grep -Fq 'ftr-logo-exact.sha256' tools/brand/EXACT-BRAND-ASSET-LOCK.md
           if test -f tools/brand/ftr-logo-exact.png; then
-            echo 'EXACT BRAND BINARY PRESENT — release asset can proceed to visual/hash QA.'
+            test -f tools/brand/ftr-logo-exact.sha256
+            EXPECTED="$(tr -d '\r\n ' < tools/brand/ftr-logo-exact.sha256)"
+            test "$(sha256sum tools/brand/ftr-logo-exact.png | awk '{print $1}')" = "$EXPECTED"
+            echo 'EXACT BRAND BINARY + HASH PRESENT — release asset can proceed to visual QA.'
           else
+            test ! -f tools/brand/ftr-logo-exact.sha256
             echo 'EXACT BRAND BINARY PENDING — source QA passes, RELEASE BUILD MUST REMAIN BLOCKED.'
           fi
 
