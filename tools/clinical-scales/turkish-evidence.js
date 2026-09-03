@@ -49,6 +49,11 @@
     'PubMed — Modified Tardieu reliability in SCI, Turkey',
     'https://pubmed.ncbi.nlm.nih.gov/28485384/');
 
+  add('tinetti',
+    'Performance-Oriented Mobility Assessment I (POMA-I/Tinetti) Türkçeye çevrilmiş ve 65 yaş üzeri Türk bireylerde kültürler arası uyarlama, iç tutarlılık, test-tekrar test ile gözlemciler arası/gözlemci içi güvenilirlik ve yapı geçerliliği incelenmiştir. Çalışmadaki POMA-I sürümü 28 puanlık denge+yürüme yapısıdır; diğer Tinetti/POMA varyantları bununla otomatik olarak eşitlenmez.',
+    'Springer — Turkish POMA-I validity/reliability',
+    'https://doi.org/10.1007/s11556-012-0096-2');
+
   add('odi',
     'ODI 2.0 Türkçe sürümü bel ağrılı 95 ayaktan hastada kültürler arası uyarlanmış; test-tekrar test ICC 0.938 ve yüksek iç tutarlılık bildirilmiştir.',
     'PubMed — Turkish Oswestry Disability Index validation',
@@ -100,6 +105,12 @@
     'PubMed — Purdue Pegboard validity/cut-offs, Hacettepe/Turkey',
     'https://pubmed.ncbi.nlm.nih.gov/40337111/');
 
+  add('sf36',
+    'SF-36’nın Türkçe sürümünde Türkiye’de kanser hastalarında güvenilirlik ve yapı geçerliliği incelenmiş; sekiz alt ölçek için iç tutarlılık ve test-tekrar test stabilitesi desteklenmiştir. Ayrıca SF-36v2 Türkçe sürümü kas-iskelet patolojili örneklemde kültürler arası uyarlanıp ölçüm özellikleri değerlendirilmiştir. SF-36, SF-36v2 ve RAND-36 hak/puanlama sistemleri birbirine karıştırılmaz.',
+    'PubMed — Turkish SF-36 reliability/construct validity in cancer',
+    'https://pubmed.ncbi.nlm.nih.gov/15789959/');
+  byId.sf36.sources.push(['PubMed — Turkish SF-36v2 musculoskeletal validation','https://pubmed.ncbi.nlm.nih.gov/27866914/']);
+
   add('mmse',
     'Standardize Mini Mental Test Türk toplumunda hafif demans ayrımında incelenmiş; eğitimli örneklemde 23/24 kesimi yüksek duyarlılık/özgüllük göstermiştir. Daha sonraki Türk çalışmaları yaş ve eğitim etkisini vurguladığından tek cut-off evrensel kabul edilmez.',
     'PubMed — Turkish standardized MMSE validation',
@@ -107,12 +118,19 @@
   byId.mmse.sources.push(['PubMed — Revised Turkish MMSE educated/uneducated older adults','https://pubmed.ncbi.nlm.nih.gov/19337986/']);
   byId.mmse.sources.push(['PubMed — Turkish MMSE normative psychometric caution','https://pubmed.ncbi.nlm.nih.gov/15729101/']);
 
-  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-2';
+  add('6mwt',
+    '6 Dakika Yürüme Testi dil bağımlı bir anket değildir; Türkiye kanıtı burada “Türkçe form validasyonu” olarak değil popülasyona özgü referans veri olarak tutulur. Sağlıklı Türk çocuklarda 6–12 yaş ve ayrıca 11–18 yaş gruplarında 6 dakika yürüme mesafesi için ülkeye özgü referans değer/denklemleri yayımlanmıştır. Bu pediatrik referanslar erişkin, kardiyopulmoner veya nörolojik popülasyonlara genellenmez.',
+    'PubMed — 6MWT reference values in healthy Turkish children 6–12 years',
+    'https://pubmed.ncbi.nlm.nih.gov/31294244/');
+  byId['6mwt'].sources.push(['PubMed — 6MWT reference values in healthy Turkish children/adolescents 11–18 years','https://pubmed.ncbi.nlm.nih.gov/24987154/']);
+
+  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-3';
   db.turkishEvidencePolicy = {
     populationNamed: true,
     editionNamed: true,
     psychometricValidationDoesNotGrantCopyright: true,
     noUniversalCutoffInference: true,
-    turkeyCohortEvidenceSeparatedFromTranslationLicense: true
+    turkeyCohortEvidenceSeparatedFromTranslationLicense: true,
+    languageValidationSeparatedFromPopulationReferenceValues: true
   };
 })();
