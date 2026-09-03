@@ -1,0 +1,103 @@
+name: v30 host integration fail-closed guards
+
+on:
+  push:
+    branches: [v30-three-plan-premium]
+  pull_request:
+    branches: [v30-three-plan-premium]
+
+permissions:
+  contents: read
+
+jobs:
+  host-integration-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Host bridge inputs must exist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f tools/v30/integration/v30-three-plan.js
+          test -f tools/v30/integration/v30-three-plan.css
+          test -f tools/v30/build_v30_three_plan_apk.py
+          echo 'V30 HOST INPUTS PRESENT'
+
+      - name: Host bridge JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tools/v30/integration/v30-three-plan.js
+          echo 'V30 HOST JS SYNTAX PASS'
+
+      - name: Preserve physically verified v29.9 composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq '.v56-home-shell.ftr-a3d-v56-installed' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'ftr-v30-reference-middle' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'ftr-v30-reference-tail' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'clip-path:inset(60% 0 14.25% 0)' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'clip-path:inset(85.75% 0 0 0)' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'top:98.745%' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'top:105.668%' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'No unrelated home card is redesigned' tools/v30/integration/v30-three-plan.css
+          echo 'PRESERVED HOME PIXEL-SLICE CONTRACT PASS'
+
+      - name: Clinical Scales home card contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "const CARD_ID = 'ftr-v30-clinical-home-card'" tools/v30/integration/v30-three-plan.js
+          grep -Fq 'Klinik Ölçekler' tools/v30/integration/v30-three-plan.js
+          grep -Fq 'Testler, skorlamalar ve değerlendirme araçları' tools/v30/integration/v30-three-plan.js
+          grep -Fq "window.location.href = './clinical-scales/index.html'" tools/v30/integration/v30-three-plan.js
+          grep -Fq '.ftr-v30-clinical-card' tools/v30/integration/v30-three-plan.css
+          echo 'CLINICAL HOME CARD PASS'
+
+      - name: Exact brand home-control contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq "const BRAND_ID = 'ftr-v30-home-brand'" tools/v30/integration/v30-three-plan.js
+          grep -Fq './brand/ftr-logo-exact.png' tools/v30/integration/v30-three-plan.js
+          grep -Fq "window.location.href = './index.html'" tools/v30/integration/v30-three-plan.js
+          grep -Fq '.ftr-v30-home-brand' tools/v30/integration/v30-three-plan.css
+          grep -Fq 'ftr-logo-exact.sha256' tools/v30/build_v30_three_plan_apk.py
+          if test -f tools/brand/ftr-logo-exact.png; then
+            test -f tools/brand/ftr-logo-exact.sha256
+            expected="$(tr -d '\r\n ' < tools/brand/ftr-logo-exact.sha256)"
+            actual="$(sha256sum tools/brand/ftr-logo-exact.png | awk '{print $1}')"
+            test "$actual" = "$expected"
+            echo 'EXACT BRAND HASH PASS'
+          else
+            test ! -f tools/brand/ftr-logo-exact.sha256
+            echo 'EXACT BRAND PENDING: RELEASE BUILD REMAINS BLOCKED'
+          fi
+
+      - name: Clinical release payload completeness
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in \
+            index.html style.css evidence-enhancer.css data.js evidence-overrides.js \
+            turkish-evidence.js scoring-evidence.js app.js visual-enhancer.js \
+            detail-evidence-enhancer.js RESEARCH-MANIFEST.md; do
+            test -f "tools/clinical-scales/$f"
+          done
+          grep -Fq './scoring-evidence.js' tools/clinical-scales/index.html
+          grep -Fq './detail-evidence-enhancer.js' tools/clinical-scales/index.html
+          grep -Fq './evidence-enhancer.css' tools/clinical-scales/index.html
+          echo 'CLINICAL RELEASE PAYLOAD PASS'
+
+      - name: Offline and scope safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -n -E 'XMLHttpRequest|WebSocket|navigator\.geolocation|navigator\.mediaDevices' tools/v30/integration tools/clinical-scales/*.js
+          ! grep -R -n -E '\bfetch\s*\(' tools/v30/integration tools/clinical-scales/*.js
+          ! grep -R -n -E 'patientName|hastaAdi|hasta_ad[iı]|tcKimlik|TCKN|emailAddress' tools/v30/integration tools/clinical-scales || true
+          echo 'V30 HOST + CLINICAL OFFLINE SCOPE PASS'
