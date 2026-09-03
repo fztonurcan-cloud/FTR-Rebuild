@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Fail-closed FTR Akademi v30 three-plan APK builder.
 
-This builder is intentionally based on the physically verified v29.9 APK rather
-than repackaging unrelated application content. It permits exactly the three
-user-approved plan surfaces:
+The builder starts only from the physically phone-verified v29.9 APK and permits
+exactly the three user-approved surfaces:
 
-1. replace only the visible ligament beauty atlas while proving the invisible
-   ligament ID map and ligament structure contract are unchanged;
-2. add the offline Clinical Scales module;
-3. add the exact hash-locked approved FTR brand asset and narrow host bridge.
+1. replace only the visible ligament beauty atlas with the hash-locked artifact
+   derived from the verified v29.9 atlas while preserving the invisible ID map;
+2. add the complete offline Clinical Scales module;
+3. add the exact SHA-locked approved FTR brand asset and narrow host bridge.
 
-Any unrelated existing APK payload change aborts the build.
+Any unrelated existing APK payload change aborts the build. Source/static QA is
+not physical-phone approval; produced APKs remain pending user retest.
 """
 
 from __future__ import annotations
@@ -30,6 +30,9 @@ BASE_NAME = "FTR-Akademi-v29.9-3D-ANATOMI-STATIC-ATLAS.apk"
 BASE_SIZE = 1_137_460_262
 BASE_SHA256 = "acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809"
 EXPECTED_CERT_SHA256 = "8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2"
+EXPECTED_PLAN1_FRONT_SHA256 = "f6d50400ddbdd31805a82c5b020040ca3c5fcc864fe83be32fa65c81f6ad2028"
+EXPECTED_LIGAMENT_ID_SHA256 = "171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7"
+EXPECTED_PLAN1_STRUCTURE_COUNT = 292
 HOST_INDEX = "assets/app/index.html"
 LIGAMENT_FRONT = "assets/app/anatomy3d/atlas/ligament-front.png"
 LIGAMENT_ID = "assets/app/anatomy3d/atlas/ligament-id.png"
@@ -88,12 +91,17 @@ def signing_values(path: Path) -> tuple[str, str]:
     return alias, password
 
 
+def repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
 def source_roots() -> tuple[Path, Path, Path]:
-    repo = Path(__file__).resolve().parents[2]
-    clinical = repo / "tools" / "clinical-scales"
-    brand = repo / "tools" / "brand"
-    integration = repo / "tools" / "v30" / "integration"
-    return clinical, brand, integration
+    repo = repo_root()
+    return (
+        repo / "tools" / "clinical-scales",
+        repo / "tools" / "brand",
+        repo / "tools" / "v30" / "integration",
+    )
 
 
 def validate_exact_brand(brand_root: Path) -> tuple[Path, str]:
@@ -119,32 +127,69 @@ def validate_exact_brand(brand_root: Path) -> tuple[Path, str]:
 
 def validate_clinical(clinical_root: Path) -> list[Path]:
     required = [
-        "index.html", "style.css", "data.js", "evidence-overrides.js",
-        "turkish-evidence.js", "app.js", "visual-enhancer.js", "RESEARCH-MANIFEST.md",
+        "index.html",
+        "style.css",
+        "data.js",
+        "evidence-overrides.js",
+        "turkish-evidence.js",
+        "scoring-evidence.js",
+        "app.js",
+        "visual-enhancer.js",
+        "detail-evidence-enhancer.js",
+        "evidence-enhancer.css",
+        "RESEARCH-MANIFEST.md",
     ]
     missing = [name for name in required if not (clinical_root / name).is_file()]
     if missing:
         raise SystemExit(f"Clinical Scales module incomplete: {missing}")
 
     index = (clinical_root / "index.html").read_text(encoding="utf-8")
-    order = ["./data.js", "./evidence-overrides.js", "./turkish-evidence.js", "./app.js", "./visual-enhancer.js"]
-    positions = []
-    for item in order:
+    script_order = [
+        "./data.js",
+        "./evidence-overrides.js",
+        "./turkish-evidence.js",
+        "./scoring-evidence.js",
+        "./app.js",
+        "./visual-enhancer.js",
+        "./detail-evidence-enhancer.js",
+    ]
+    positions: list[int] = []
+    for item in script_order:
         if item not in index:
             raise SystemExit(f"Clinical Scales script missing from index: {item}")
         positions.append(index.index(item))
     if positions != sorted(positions):
         raise SystemExit("Clinical Scales script order is unsafe")
+    if "./evidence-enhancer.css" not in index:
+        raise SystemExit("Clinical Scales deep-evidence stylesheet is missing from index")
     if "../brand/ftr-logo-exact.png" not in index:
         raise SystemExit("Clinical Scales is not wired to the exact Plan 3 brand asset")
 
-    js_text = "\n".join((clinical_root / name).read_text(encoding="utf-8") for name in required if name.endswith(".js"))
+    text_by_name = {
+        name: (clinical_root / name).read_text(encoding="utf-8")
+        for name in required
+        if name.endswith((".js", ".html", ".md"))
+    }
+    all_js = "\n".join(value for name, value in text_by_name.items() if name.endswith(".js"))
     forbidden = ["XMLHttpRequest", "WebSocket", "navigator.geolocation", "navigator.mediaDevices"]
-    if any(token in js_text for token in forbidden) or re.search(r"\bfetch\s*\(", js_text):
+    if any(token in all_js for token in forbidden) or re.search(r"\bfetch\s*\(", all_js):
         raise SystemExit("Clinical Scales violates offline runtime contract")
     for patient_identity in ["patientName", "hastaAdi", "tcKimlik", "TCKN", "emailAddress"]:
-        if patient_identity in js_text:
+        if patient_identity in all_js:
             raise SystemExit(f"Clinical Scales unexpectedly collects patient identity: {patient_identity}")
+
+    evidence = text_by_name["evidence-overrides.js"]
+    turkish = text_by_name["turkish-evidence.js"]
+    scoring = text_by_name["scoring-evidence.js"]
+    detail = text_by_name["detail-evidence-enhancer.js"]
+    if "2026-09-03-authoritative-pass-2" not in evidence:
+        raise SystemExit("Clinical authoritative evidence version lock missing")
+    if "2026-09-03-pubmed-pass-3" not in turkish or "indirectComparatorEvidenceExplicitlyLabeled" not in turkish:
+        raise SystemExit("Clinical Turkey-evidence safety lock missing")
+    if "2026-09-03-deep-scoring-pass-1" not in scoring or "protectedItemWordingExcluded" not in scoring:
+        raise SystemExit("Clinical deep-scoring safety lock missing")
+    if "Skor Mimarisi" not in detail or "Türkçe Psikometrik Kanıt" not in detail:
+        raise SystemExit("Clinical detail evidence renderer is incomplete")
 
     return sorted(path for path in clinical_root.iterdir() if path.is_file())
 
@@ -169,14 +214,45 @@ def normalized_ligament_contract(data: dict) -> dict:
     }
 
 
+def validate_plan1_lock() -> dict:
+    path = repo_root() / "tools" / "v30" / "PLAN1-ARTIFACT-LOCK.json"
+    if not path.is_file():
+        raise SystemExit("PLAN 1 BLOCKED: artifact lock file missing")
+    lock = json.loads(path.read_text(encoding="utf-8"))
+    expected = {
+        "artifact_id": 9891447400,
+        "artifact_digest": "sha256:8cb6fa86d6cc5cae3a4ee1e81d57a163ca85acc3384bdf9e3a0803f89b99c76d",
+        "baseline_apk_sha256": BASE_SHA256,
+        "derived_ligament_front_sha256": EXPECTED_PLAN1_FRONT_SHA256,
+        "ligament_id_sha256": EXPECTED_LIGAMENT_ID_SHA256,
+        "ligament_structure_count": EXPECTED_PLAN1_STRUCTURE_COUNT,
+        "status": "PLAN1_DERIVED_ARTIFACT_QA_PASS",
+    }
+    for key, value in expected.items():
+        if lock.get(key) != value:
+            raise SystemExit(f"PLAN 1 BLOCKED: artifact lock mismatch for {key}: {lock.get(key)!r}")
+    if lock.get("ligament_id_byte_identical_to_v29_9") is not True:
+        raise SystemExit("PLAN 1 BLOCKED: artifact lock does not prove ID-map identity")
+    return lock
+
+
 def validate_plan1_artifact(artifact_root: Path, base_archive: zipfile.ZipFile) -> tuple[Path, dict[str, object]]:
+    lock = validate_plan1_lock()
     dist = artifact_root / "dist"
     front = dist / "atlas" / "ligament-front.png"
     ids = dist / "atlas" / "ligament-id.png"
     atlas_path = dist / "data" / "atlas-map.json"
+    report_path = artifact_root.parent / "plan1-derived-report.json"
     for path in [front, ids, atlas_path]:
         if not path.is_file():
             raise SystemExit(f"Plan 1 artifact missing: {path}")
+
+    front_sha = sha256(front)
+    id_sha = sha256(ids)
+    if front_sha != EXPECTED_PLAN1_FRONT_SHA256 or front_sha != lock["derived_ligament_front_sha256"]:
+        raise SystemExit(f"PLAN 1 BLOCKED: visible ligament atlas is not the locked derived artifact: {front_sha}")
+    if id_sha != EXPECTED_LIGAMENT_ID_SHA256:
+        raise SystemExit(f"PLAN 1 BLOCKED: unexpected ligament ID-map hash: {id_sha}")
 
     data = json.loads(atlas_path.read_text(encoding="utf-8"))
     policy = data.get("policy") or {}
@@ -184,6 +260,7 @@ def validate_plan1_artifact(artifact_root: Path, base_archive: zipfile.ZipFile) 
         "ligament_high_visibility_red",
         "ligament_skeleton_reference_preserved",
         "ligament_id_map_unchanged_by_recolor",
+        "plan1_derived_from_physically_verified_v29_9",
     ]
     for flag in expected_flags:
         if policy.get(flag) is not True:
@@ -195,20 +272,35 @@ def validate_plan1_artifact(artifact_root: Path, base_archive: zipfile.ZipFile) 
 
     base_id = base_archive.read(LIGAMENT_ID)
     artifact_id = ids.read_bytes()
-    if sha256_bytes(base_id) != sha256_bytes(artifact_id):
+    if sha256_bytes(base_id) != EXPECTED_LIGAMENT_ID_SHA256:
+        raise SystemExit("PLAN 1 BLOCKED: base APK ligament ID map no longer matches locked v29.9")
+    if base_id != artifact_id:
         raise SystemExit("PLAN 1 BLOCKED: ligament invisible ID map differs from physically verified v29.9")
 
     base_data = json.loads(base_archive.read(BASE_ATLAS_MAP).decode("utf-8"))
-    if normalized_ligament_contract(base_data) != normalized_ligament_contract(data):
+    base_contract = normalized_ligament_contract(base_data)
+    artifact_contract = normalized_ligament_contract(data)
+    if base_contract != artifact_contract:
         raise SystemExit("PLAN 1 BLOCKED: ligament structure IDs/names/anchors changed")
+    if artifact_contract["structure_count"] != EXPECTED_PLAN1_STRUCTURE_COUNT:
+        raise SystemExit("PLAN 1 BLOCKED: ligament structure count changed")
 
-    if front.stat().st_size < 10_000:
-        raise SystemExit("PLAN 1 BLOCKED: red ligament beauty atlas is implausibly small")
+    if report_path.is_file():
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        if report.get("status") != "PLAN1_DERIVED_ARTIFACT_QA_PASS":
+            raise SystemExit("PLAN 1 BLOCKED: derived artifact report status is not PASS")
+        if report.get("derived_ligament_front_sha256") != front_sha:
+            raise SystemExit("PLAN 1 BLOCKED: derived artifact report/front hash mismatch")
+        if report.get("derived_ligament_id_sha256") != id_sha or report.get("ligament_id_byte_identical") is not True:
+            raise SystemExit("PLAN 1 BLOCKED: derived artifact report does not prove ID-map identity")
 
     return front, {
-        "ligament_front_sha256": sha256(front),
-        "ligament_id_sha256": sha256(ids),
+        "locked_artifact_id": lock["artifact_id"],
+        "locked_artifact_digest": lock["artifact_digest"],
+        "ligament_front_sha256": front_sha,
+        "ligament_id_sha256": id_sha,
         "ligament_id_unchanged": True,
+        "ligament_structure_count": EXPECTED_PLAN1_STRUCTURE_COUNT,
         "ligament_structure_contract_unchanged": True,
         "policy_flags": {flag: True for flag in expected_flags},
     }
@@ -254,7 +346,7 @@ def verify_signing(apksigner: Path, output: Path) -> dict[str, object]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", type=Path, required=True, help="Exact physically verified v29.9 APK")
-    parser.add_argument("--plan1-artifact", type=Path, required=True, help="Extracted Run #70 anatomy artifact root")
+    parser.add_argument("--plan1-artifact", type=Path, required=True, help="Extracted hash-locked v29.9-derived Plan 1 artifact root")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--zipalign", type=Path, required=True)
     parser.add_argument("--apksigner", type=Path, required=True)
@@ -268,8 +360,9 @@ def main() -> None:
         raise SystemExit(f"Base APK not found: {base}")
     if base.stat().st_size != BASE_SIZE or sha256(base) != BASE_SHA256:
         raise SystemExit("Refusing any base other than the exact physically verified v29.9 APK")
-    if args.output.exists():
-        raise SystemExit(f"Refusing to overwrite existing output: {args.output}")
+    output = args.output.resolve()
+    if output.exists():
+        raise SystemExit(f"Refusing to overwrite existing output: {output}")
 
     clinical_root, brand_root, integration_root = source_roots()
     brand_image, brand_sha = validate_exact_brand(brand_root)
@@ -293,10 +386,10 @@ def main() -> None:
             for item in archive.infolist()
             if item.filename not in signature_entries(names)
         }
+        base_ligament_id = archive.read(LIGAMENT_ID)
         plan1_front, plan1_report = validate_plan1_artifact(args.plan1_artifact.resolve(), archive)
 
     alias, password = signing_values(args.signing_metadata)
-    output = args.output.resolve()
     report_path = args.report.resolve()
     output.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -366,13 +459,19 @@ def main() -> None:
             for item in archive.infolist()
             if item.filename not in signature_entries(output_names)
         }
-        if archive.read(LIGAMENT_ID) != zipfile.ZipFile(base).read(LIGAMENT_ID):
+        if archive.read(LIGAMENT_ID) != base_ligament_id:
             raise SystemExit("Output unexpectedly changed the ligament invisible ID map")
+        if sha256_bytes(archive.read(LIGAMENT_FRONT)) != EXPECTED_PLAN1_FRONT_SHA256:
+            raise SystemExit("Output red ligament beauty layer no longer matches the locked Plan 1 artifact")
         if sha256_bytes(archive.read(BRAND_RUNTIME)) != brand_sha:
             raise SystemExit("Output exact brand asset hash changed during packaging")
         host_index = archive.read(HOST_INDEX).decode("utf-8")
         if host_index.count("data-ftr-v30-three-plan") != 2:
             raise SystemExit("v30 host bootstrap missing or duplicated")
+        for source in clinical_files:
+            runtime_name = CLINICAL_PREFIX + source.name
+            if runtime_name not in output_names:
+                raise SystemExit(f"Clinical release payload missing after packaging: {runtime_name}")
 
     expected_changed = {HOST_INDEX, LIGAMENT_FRONT}
     changed_existing = sorted(
@@ -406,7 +505,14 @@ def main() -> None:
             "removed_existing": removed_existing,
             "added_count": len(actual_added),
             "plan1": plan1_report,
-            "plan2": {"clinical_files": sorted(path.name for path in clinical_files), "offline": True, "patient_identity": False},
+            "plan2": {
+                "clinical_files": sorted(path.name for path in clinical_files),
+                "deep_scoring_required": True,
+                "turkey_evidence_required": True,
+                "detail_evidence_renderer_required": True,
+                "offline": True,
+                "patient_identity": False,
+            },
             "plan3": {"brand_sha256": brand_sha, "hash_locked": True, "logo_is_home": True},
         },
         "physical_phone_qa": "PENDING_USER_RETEST",
