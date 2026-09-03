@@ -1,0 +1,503 @@
+window.FTR_CLINICAL_SCALES = {
+  version: 'v30-research-2026-09-03',
+  disclaimer: 'Klinik Ölçekler eğitim ve klinik karar desteği amacı taşır; tanı koymaz. Puan eşikleri yalnız doğrulandıkları popülasyon bağlamında yorumlanmalıdır.',
+  categories: [
+    {id:'adl', title:'Günlük Yaşam & Fonksiyon', icon:'activity', accent:'#4de0c1'},
+    {id:'neuro', title:'Nörolojik Değerlendirme', icon:'brain', accent:'#b574ff'},
+    {id:'tone', title:'Spastisite & Tonus', icon:'wave', accent:'#ff9d3d'},
+    {id:'balance', title:'Denge & Mobilite', icon:'balance', accent:'#35a8ff'},
+    {id:'ortho', title:'Ortopedi & Ağrı', icon:'joint', accent:'#ff6877'},
+    {id:'peds', title:'Pediatrik Rehabilitasyon', icon:'child', accent:'#51d883'},
+    {id:'hand', title:'El & İnce Motor', icon:'hand', accent:'#b788ff'},
+    {id:'general', title:'Genel Sağlık & Kardiyopulmoner', icon:'heart', accent:'#f8be3f'}
+  ],
+  scales: [
+    {
+      id:'barthel', category:'adl', name:'Barthel İndeksi', short:'BI', visual:'adl',
+      tags:['gya','günlük yaşam','öz bakım','mobilite','inme','nöroloji','fonksiyon'],
+      purpose:'Temel günlük yaşam aktivitelerinde kişinin ne kadar bağımsız olduğunu ve fiziksel yardım gereksinimini özetler.',
+      population:'Nörolojik ve kas-iskelet sistemi bozuklukları; özellikle inme ve rehabilitasyon popülasyonlarında yaygın kullanılır.',
+      domains:['Beslenme','Banyo','Kişisel bakım','Giyinme','Barsak kontrolü','Mesane kontrolü','Tuvalet','Transfer','Mobilite','Merdiven'],
+      format:'10 temel aktivite. Yaygın sürümde toplam skor 0–100 aralığındadır; daha yüksek puan daha fazla bağımsızlığı temsil eder.',
+      duration:'Yaklaşık 5–10 dk; bilgi kaynağına ve uygulama biçimine göre değişebilir.',
+      equipment:'Genellikle özel ekipman gerektirmez; performans gözlemi yapılacaksa gerçek günlük yaşam ortamı kullanılabilir.',
+      interpretation:'Toplam skor işlevsel bağımsızlığın genel göstergesidir. Kategori eşikleri farklı sürüm ve popülasyonlarda değişebildiğinden tek bir evrensel bağımlılık sınıfı kullanılmaz.',
+      turkish:'Türkçe klinik kullanım yaygındır. Uygulamaya tam Türkçe form eklenmeden önce kullanılacak resmi çevirinin dağıtım/izin koşulları ayrıca doğrulanacaktır.',
+      rights:{mode:'restricted', label:'Bilgi modu', note:'Mapi Research Trust erişim koşulları kullanıcı türüne göre değişir; ticari/IT/e-uygulama kullanımı için izin veya ücret gerekebilir.'},
+      interactive:null,
+      sources:[
+        ['RehabMeasures — Barthel Index','https://www.sralab.org/rehabilitation-measures/barthel-index'],
+        ['Mapi ePROVIDE — Barthel Index','https://eprovide.mapi-trust.org/instruments/barthel-index']
+      ]
+    },
+    {
+      id:'fim', category:'adl', name:'Fonksiyonel Bağımsızlık Ölçütü', short:'FIM', visual:'care',
+      tags:['fim','bakım yükü','bağımsızlık','motor','bilişsel','gya','rehabilitasyon'],
+      purpose:'Engellilik düzeyini ve günlük aktiviteleri tamamlamak için gereken insan yardımının miktarını standart biçimde ölçer.',
+      population:'İnme, spinal kord yaralanması, beyin hasarı, multipl skleroz ve karma rehabilitasyon popülasyonları.',
+      domains:['13 motor madde','5 bilişsel madde','Öz bakım','Sfinkter kontrolü','Transfer','Lokomosyon','İletişim','Sosyal biliş'],
+      format:'18 madde, her madde 1–7. Toplam 18–126; yüksek skor daha fazla bağımsızlık anlamına gelir.',
+      duration:'Genellikle 30–45 dk; eğitimli ekip ve gözlem bilgisi gerektirir.',
+      equipment:'Değerlendirilen aktiviteye göre değişir.',
+      interpretation:'Toplam ve motor/bilişsel alt skorlar bakım gereksinimini izlemek için kullanılır; tek başına tanısal araç değildir.',
+      turkish:'Türkiye’de rehabilitasyon hizmetlerinde bilinir ve kullanılır; resmi FIM kullanımında lisans/eğitim gereklilikleri korunmalıdır.',
+      rights:{mode:'restricted', label:'Lisans gerekli', note:'FIM ücretsiz değildir. UDSMR üzerinden kullanım lisansı gerekir; uygulama içinde özgün madde/form çoğaltılmayacaktır.'},
+      interactive:null,
+      sources:[
+        ['RehabMeasures — Functional Independence Measure','https://www.sralab.org/rehabilitation-measures/functional-independence-measure'],
+        ['UDSMR','https://www.udsmr.org/']
+      ]
+    },
+    {
+      id:'katz', category:'adl', name:'Katz Günlük Yaşam Aktiviteleri İndeksi', short:'Katz GYA', visual:'adl',
+      tags:['katz','gya','banyo','giyinme','transfer','tuvalet','kontinans','beslenme','geriatri'],
+      purpose:'Temel öz bakım aktivitelerinde bağımsızlığı hızlı biçimde sınıflandırır.',
+      population:'Özellikle yaşlı erişkinler ve fonksiyonel gerileme riski olan bireyler.',
+      domains:['Banyo','Giyinme','Tuvalet','Transfer','Kontinans','Beslenme'],
+      format:'Güncel altı alanlı kullanımda bağımsız/bağımlı durum üzerinden 0–6 türü puanlama yaygındır. Tarihsel Katz sınıflamasında bağımsızlık örüntüleri A–G kategorileriyle de tanımlanmıştır.',
+      duration:'Yaklaşık 5 dk.',
+      equipment:'Özel ekipman gerektirmez.',
+      interpretation:'Daha fazla bağımsız aktivite daha yüksek temel GYA bağımsızlığını gösterir. Tarihsel A–G sınıflaması ile modern toplam puan yaklaşımı birbirine karıştırılmamalıdır.',
+      turkish:'Türkçe yaşlı popülasyonda geçerlilik/güvenirlik çalışmaları bulunmaktadır; uygulama, çalışmanın kullandığı sürümü açıkça etiketleyecektir.',
+      rights:{mode:'reference', label:'Kaynak doğrulamalı', note:'Tam Türkçe formun dağıtım koşulları doğrulanmadan uygulama içine birebir anket metni gömülmez.'},
+      interactive:null,
+      sources:[
+        ['Hartford Institute — Katz ADL','https://hign.org/consultgeri/try-this-series/katz-index-independence-activities-daily-living-adl'],
+        ['PubMed — Turkish Katz validation','https://pubmed.ncbi.nlm.nih.gov/?term=Katz+Turkish+validity+reliability+older+adults']
+      ]
+    },
+    {
+      id:'lawton', category:'adl', name:'Lawton-Brody Enstrümantal GYA Ölçeği', short:'Lawton-Brody', visual:'iadl',
+      tags:['iadl','telefon','alışveriş','yemek','ilaç','finans','ev işleri','ulaşım','geriatri'],
+      purpose:'Toplum içinde bağımsız yaşamayı sağlayan daha karmaşık günlük aktiviteleri değerlendirir.',
+      population:'Özellikle toplumda yaşayan yaşlı erişkinler, bilişsel/fonksiyonel gerileme değerlendirmeleri.',
+      domains:['Telefon kullanımı','Alışveriş','Yemek hazırlama','Ev işleri','Çamaşır','Ulaşım','İlaç yönetimi','Finans yönetimi'],
+      format:'8 alan. Güncel klinik yaklaşım tüm alanların cinsiyetten bağımsız değerlendirilmesini destekler; yaygın toplam 0–8.',
+      duration:'Yaklaşık 5–10 dk.',
+      equipment:'Özel ekipman gerektirmez.',
+      interpretation:'Daha yüksek toplam puan daha yüksek enstrümantal bağımsızlığı gösterir; kültür ve yaşam rolü bağlamı göz önünde bulundurulur.',
+      turkish:'Türkçe geçerlilik/güvenirlik çalışmaları yaşlı popülasyonlarda yayımlanmıştır; uygulama kaynak/popülasyon bilgisini birlikte gösterecektir.',
+      rights:{mode:'reference', label:'Kaynak doğrulamalı', note:'Tam ölçek metni yalnız dağıtım hakkı doğrulandıktan sonra interaktif hale getirilecektir.'},
+      interactive:null,
+      sources:[['Hartford Institute — Lawton IADL','https://hign.org/consultgeri/try-this-series/lawton-brody-instrumental-activities-daily-living-scale-iadl']]
+    },
+    {
+      id:'brunnstrom', category:'neuro', name:'Brunnstrom Motor İyileşme Evrelemesi', short:'Brunnstrom', visual:'stroke',
+      tags:['inme','hemipleji','sinerji','motor iyileşme','spastisite','svo'],
+      purpose:'İnme sonrası hemiplejide motor iyileşmenin sinerji ve istemli hareket örüntülerindeki değişimini evreleyerek takip etmeye yardımcı olur.',
+      population:'İnme sonrası hemiparezi/hemipleji.',
+      domains:['Flasidite','Spastisite gelişimi','Sinerji hâkimiyeti','Sinerji dışı hareketlerin ortaya çıkması','Koordinasyonun iyileşmesi'],
+      format:'Literatürde altı evreli özetler yaygın olmakla birlikte bazı eğitim/araştırma kaynaklarında normal işlevi ayrı son aşama olarak ele alan yedi aşamalı anlatımlar bulunur. Uygulama kullanılan konvansiyonu açıkça belirtir.',
+      duration:'Klinik motor muayenenin parçası olarak uygulanır.',
+      equipment:'Özel ekipman gerektirmez.',
+      interpretation:'Evre, iyileşme örüntüsünü betimler; tek başına prognoz veya tedavi seçimi belirlemez.',
+      turkish:'Türkiye’de nörolojik rehabilitasyon eğitiminde ve klinikte yaygın terminolojiye sahiptir.',
+      rights:{mode:'reference', label:'Eğitimsel evreleme', note:'Telifli form kopyalanmaz; evre kavramı kaynaklandırılmış klinik özet olarak sunulur.'},
+      interactive:null,
+      sources:[['PubMed search — Brunnstrom recovery stages','https://pubmed.ncbi.nlm.nih.gov/?term=Brunnstrom+recovery+stages+stroke']]
+    },
+    {
+      id:'fma', category:'neuro', name:'Fugl-Meyer Değerlendirmesi', short:'FMA', visual:'stroke-arm',
+      tags:['fugl meyer','inme','motor','duyu','denge','eklem hareketi','ağrı','üst ekstremite','alt ekstremite'],
+      purpose:'İnme sonrası sensorimotor bozukluğu kantitatif olarak değerlendiren en yaygın standart ölçümlerden biridir.',
+      population:'İnme sonrası hemiparezi.',
+      domains:['Motor: ÜE 66','Motor: AE 34','Duyu 24','Denge 14','Eklem hareket açıklığı 44','Eklem ağrısı 44'],
+      format:'Maddeler çoğunlukla 0=başaramaz, 1=kısmen, 2=tam şeklinde üç düzeyde puanlanır. Toplam tam FMA 226; motor toplamı 100.',
+      duration:'Tam sürüm yaklaşık 30 dk; alt ölçek veya kısaltılmış sürümler daha kısa olabilir.',
+      equipment:'Top, küçük kap, refleks muayene aracı ve hareket için uygun alan gibi basit malzemeler.',
+      interpretation:'Alt alanlar ayrı izlenebilir. Motor 100 skoru, tam FMA toplam 226 skoru ile karıştırılmamalıdır.',
+      turkish:'Türkçe resmi protokolün kullanım/çeviri durumu ayrıca doğrulanacaktır; uygulama izinsiz bir resmi çeviri üretmeyecektir.',
+      rights:{mode:'restricted', label:'Bilgi modu', note:'University of Gothenburg protokolleri klinik/araştırmada ticari olmayan kullanım için ücretsizdir; ticari kullanım ve resmi çeviri için izin gereklidir.'},
+      interactive:null,
+      sources:[
+        ['University of Gothenburg — Fugl-Meyer Assessment','https://www.gu.se/en/neuroscience-physiology/fugl-meyer-assessment'],
+        ['RehabMeasures — FMA','https://www.sralab.org/rehabilitation-measures/fugl-meyer-assessment-motor-recovery-after-stroke']
+      ]
+    },
+    {
+      id:'nihss', category:'neuro', name:'NIH İnme Skalası', short:'NIHSS', visual:'neuro-exam',
+      tags:['nihss','akut inme','bilinç','görme','motor','duyu','dil','dizartri','ihmal'],
+      purpose:'Akut inmede nörolojik defisitin şiddetini standartlaştırarak iletişim, izlem ve araştırmayı destekler.',
+      population:'Akut inme şüphesi veya doğrulanmış inme; eğitimli sağlık profesyonelleri.',
+      domains:['Bilinç','Bakış','Görme alanı','Yüz motoru','Kol motoru','Bacak motoru','Ataksi','Duyu','Dil','Dizartri','İhmal'],
+      format:'NIH/NLM tanımında 15 maddelik nörolojik muayene ölçeğidir. Alt maddelerin puanları toplanır; yüksek skor daha ağır nörolojik defisiti gösterir.',
+      duration:'Deneyimli uygulayıcıda genellikle birkaç dakika; standardizasyon ve eğitim önemlidir.',
+      equipment:'Standart muayene uyaranları ve ölçek materyalleri.',
+      interpretation:'Akut inme kararlarını tek başına belirlemez; görüntüleme, zaman penceresi ve klinik değerlendirmeyle birlikte kullanılır.',
+      turkish:'Türkçe klinik kullanım için doğrulanmış eğitim/form kaynağı belirlenmeden maddeler uygulamaya gömülmez.',
+      rights:{mode:'restricted', label:'Telif kontrollü', note:'NLM CDE kaydı NIHSS için copyright işareti taşır. Tam form/metin uygulamaya kopyalanmaz; resmi eğitim ve form kaynağına yönlendirme yapılır.'},
+      interactive:null,
+      sources:[
+        ['NLM CDE — NIHSS','https://cde.nlm.nih.gov/formView?tinyId=myX9VJrSYg'],
+        ['NINDS — Stroke assessment','https://www.ninds.nih.gov/health-information/stroke/assess-and-treat']
+      ]
+    },
+    {
+      id:'rivermead', category:'neuro', name:'Rivermead Mobilite İndeksi', short:'RMI', visual:'mobility',
+      tags:['rivermead','mobilite','transfer','yürüme','merdiven','koşma','inme','kafa travması'],
+      purpose:'Yatak içi hareketlerden ileri düzey yürüyüşe kadar işlevsel mobiliteyi hızlı biçimde tarar.',
+      population:'İnme ve kafa travması başta olmak üzere nörolojik rehabilitasyon.',
+      domains:['Yatak içi hareket','Transfer','Ayağa kalkma','İç/dış ortam yürüme','Merdiven','Yerden nesne alma','Koşma'],
+      format:'15 madde; 14 öz-bildirim ve 1 gözlem. Her madde 0/1, toplam 0–15.',
+      duration:'Yaklaşık 3–5 dk.',
+      equipment:'Çoğunlukla özel ekipman yok; gözlem maddesi için uygun alan.',
+      interpretation:'Yüksek skor daha yüksek mobilite düzeyini gösterir. Tavan etkisi ileri düzey hastalarda dikkate alınabilir.',
+      turkish:'Türkçe kullanım ve psikometrik çalışmalar bildirilmiştir; uygulama kullanılan versiyonun referansını gösterecektir.',
+      rights:{mode:'reference', label:'Kaynak kontrollü', note:'RehabMeasures ücretsiz olduğunu belirtse de NINDS telif bildirimi bulunduğundan tam formun yeniden dağıtımı ayrıca doğrulanacaktır.'},
+      interactive:null,
+      sources:[['RehabMeasures — Rivermead Mobility Index','https://www.sralab.org/rehabilitation-measures/rivermead-mobility-index']]
+    },
+    {
+      id:'mas', category:'tone', name:'Modifiye Ashworth Skalası', short:'MAS', visual:'passive-rom',
+      tags:['mas','ashworth','spastisite','tonus','pasif hareket','inme','spinal kord','serebral palsi'],
+      purpose:'Pasif harekete karşı hissedilen direnç üzerinden artmış kas tonusunu klinik olarak derecelendirir.',
+      population:'Santral sinir sistemi lezyonları; inme, spinal kord yaralanması, MS, serebral palsi vb.',
+      domains:['Pasif hareket sırasında direnç','Kas tonusu'],
+      format:'0, 1, 1+, 2, 3, 4 olmak üzere 6 seçenek.',
+      duration:'Kas grubu başına saniyeler-dakikalar; değerlendirilen eklem sayısına bağlı.',
+      equipment:'Genellikle özel ekipman gerekmez.',
+      interpretation:'MAS hız bağımlı spastisitenin tüm nörofizyolojik özelliklerini ölçmez; özellikle 1+ kategorisi ve değerlendirici tekniği güvenirliği etkileyebilir.',
+      turkish:'Türk kliniklerinde yaygın kullanılır; uygulama standardize pozisyon/hız hatırlatıcıları sunar.',
+      rights:{mode:'open', label:'İnteraktif kullanılabilir', note:'RehabMeasures aracı ücretsiz olarak listeler.'},
+      interactive:{kind:'mas', options:['0','1','1+','2','3','4']},
+      sources:[['RehabMeasures — Modified Ashworth Scale','https://www.sralab.org/rehabilitation-measures/ashworth-scale-modified-ashworth-scale']]
+    },
+    {
+      id:'tardieu', category:'tone', name:'Tardieu / Modifiye Tardieu Skalası', short:'MTS', visual:'goniometer',
+      tags:['tardieu','r1','r2','v1','v2','v3','spastisite','gonyometre','yakalama açısı'],
+      purpose:'Kasın farklı pasif germe hızlarına verdiği yanıtı; reaksiyon kalitesi ve reaksiyon açısıyla birlikte değerlendirir.',
+      population:'İnme, serebral palsi ve diğer üst motor nöron sendromları.',
+      domains:['R1 hızlı germe reaksiyon açısı','R2 yavaş hızdaki tam pasif ROM','Kas reaksiyon kalitesi','V1/V2/V3 hızları'],
+      format:'R2 V1 ile, R1 hızlı V3 ile ölçülür. R2−R1 farkı dinamik ton bileşeni hakkında klinik bilgi verir. Reaksiyon kalitesi sürüme göre 0–5 veya 0–4 varyantıyla raporlanabilir.',
+      duration:'Eklem/kas sayısına bağlı.',
+      equipment:'Gonyometre.',
+      interpretation:'Büyük R2−R1 farkı dinamik nöromüsküler bileşene işaret edebilir; küçük fark sabit yumuşak doku kısıtlılığının daha baskın olabileceğini düşündürebilir. Bu yorum tek başına tanı değildir.',
+      turkish:'Türkçe terminoloji R1/R2/V1/V3 korunarak sunulacaktır; resmi Türkçe form varsa kaynaklandırılacaktır.',
+      rights:{mode:'open', label:'İnteraktif kullanılabilir', note:'RehabMeasures aracı ücretsiz olarak listeler.'},
+      interactive:{kind:'tardieu'},
+      sources:[['RehabMeasures — Tardieu/Modified Tardieu','https://www.sralab.org/rehabilitation-measures/tardieu-scalemodified-tardieu-scale']]
+    },
+    {
+      id:'penn', category:'tone', name:'Penn Spazm Sıklığı Skalası', short:'PSFS', visual:'spasm',
+      tags:['penn','spazm','spinal kord','spastisite','sıklık','şiddet'],
+      purpose:'Hastanın istemsiz spazm sıklığı ve şiddetine ilişkin algısını hızlı biçimde kaydeder.',
+      population:'Özellikle spinal kord yaralanması; bazı çalışmalarda farklı spastisite popülasyonları.',
+      domains:['Spazm sıklığı 0–4','Spazm şiddeti 1–3'],
+      format:'İki bölüm. Sıklık 0–4; spazm yoksa şiddet bölümü uygulanmaz. Şiddet 1 hafif, 2 orta, 3 şiddetli.',
+      duration:'Yaklaşık 1 dk.',
+      equipment:'Yok.',
+      interpretation:'Hasta-bildirimlidir; fleksör/ekstansör spazm örüntülerini ayrıntılı ayırmayabilir.',
+      turkish:'Türkçe doğrulanmış özgün form kaynağı bulunmadan kelimesi kelimesine çeviri resmi ölçek gibi sunulmayacaktır.',
+      rights:{mode:'open', label:'İnteraktif kullanılabilir', note:'RehabMeasures ücretsiz olarak listeler; uygulama puan girişini kaynak tanımıyla sınırlar.'},
+      interactive:{kind:'penn'},
+      sources:[['RehabMeasures — Penn Spasm Frequency Scale','https://www.sralab.org/rehabilitation-measures/penn-spasm-frequency-scale']]
+    },
+    {
+      id:'berg', category:'balance', name:'Berg Denge Ölçeği', short:'BBS', visual:'single-leg',
+      tags:['berg','denge','düşme','14 madde','yaşlı','inme','mobilite'],
+      purpose:'Yetişkinlerde işlevsel statik/dinamik denge performansını 14 görevle değerlendirir.',
+      population:'Yaşlı erişkinler ve çok sayıda nörolojik/rehabilitasyon popülasyonu.',
+      domains:['Oturma-kalkma','Desteksiz oturma/ayakta durma','Transfer','Dar destek yüzeyi','Uzanma','Dönme','Basamak','Tandem','Tek ayak'],
+      format:'14 madde × 0–4; maksimum 56.',
+      duration:'Yaklaşık 15–20 dk.',
+      equipment:'Sandalye, basamak/tabure, cetvel/ölçüm, kronometre ve güvenli test alanı.',
+      interpretation:'Yüksek skor daha iyi dengeyi gösterir. <45 gibi eşikler bazı yaşlı/inme örneklemlerinde düşme riskiyle ilişkilidir; tüm tanılara evrensel eşik olarak uygulanmaz.',
+      turkish:'Türkçe BBS, yaşlı erişkinlerde yüksek test-tekrar test ve değerlendiriciler arası güvenirlik ile geçerli bulunmuştur (Sahin ve ark., 2008).',
+      rights:{mode:'open', label:'İnteraktif kullanılabilir', note:'RehabMeasures BBS’yi kamuya açık/public-domain olarak listeler.'},
+      interactive:{kind:'berg', max:56},
+      sources:[
+        ['RehabMeasures — Berg Balance Scale','https://www.sralab.org/rehabilitation-measures/berg-balance-scale'],
+        ['PubMed — Turkish BBS validation','https://pubmed.ncbi.nlm.nih.gov/18489806/']
+      ]
+    },
+    {
+      id:'tug', category:'balance', name:'Timed Up and Go Testi', short:'TUG', visual:'chair-walk',
+      tags:['tug','3 metre','sandalye','yürüme','dönüş','mobilite','düşme','zaman'],
+      purpose:'Fonksiyonel mobiliteyi sandalyeden kalkma, 3 m yürüme, dönme ve tekrar oturma süresiyle ölçer.',
+      population:'Yaşlı erişkinler ve çeşitli nörolojik/ortopedik popülasyonlar.',
+      domains:['Transfer','Kısa mesafe yürüme','Dönüş','Fonksiyonel mobilite hızı'],
+      format:'Sonuç saniye cinsindendir; düşük süre genellikle daha iyi performanstır. Aynı yardımcı cihaz karşılaştırmalı takiplerde tutarlı kullanılmalıdır.',
+      duration:'Genellikle 3 dk’dan kısa; bir deneme/pratik geçişi önerilebilir.',
+      equipment:'Kolçaklı/standart sandalye, 3 m mesafe, kronometre.',
+      interpretation:'12–13 saniye gibi değerler belirli popülasyon çalışmalarından gelir; tek bir evrensel düşme eşiği yoktur. Sonuç yaş, tanı, yardımcı cihaz ve protokolle birlikte yorumlanır.',
+      turkish:'Türkiye’de yaygın klinik kullanım vardır; popülasyona özgü norm/validasyon çalışmaları ayrı kaynaklandırılır.',
+      rights:{mode:'open', label:'İnteraktif süre ölçümü', note:'Prosedür açık klinik testtir; uygulama evrensel olmayan cut-off üretmez.'},
+      interactive:{kind:'time', unit:'sn'},
+      sources:[['RehabMeasures — Timed Up and Go','https://www.sralab.org/rehabilitation-measures/timed-and-go']]
+    },
+    {
+      id:'tinetti', category:'balance', name:'Tinetti Performansa Dayalı Mobilite Değerlendirmesi', short:'POMA', visual:'gait',
+      tags:['tinetti','poma','denge','yürüyüş','16 madde','28 puan','geriatri','düşme'],
+      purpose:'Özellikle yaşlı erişkinlerde denge ve yürüyüş performansını birlikte değerlendirir.',
+      population:'Başta yaşlı erişkinler; Parkinson ve inme gibi gruplarda da kullanılmıştır.',
+      domains:['9 denge maddesi','7 yürüyüş maddesi'],
+      format:'Bu modül 16 maddeli, 28 puanlık POMA sürümünü temel alır. Maddeler 0–2 veya ikili seçeneklerle puanlanır; maksimum 28.',
+      duration:'Yaklaşık 10–15 dk.',
+      equipment:'Sert kolçaksız sandalye, kronometre, yaklaşık 4.6 m yürüme alanı.',
+      interpretation:'Farklı POMA sürümleri ve popülasyona özgü eşikler bulunduğundan sonuç ekranı kullanılan 28 puanlık sürümü açıkça belirtir.',
+      turkish:'Türkçe POMA-I yaşlılarda güvenilir ve geçerli bulunmuştur; toplam skor BBS ile güçlü pozitif, TUG ile negatif korelasyon göstermiştir.',
+      rights:{mode:'open', label:'İnteraktif kullanılabilir', note:'RehabMeasures 16 maddeli 28 puan sürümünü ücretsiz listeler.'},
+      interactive:{kind:'tinetti', max:28},
+      sources:[
+        ['RehabMeasures — Tinetti POMA','https://www.sralab.org/rehabilitation-measures/tinetti-performance-oriented-mobility-assessment'],
+        ['Turkish POMA validation','https://doi.org/10.1007/s11556-012-0096-2']
+      ]
+    },
+    {
+      id:'dgi', category:'balance', name:'Dynamic Gait Index', short:'DGI', visual:'obstacle-gait',
+      tags:['dgi','dinamik yürüyüş','baş çevirme','engel','merdiven','24 puan','denge'],
+      purpose:'Yürüyüş sırasında dış taleplere uyum sağlarken dengeyi değiştirebilme yeteneğini değerlendirir.',
+      population:'Yaşlı erişkinler ve nörolojik/vestibüler popülasyonlar.',
+      domains:['Düz zeminde yürüme','Hız değiştirme','Yatay baş hareketi','Dikey baş hareketi','Pivot dönüş','Engel üzerinden geçme','Engel etrafından geçme','Merdiven'],
+      format:'8 görev, her biri 0–3; maksimum 24.',
+      duration:'Yaklaşık 10–15 dk.',
+      equipment:'İşaretli yürüme alanı, engeller/koniler, merdiven ve kronometre.',
+      interpretation:'Yüksek skor daha iyi dinamik yürüme dengesini gösterir. Tavan etkisi bazı yüksek fonksiyonlu gruplarda önemlidir.',
+      turkish:'Orijinal DGI için Türkçe popülasyona özgü kaynak ayrıca doğrulanacaktır; Türkçe modifiye DGI yaşlılarda geçerli ve güvenilir bulunmuştur (ICC ≈0.95).',
+      rights:{mode:'open', label:'İnteraktif kullanılabilir', note:'RehabMeasures DGI’yi ücretsiz/erişilebilir olarak listeler.'},
+      interactive:{kind:'dgi', max:24},
+      sources:[
+        ['RehabMeasures — DGI','https://www.sralab.org/rehabilitation-measures/dynamic-gait-index'],
+        ['PubMed — Turkish mDGI','https://pubmed.ncbi.nlm.nih.gov/36121068/']
+      ]
+    },
+    {
+      id:'odi', category:'ortho', name:'Oswestry Bel Sakatlık İndeksi', short:'ODI', visual:'low-back',
+      tags:['oswestry','odi','bel ağrısı','özürlülük','disability','lomber'],
+      purpose:'Bel ağrısının günlük yaşam ve işlev üzerindeki etkisini hasta-bildirimli olarak ölçer.',
+      population:'Bel ağrılı erişkinler.',
+      domains:['Ağrı şiddeti','Kişisel bakım','Kaldırma','Yürüme','Oturma','Ayakta durma','Uyku','Sosyal yaşam','Seyahat ve sürüme bağlı alanlar'],
+      format:'Klasik ODI 10 bölüm üzerinden özürlülük yüzdesine dönüştürülen bir sonuç üretir; sürüm numarası ve eksik madde hesabı doğru belirtilmelidir.',
+      duration:'Yaklaşık 5 dk.',
+      equipment:'Yok; hasta-bildirim formu.',
+      interpretation:'Yüzde yükseldikçe bel ağrısına bağlı engellilik etkisi artar; kategori sınırları kullanılan resmi sürümün kurallarına göre yorumlanmalıdır.',
+      turkish:'Türkçe ODI, bel ağrılı hastalarda yüksek iç tutarlılık ve test-tekrar test güvenirliğiyle geçerli bulunmuştur (ICC 0.938; Yakut ve ark.).',
+      rights:{mode:'restricted', label:'Lisans gerekli', note:'ODI teliflidir. Elektronik uygulama için lisans; ticari kullanımda ücret ve ekran görüntüsü incelemesi gerekebilir.'},
+      interactive:null,
+      sources:[
+        ['Mapi ePROVIDE — ODI','https://eprovide.mapi-trust.org/instruments/oswestry-disability-index'],
+        ['PubMed — Turkish ODI validation','https://pubmed.ncbi.nlm.nih.gov/15129077/']
+      ]
+    },
+    {
+      id:'ndi', category:'ortho', name:'Boyun Özürlülük İndeksi', short:'NDI', visual:'neck',
+      tags:['ndi','boyun ağrısı','servikal','özürlülük','günlük yaşam'],
+      purpose:'Boyun ağrısının günlük yaşam aktiviteleri ve işlev üzerindeki etkisini hasta-bildirimli ölçer.',
+      population:'Boyun ağrılı erişkinler; whiplash dahil çeşitli servikal sorunlar.',
+      domains:['Ağrı ve öz bakım','Kaldırma/okuma','Baş ağrısı','Konsantrasyon','İş','Araç kullanma','Uyku','Rekreasyon'],
+      format:'10 bölümden oluşan NDI, toplam engellilik skoruna dönüştürülür; resmi sürüm metni ve hesaplama yöntemi korunmalıdır.',
+      duration:'Yaklaşık 5 dk.',
+      equipment:'Yok; hasta-bildirim formu.',
+      interpretation:'Yüksek puan daha fazla boyun ilişkili engellilik anlamına gelir; resmi sürümün yorum sınıfları kullanılmalıdır.',
+      turkish:'Türkçe NDI boyun ağrılı 88 hastada geçerli ve güvenilir bulunmuş, test-tekrar test ICC 0.979 bildirilmiştir.',
+      rights:{mode:'restricted', label:'Lisans gerekli', note:'NDI © Dr Howard Vernon. Elektronik uygulama ve ticari kullanıcılar için lisans/ücret ve bazı durumlarda ekran incelemesi gereklidir.'},
+      interactive:null,
+      sources:[
+        ['Mapi ePROVIDE — NDI','https://eprovide.mapi-trust.org/instruments/neck-disability-index'],
+        ['PubMed — Turkish NDI validation','https://pubmed.ncbi.nlm.nih.gov/18469684/']
+      ]
+    },
+    {
+      id:'dash', category:'ortho', name:'DASH — Kol, Omuz ve El Sorunları Anketi', short:'DASH', visual:'upper-limb',
+      tags:['dash','kol','omuz','el','üst ekstremite','30 madde','semptom','fonksiyon'],
+      purpose:'Üst ekstremite bozukluklarında semptomların ve fiziksel işlev kısıtlılığının hasta tarafından bildirilmesini sağlar.',
+      population:'Omuz, dirsek, önkol, el bileği ve el sorunları olan erişkinler.',
+      domains:['Fonksiyon/semptom ana bölüm','İsteğe bağlı iş modülü','İsteğe bağlı spor/müzik modülü'],
+      format:'Ana DASH 30 maddelidir; resmi hesaplama yalnız yeterli madde yanıtlandığında uygulanır ve 0–100 ölçeğine dönüştürülür.',
+      duration:'Yaklaşık 5–10 dk.',
+      equipment:'Yok; hasta-bildirim formu.',
+      interpretation:'Yüksek DASH skoru daha fazla semptom ve işlev kaybını gösterir.',
+      turkish:'DASH-T Türkçe uyarlaması 134 üst ekstremite hastasında geçerli/güvenilir bulunmuş; fonksiyon/semptom test-tekrar test değeri 0.910 bildirilmiştir.',
+      rights:{mode:'restricted', label:'Ticari izin gerekli', note:'IWH koşulları, DASH’ın satılan bir ürüne yazılı izin olmadan gömülmesini yasaklar. Bu nedenle tam 30 madde uygulamaya eklenmez.'},
+      interactive:null,
+      sources:[
+        ['Official DASH Conditions of Use','https://www.dash.iwh.on.ca/download'],
+        ['DASH Licensing','https://www.dash.iwh.on.ca/licences'],
+        ['Turkish DASH validation','https://research.hacettepe.edu.tr/tr/publications/kol-omuz-ve-el-sorunlari-disabilities-of-the-arm-shoulder-and-han-2/']
+      ]
+    },
+    {
+      id:'womac', category:'ortho', name:'WOMAC Osteoartrit İndeksi', short:'WOMAC', visual:'knee-hip',
+      tags:['womac','osteoartrit','diz','kalça','ağrı','sertlik','fonksiyon'],
+      purpose:'Diz/kalça osteoartritinde ağrı, eklem sertliği ve fiziksel fonksiyon etkisini hastadan bildirilen sonuç olarak ölçer.',
+      population:'Diz ve kalça osteoartriti.',
+      domains:['Ağrı','Sertlik','Fiziksel fonksiyon'],
+      format:'Farklı WOMAC sürüm/ölçekleme yöntemleri vardır; sonuçların sürüm belirtilmeden karşılaştırılması doğru değildir.',
+      duration:'Genellikle 5–10 dk.',
+      equipment:'Yok; hasta-bildirim formu.',
+      interpretation:'Yüksek/düşük yönü kullanılan skor dönüşümüne göre açıkça belirtilmelidir; resmi formun hesaplama kuralı korunur.',
+      turkish:'Türkçe WOMAC diz OA hastalarında kabul edilebilir, güvenilir, geçerli ve değişime duyarlı bulunmuştur.',
+      rights:{mode:'restricted', label:'Telif/lisans kontrollü', note:'WOMAC telifli ve markalıdır; tam form ve elektronik uygulama için hak sahibinin koşulları izlenmelidir.'},
+      interactive:null,
+      sources:[
+        ['WOMAC official','https://www.womac.org/'],
+        ['PubMed — Turkish WOMAC validation','https://pubmed.ncbi.nlm.nih.gov/15639634/']
+      ]
+    },
+    {
+      id:'hhs', category:'ortho', name:'Harris Kalça Skoru', short:'HHS', visual:'hip',
+      tags:['harris hip','kalça','artroplasti','protez','ağrı','fonksiyon','100'],
+      purpose:'Kalça patolojisi/cerrahisi sonrası ağrı ve fonksiyon ağırlıklı klinik sonucu değerlendirmek için kullanılır.',
+      population:'Kalça hastalığı olan veya kalça cerrahisi geçiren erişkinler.',
+      domains:['Ağrı','Fonksiyon','Deformite','Eklem hareket açıklığı'],
+      format:'Maksimum 100. Klasik dağılımda ağrı ve fonksiyon toplam puanın büyük bölümünü oluşturur; ROM ve deformite daha küçük katkı sağlar.',
+      duration:'Yaklaşık 5–10 dk; klinik muayene bileşeni vardır.',
+      equipment:'Gonyometre ve standart klinik muayene ortamı.',
+      interpretation:'Yüksek skor daha iyi kalça sonucu gösterir. Sık kullanılan sonuç sınıfları literatürde vardır ancak sürüm/çalışma bağlamı gösterilmelidir.',
+      turkish:'Türkçe HHS, farklı kalça patolojileri olan 80 kişide geçerli/güvenilir bulunmuş; test-tekrar test ICC 0.91 bildirilmiştir.',
+      rights:{mode:'reference', label:'Bilgi modu', note:'Tam madde/metin ve elektronik skor formu hak durumu doğrulanmadan yeniden dağıtılmaz.'},
+      interactive:null,
+      sources:[['PubMed — Turkish HHS validation','https://pubmed.ncbi.nlm.nih.gov/25264204/']]
+    },
+    {
+      id:'gmfm', category:'peds', name:'Kaba Motor Fonksiyon Ölçümü', short:'GMFM-88/66', visual:'child-motor',
+      tags:['gmfm','serebral palsi','çocuk','kaba motor','yatma','oturma','emekleme','yürüme'],
+      purpose:'Serebral palsili çocuklarda kaba motor fonksiyondaki değişimi ölçmek üzere geliştirilmiş gözlemsel performans ölçümüdür.',
+      population:'Özellikle serebral palsi; GMFM-66 için tanımlanmış kullanım çerçevesi korunmalıdır.',
+      domains:['A: Yatma/yuvarlanma','B: Oturma','C: Emekleme/diz çökme','D: Ayakta durma','E: Yürüme/koşma/zıplama'],
+      format:'GMFM-88 ve Rasch temelli GMFM-66 sürümleri vardır; skor algoritmaları birbirinin yerine kullanılmaz.',
+      duration:'GMFM-88 genellikle 45–60 dk; çocuğun düzeyine ve sürüme göre değişir.',
+      equipment:'Zemin/mat, basamak, bank/oturma yüzeyi ve standartlaştırılmış motor görev ekipmanı.',
+      interpretation:'Değişim izleme aracıdır; GMFCS düzeyi ile aynı şey değildir.',
+      turkish:'2024 Türkçe GMFM-88&66 çalışmasında 150 CP’li çocukta çok yüksek iç tutarlılık ve değerlendirici güvenirliği raporlanmıştır.',
+      rights:{mode:'restricted', label:'CanChild lisansı gerekli', note:'CanChild/McMaster materyalleri ticari ürün entegrasyonunda izin/lisans gerektirir; tam maddeler lisans olmadan gömülmez.'},
+      interactive:null,
+      sources:[
+        ['CanChild legal/use policy','https://canchild.ca/legal/'],
+        ['PubMed — Turkish GMFM-88&66','https://pubmed.ncbi.nlm.nih.gov/39334609/']
+      ]
+    },
+    {
+      id:'gmfcs', category:'peds', name:'Kaba Motor Fonksiyonel Sınıflandırma Sistemi', short:'GMFCS E&R', visual:'child-levels',
+      tags:['gmfcs','serebral palsi','seviye 1','seviye 5','mobilite','çocuk','genç'],
+      purpose:'Serebral palside çocuğun/genç bireyin günlük yaşamdaki olağan kaba motor performansını beş seviyede sınıflandırır.',
+      population:'Serebral palsili çocuklar ve gençler; yaş bantlarına göre tanımlamalar kullanılır.',
+      domains:['Oturma','Transfer','Yürüme','Tekerlekli mobilite','Toplum mobilitesi'],
+      format:'Seviye I–V. I daha bağımsız kaba motor işlevi, V daha yüksek fiziksel yardım/tekerlekli mobilite gereksinimini temsil eder.',
+      duration:'Klinik görüşme ve gözlemle birkaç dakika.',
+      equipment:'Özel ekipman yok.',
+      interpretation:'GMFCS tedavi başarısı skoru değildir; CP’de olağan performansı sınıflar. CP dışındaki tanılara genellenmemelidir.',
+      turkish:'Türkçe Expanded & Revised GMFCS çalışmasında hekimler arası ICC 0.97 ve yüksek test-tekrar test güvenirliği bildirilmiştir.',
+      rights:{mode:'restricted', label:'CanChild lisansı gerekli', note:'CanChild içeriği ticari ürün entegrasyonunda izin/lisans gerektirir; resmi seviye açıklamaları lisans olmadan birebir çoğaltılmaz.'},
+      interactive:null,
+      sources:[
+        ['CanChild use guidelines','https://canchild.ca/get-involved/use-of-materials-translation-guidelines/'],
+        ['PubMed — Turkish GMFCS','https://pubmed.ncbi.nlm.nih.gov/22126744/']
+      ]
+    },
+    {
+      id:'pdms', category:'peds', name:'Peabody Gelişimsel Motor Ölçekleri', short:'PDMS', visual:'child-play',
+      tags:['peabody','pdms','ince motor','kaba motor','çocuk','gelişim','0-5 yaş'],
+      purpose:'Erken çocukluk döneminde kaba ve ince motor yetenekleri standardize biçimde değerlendirmek için kullanılan ticari motor gelişim test ailesidir.',
+      population:'Doğumdan okul öncesi döneme kadar küçük çocuklar; sürüme göre yaş aralığı değişir.',
+      domains:['Kaba motor','İnce motor','Nesne kontrolü/manipülasyon','Göz-el koordinasyonu','Sürüme özgü alt testler'],
+      format:'Kullanılan PDMS sürümüne göre alt test ve norm tabanlı skor sistemi değişir. Güncel PDMS-3, PDMS-2’den farklı bir ticari sürümdür.',
+      duration:'PDMS-3 resmi kaynağı 60–90 dk bildirir.',
+      equipment:'Resmi test kiti, nesneler, kayıt formları ve sürüme özgü materyaller.',
+      interpretation:'Standart/norm skorları resmi kılavuz ve yaş normlarına göre hesaplanmalıdır.',
+      turkish:'Türkçe sürümün hangi PDMS edisyonuna ait olduğu ayrıca doğrulanmadan “Türkçe PDMS” adıyla puanlayıcı sunulmayacaktır.',
+      rights:{mode:'restricted', label:'Ticari test', note:'PRO-ED tarafından satılan, telifli testtir; resmi materyal ve scoring sistemi uygulamaya kopyalanmaz.'},
+      interactive:null,
+      sources:[['PRO-ED — PDMS-3','https://proedinc.com/products-15080.html']]
+    },
+    {
+      id:'jebsen', category:'hand', name:'Jebsen-Taylor El Fonksiyon Testi', short:'JTHFT', visual:'hand-tasks',
+      tags:['jebsen','jthft','el fonksiyonu','adls','zaman','kart','nesne','yazı'],
+      purpose:'Günlük yaşamı taklit eden yedi zamanlı görevle ince ve kaba el fonksiyonunu objektif olarak ölçer.',
+      population:'İnme, artrit, el yaralanmaları ve diğer üst ekstremite durumları; çocuk ve erişkin örneklemleri.',
+      domains:['Yazı','Kart çevirme','Küçük nesne alma','Dama/nesne istifleme','Simüle beslenme','Hafif nesne taşıma','Ağır nesne taşıma'],
+      format:'Yedi alt test her el için ayrı zamanlanır; düşük süre daha iyi performanstır. Klasik protokolde alt test başına üst süre sınırı bulunur.',
+      duration:'Yaklaşık 15–45 dk.',
+      equipment:'Standartlaştırılmış masa düzeni, kart/nesne seti, kaşık, kutu/konserve benzeri ağırlıklar, kronometre ve test panosu.',
+      interpretation:'Alt test süreleri ve toplam süre, yaş/elde baskınlık gibi bağlamlarla değerlendirilir.',
+      turkish:'Türkçe norm/validasyon kaynağı ayrı doğrulanacaktır; uygulama özgün kit formunu çoğaltmaz.',
+      rights:{mode:'restricted', label:'Kit/uygulama koşulu', note:'RehabMeasures ticari test kitleri olduğunu bildirir; resmi materyaller kopyalanmaz.'},
+      interactive:null,
+      sources:[['RehabMeasures — Jebsen-Taylor','https://www.sralab.org/rehabilitation-measures/jebsen-taylor-hand-function-test']]
+    },
+    {
+      id:'9hpt', category:'hand', name:'Nine-Hole Peg Test', short:'9-HPT', visual:'pegboard9',
+      tags:['nine hole peg','9hpt','ince motor','parmak','dexterity','el','zaman'],
+      purpose:'Parmak becerisi ve ince motor koordinasyonu tek bir zamanlı pegboard göreviyle ölçer.',
+      population:'MS, inme ve çeşitli nörolojik/üst ekstremite popülasyonları; çocuklardan yaşlılara kadar norm verileri bulunur.',
+      domains:['Tek el parmak becerisi','Yerleştirme ve çıkarma hızı'],
+      format:'Dokuz peg tek tek deliklere yerleştirilip tekrar kaba alınır. Süre, ilk pege temas ile son pegin kaba düşmesi arasında saniye olarak kaydedilir.',
+      duration:'Yaklaşık 1–3 dk.',
+      equipment:'9 delikli standart pano, 9 peg, peg kabı ve kronometre.',
+      interpretation:'Düşük süre daha iyi beceridir. El, dominantlık, yaş ve kullanılan pano standardı raporlanmalıdır.',
+      turkish:'Türkiye’ye özgü norm/validasyon verisi doğrulanmadan yabancı normlar Türk popülasyonu için “normal” olarak etiketlenmeyecektir.',
+      rights:{mode:'open', label:'İnteraktif zaman kaydı', note:'Test prosedürü açık kaynaklarda ayrıntılı tanımlanır; fiziksel standart pano yine gereklidir.'},
+      interactive:{kind:'hand-time', unit:'sn'},
+      sources:[['RehabMeasures — Nine-Hole Peg Test','https://www.sralab.org/rehabilitation-measures/nine-hole-peg-test']]
+    },
+    {
+      id:'purdue', category:'hand', name:'Purdue Pegboard Testi', short:'Purdue', visual:'pegboard',
+      tags:['purdue','pegboard','dexterity','iki el','assembly','çubuk','pul','somun'],
+      purpose:'Parmak ucu becerisi, tek/iki el koordinasyonu ve montaj becerisini standart pegboard görevleriyle değerlendirir.',
+      population:'Mesleki değerlendirme, nörolojik ve el fonksiyonu popülasyonları.',
+      domains:['Sağ el','Sol el','İki el','Sağ+sol+iki el birleşik skor','Montaj'],
+      format:'Standart süreli görevlerde yerleştirilen parça sayısı veya resmi protokol skorları kaydedilir.',
+      duration:'Kısa çoklu denemeler; resmi protokole bağlı.',
+      equipment:'Standart Purdue Pegboard, pegler, pullar, manşon/somun benzeri montaj parçaları, kronometre.',
+      interpretation:'Normatif karşılaştırma yaş/cinsiyet/meslek ve kullanılan protokole bağlıdır.',
+      turkish:'Türkiye normları veya Türkçe psikometrik kaynak doğrulanmadan yerel norm yorumu yapılmayacaktır.',
+      rights:{mode:'restricted', label:'Ticari ekipman/protokol', note:'Purdue Pegboard ticari test sistemi ve resmi scoring uygulamaları mevcuttur; tam protokol/Norm tablosu kopyalanmaz.'},
+      interactive:null,
+      sources:[['Lafayette Instrument — Purdue Pegboard','https://lafayetteinstrument.com/']]
+    },
+    {
+      id:'sf36', category:'general', name:'SF-36 Sağlık Taraması', short:'SF-36 / RAND-36', visual:'quality-life',
+      tags:['sf36','rand36','yaşam kalitesi','fiziksel fonksiyon','ağrı','enerji','sosyal','ruh sağlığı'],
+      purpose:'Genel sağlıkla ilişkili yaşam kalitesini sekiz boyutta ölçen 36 maddelik sağlık durumu anket ailesini açıklar.',
+      population:'Çok geniş yetişkin hasta ve toplum popülasyonları.',
+      domains:['Fiziksel fonksiyon','Fiziksel rol','Bedensel ağrı','Genel sağlık','Vitalite','Sosyal işlev','Duygusal rol','Ruh sağlığı'],
+      format:'SF-36 ve RAND-36 aynı 36 temel madde ailesinden gelişmiştir ancak bazı puanlama ayrıntıları ve hak sahipliği farklıdır. SF-36v2 ayrıca norm-temelli skorlar kullanabilir.',
+      duration:'Yaklaşık 5–10 dk.',
+      equipment:'Yok; hasta-bildirim formu.',
+      interpretation:'Sekiz alt alan ayrı raporlanır. RAND-36 puanlama ile SF-36v2 norm-temelli puanlama birbirinin yerine sunulmaz.',
+      turkish:'Türkçe SF-36 psikometrik çalışmalarında kullanılmıştır; hangi lisanslı/validated Türkçe sürüm kullanıldığı açıkça belirtilmelidir.',
+      rights:{mode:'restricted', label:'SF-36 lisans kontrollü', note:'SF-36v2 QualityMetric/IQVIA lisanslıdır. Uygulama SF-36 maddelerini lisanssız gömmez; gerektiğinde kamuya açık RAND-36 ayrı ve doğru adıyla ele alınabilir.'},
+      interactive:null,
+      sources:[
+        ['RAND — 36-Item Health Survey','https://www.rand.org/health-care/surveys_tools/mos/36-item-short-form.html'],
+        ['QualityMetric — SF-36v2','https://www.qualitymetric.com/']
+      ]
+    },
+    {
+      id:'mmse', category:'general', name:'Mini Mental Durum Muayenesi', short:'MMSE', visual:'cognition',
+      tags:['mmse','biliş','oryantasyon','bellek','dikkat','30 puan','geriatri','demans'],
+      purpose:'Bilişsel işlev bozukluğunu taramak üzere oryantasyon, kayıt, dikkat/hesaplama, hatırlama ve dil gibi alanları örnekler.',
+      population:'Özellikle yaşlı erişkinler ve bilişsel bozukluk şüphesi olan klinik popülasyonlar.',
+      domains:['Oryantasyon','Kayıt','Dikkat/hesaplama','Hatırlama','Dil ve yapılandırılmış görevler'],
+      format:'Klasik toplam 30 puandır. Eğitim düzeyi ve kültürel/linguistik uyarlama sonucu etkiler.',
+      duration:'Yaklaşık 5–10 dk.',
+      equipment:'Resmi test formu ve basit görev materyalleri.',
+      interpretation:'Tarama aracıdır; demans tanısı koymaz. Cut-off eğitim durumu ve kullanılan validasyon sürümüne göre değişebilir.',
+      turkish:'Revize Türkçe MMSE çalışmasında eğitimli yaşlılarda 22/23, eğitimsiz yaşlılarda 18/19 optimum kesim noktaları raporlanmıştır; bu değerler yalnız çalışılan toplum bağlamında gösterilecektir.',
+      rights:{mode:'restricted', label:'Lisans gerekli', note:'MMSE/PAR telifli ve lisanslıdır. Türkçe form dahil test maddeleri uygulamaya lisans olmadan gömülmez.'},
+      interactive:null,
+      sources:[
+        ['PAR — MMSE licensing','https://www.parinc.com/about/connect-with-us/licensing-team/available-par-products'],
+        ['PubMed — revised Turkish MMSE','https://pubmed.ncbi.nlm.nih.gov/19337986/']
+      ]
+    },
+    {
+      id:'6mwt', category:'general', name:'6 Dakika Yürüme Testi', short:'6DYT / 6MWT', visual:'walkway',
+      tags:['6dyt','6mwt','6 dakika','yürüme','endurans','kardiyopulmoner','mesafe','borg'],
+      purpose:'Submaksimal aerobik/işlevsel yürüme kapasitesini altı dakikada kat edilen toplam mesafe üzerinden ölçer.',
+      population:'Kardiyopulmoner, nörolojik, romatolojik ve çeşitli rehabilitasyon popülasyonları.',
+      domains:['Toplam mesafe','Dinlenme sayısı/süresi','Yardımcı cihaz','Semptom ve efor yanıtı','Standart yürüyüş ortamı'],
+      format:'Altı dakika boyunca kendi hızında yürünen toplam mesafe metre olarak kaydedilir. Dinlenmeler serbesttir ancak kronometre devam eder.',
+      duration:'Test 6 dk; hazırlık ve ölçümlerle genellikle <10–20 dk.',
+      equipment:'Kronometre, düz koridor/yürüyüş parkuru, koniler, ölçüm işaretleri; klinik bağlama göre Borg, tansiyon aleti, nabız/SpO₂ izlemi.',
+      interpretation:'Mesafe; yaş, boy, kilo, cinsiyet, tanı, parkur uzunluğu ve protokolden etkilenir. Aynı hastanın seri izlemlerinde aynı parkur/protokol önemlidir; MDC/MCID tanıya özgüdür.',
+      turkish:'Türkiye’de kardiyopulmoner ve nörolojik rehabilitasyonda yaygın kullanılır; norm/MCID değerleri popülasyona göre ayrı kaynaklandırılacaktır.',
+      rights:{mode:'open', label:'İnteraktif kayıt kullanılabilir', note:'RehabMeasures ve ATS standardizasyon bilgileriyle güvenli kayıt ekranı oluşturulabilir.'},
+      interactive:{kind:'6mwt', unit:'m'},
+      sources:[
+        ['RehabMeasures — 6 Minute Walk Test','https://www.sralab.org/rehabilitation-measures/6-minute-walk-test'],
+        ['ATS statement','https://www.thoracic.org/statements/resources/pfet/sixminute.pdf']
+      ]
+    }
+  ]
+};
