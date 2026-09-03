@@ -37,17 +37,20 @@ jobs:
           base64 -d tools/v2910b-native/BillingBootstrap.java.xz.b64 | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBootstrap.java
           cat tools/v2910b-native/BillingBridge.java.xz.b64.part* | base64 -d | xz -d > work/src/com/ftrakademi/preview3/billing/BillingBridge.java
           grep -q 'class BillingBridge' work/src/com/ftrakademi/preview3/billing/BillingBridge.java
-      - name: Download APKTool and Play Billing 9.1.0
+      - name: Download Play Billing 9.1.0
         run: |
-          curl -fL --retry 3 -o work/apktool.jar https://github.com/iBotPeaches/Apktool/releases/download/v2.12.0/apktool_2.12.0.jar
           curl -fL --retry 3 -o work/billing.aar https://dl.google.com/dl/android/maven2/com/android/billingclient/billing/9.1.0/billing-9.1.0.aar
           mkdir -p work/billing
           unzip -q work/billing.aar -d work/billing
-          jar tf work/apktool.jar | grep -E 'smali/.*/Main.class|smali.*Main.class' | sort | tee work/smali-entrypoints.txt
+      - name: Locate SDK smali toolchain
+        run: |
+          test -f "$ANDROID_HOME/tools/lib/baksmali-2.2.1.jar"
+          test -f "$ANDROID_HOME/tools/lib/smali-2.2.1.jar"
+          echo "$ANDROID_HOME/tools/lib/*" > work/smali-entrypoints.txt
       - name: Disassemble locked MainActivity dex
         run: |
           mkdir -p work/smali
-          java -cp work/apktool.jar com.android.tools.smali.baksmali.Main disassemble work/classes.dex -o work/smali
+          java -cp "$ANDROID_HOME/tools/lib/*" org.jf.baksmali.Main disassemble work/classes.dex -o work/smali
           test -f work/smali/com/ftrakademi/preview3/MainActivity.smali
           grep -n 'addJavascriptInterface' work/smali/com/ftrakademi/preview3/MainActivity.smali | tee work/main-bridge-lines.txt
       - name: Patch exactly one Billing bootstrap call into onCreate
@@ -64,12 +67,13 @@ jobs:
           if 'BillingBootstrap;->install' in s: raise SystemExit('billing bootstrap already present')
           s=s[:line_end]+injection+s[line_end:]
           p.write_text(s)
-          print('Billing bootstrap injections:', s.count('BillingBootstrap;->install'))
+          assert s.count('BillingBootstrap;->install') == 1
+          print('Billing bootstrap injections: 1')
           PY
           grep -n -C 5 'BillingBootstrap' work/smali/com/ftrakademi/preview3/MainActivity.smali
       - name: Reassemble patched locked native dex
         run: |
-          java -cp work/apktool.jar com.android.tools.smali.smali.Main assemble work/smali -o work/classes-patched.dex
+          java -cp "$ANDROID_HOME/tools/lib/*" org.jf.smali.Main assemble work/smali -o work/classes-patched.dex
           test -s work/classes-patched.dex
           sha256sum work/classes.dex work/classes-patched.dex
       - name: Compile isolated FTRBilling bridge with Play Billing 9.1.0
@@ -87,11 +91,11 @@ jobs:
       - name: Patch contract report
         run: |
           python3 - <<'PY'
-          import hashlib, json, os
+          import hashlib, json
           def sha(p):
               h=hashlib.sha256()
               with open(p,'rb') as f:
-                  for b in iter(lambda:f.read(1024*1024),b''):h.update(b)
+                  for b in iter(lambda:f.read(1024*1024),b''): h.update(b)
               return h.hexdigest()
           report={
             'base_classes_sha256':sha('work/classes.dex'),
