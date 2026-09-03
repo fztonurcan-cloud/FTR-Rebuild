@@ -33,7 +33,7 @@ jobs:
           bad=0
           while IFS= read -r path; do
             case "$path" in
-              THREE-PLAN-SCOPE-LOCK.md|.github/workflows/v30-three-plan-guards.yml|.github/workflows/v30-host-integration-guards.yml|tools/clinical-scales/*|tools/brand/*|tools/anatomy3d/index.html|tools/anatomy3d/src/brand-nav.css|tools/anatomy3d/src/brand-nav.js|tools/v30/*) ;;
+              THREE-PLAN-SCOPE-LOCK.md|.github/workflows/v30-three-plan-guards.yml|.github/workflows/v30-host-integration-guards.yml|.github/workflows/v30-plan1-artifact-guards.yml|tools/clinical-scales/*|tools/brand/*|tools/anatomy3d/index.html|tools/anatomy3d/src/brand-nav.css|tools/anatomy3d/src/brand-nav.js|tools/v30/*) ;;
               *) echo "FORBIDDEN OUT-OF-SCOPE CHANGE: $path"; bad=1 ;;
             esac
           done < <(git diff --name-only "$BASE" HEAD)
