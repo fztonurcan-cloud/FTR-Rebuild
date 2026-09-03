@@ -11,112 +11,29 @@ permissions:
   actions: read
 
 jobs:
-  compare-ligament-artifacts:
+  derive-and-verify-plan1:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       BASELINE_ARTIFACT_ID: '9872460705'
-      RED_ARTIFACT_ID: '9890887247'
+      BASELINE_ARTIFACT_DIGEST: 'sha256:48e48fdd5c22428dc73ed7a9df758d60f85b79ca1d15bd2f20539122a4abb235'
+      BASELINE_ARTIFACT_SIZE: '4502184'
+      BASELINE_HEAD_SHA: 'cfdf34fd0d1fa8bfb1ce6e9f4a755c9e4773b0fd'
+      EXPECTED_LIGAMENT_ID_SHA256: '171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7'
+
     steps:
-      - name: Download physically verified baseline and red-ligament artifacts
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir -p /tmp/ftr/base /tmp/ftr/red
-          curl --fail --location --retry 3 \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            -o /tmp/ftr/base.zip \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${BASELINE_ARTIFACT_ID}/zip"
-          curl --fail --location --retry 3 \
-            -H "Authorization: Bearer ${GH_TOKEN}" \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            -o /tmp/ftr/red.zip \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${RED_ARTIFACT_ID}/zip"
-          unzip -q /tmp/ftr/base.zip -d /tmp/ftr/base
-          unzip -q /tmp/ftr/red.zip -d /tmp/ftr/red
-          test -f /tmp/ftr/base/dist/atlas/ligament-id.png
-          test -f /tmp/ftr/red/dist/atlas/ligament-id.png
-          test -f /tmp/ftr/base/dist/atlas/ligament-front.png
-          test -f /tmp/ftr/red/dist/atlas/ligament-front.png
-          test -f /tmp/ftr/base/dist/data/atlas-map.json
-          test -f /tmp/ftr/red/dist/data/atlas-map.json
-          echo 'PLAN1 ARTIFACT DOWNLOAD PASS'
+      - name: Checkout v30 branch
+        uses: actions/checkout@v4
 
-      - name: Invisible ligament ID map must be byte-identical
-        shell: bash
-        run: |
-          set -euo pipefail
-          base_sha="$(sha256sum /tmp/ftr/base/dist/atlas/ligament-id.png | awk '{print $1}')"
-          red_sha="$(sha256sum /tmp/ftr/red/dist/atlas/ligament-id.png | awk '{print $1}')"
-          echo "BASELINE_LIGAMENT_ID_SHA256=${base_sha}"
-          echo "RED_LIGAMENT_ID_SHA256=${red_sha}"
-          test "$base_sha" = "$red_sha"
-          cmp -s /tmp/ftr/base/dist/atlas/ligament-id.png /tmp/ftr/red/dist/atlas/ligament-id.png
-          echo 'LIGAMENT ID MAP BYTE-IDENTICAL PASS'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Visible ligament beauty layer must actually change
-        shell: bash
-        run: |
-          set -euo pipefail
-          base_sha="$(sha256sum /tmp/ftr/base/dist/atlas/ligament-front.png | awk '{print $1}')"
-          red_sha="$(sha256sum /tmp/ftr/red/dist/atlas/ligament-front.png | awk '{print $1}')"
-          echo "BASELINE_LIGAMENT_FRONT_SHA256=${base_sha}"
-          echo "RED_LIGAMENT_FRONT_SHA256=${red_sha}"
-          test "$base_sha" != "$red_sha"
-          test "$(stat -c '%s' /tmp/ftr/red/dist/atlas/ligament-front.png)" -gt 10000
-          echo 'LIGAMENT BEAUTY LAYER CHANGED PASS'
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow==11.3.0
 
-      - name: Ligament structure identity and static-runtime contract must remain unchanged
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-
-          def load(path):
-              return json.loads(Path(path).read_text(encoding='utf-8'))
-
-          def normalized(data):
-              system=(data.get('systems') or {}).get('ligament') or {}
-              structures=system.get('structures') or []
-              return {
-                  'structure_count': int(system.get('structure_count', len(structures))),
-                  'structures': [
-                      {
-                          'id': row.get('id'),
-                          'rgb': row.get('rgb'),
-                          'name': row.get('name'),
-                          'raw': row.get('raw'),
-                          'key': row.get('key'),
-                          'object_type': row.get('object_type'),
-                          'anchor': row.get('anchor'),
-                      }
-                      for row in structures
-                  ],
-              }
-
-          base=load('/tmp/ftr/base/dist/data/atlas-map.json')
-          red=load('/tmp/ftr/red/dist/data/atlas-map.json')
-          assert normalized(base) == normalized(red), 'ligament structure contract changed'
-          assert normalized(red)['structure_count'] == 292, normalized(red)['structure_count']
-          assert red.get('render_mode') == 'static-layered-atlas'
-          policy=red.get('policy') or {}
-          assert policy.get('webgl') is False
-          assert policy.get('runtime_3d_models') is False
-          assert policy.get('continuous_render_loop') is False
-          assert policy.get('ligament_high_visibility_red') is True
-          assert policy.get('ligament_skeleton_reference_preserved') is True
-          assert policy.get('ligament_id_map_unchanged_by_recolor') is True
-          print('LIGAMENT STRUCTURE + STATIC RUNTIME CONTRACT PASS', normalized(red)['structure_count'])
-          PY
-
-      - name: Red artifact provenance lock
+      - name: Verify baseline artifact provenance and download exact v29.9 atlas
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -126,14 +43,114 @@ jobs:
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${RED_ARTIFACT_ID}")"
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${BASELINE_ARTIFACT_ID}")"
           python3 - "$meta" <<'PY'
-          import json, sys
+          import json, os, sys
           m=json.loads(sys.argv[1])
-          assert m['id'] == 9890887247
-          assert m['workflow_run']['head_sha'] == 'b8cbd14c6a83d80f3040af67cc735b768fd4117d'
-          assert m['digest'] == 'sha256:2ff4bbd37940c73987979a3c427253b31e5b63d3191dc7d3f329c0702c5582a3'
-          assert m['size_in_bytes'] == 4448176
+          assert m['id'] == int(os.environ['BASELINE_ARTIFACT_ID'])
+          assert m['workflow_run']['head_sha'] == os.environ['BASELINE_HEAD_SHA']
+          assert m['digest'] == os.environ['BASELINE_ARTIFACT_DIGEST']
+          assert m['size_in_bytes'] == int(os.environ['BASELINE_ARTIFACT_SIZE'])
           assert not m['expired']
-          print('RED ARTIFACT PROVENANCE PASS')
+          print('BASELINE ARTIFACT PROVENANCE PASS')
           PY
+
+          mkdir -p /tmp/ftr/base
+          curl --fail --location --retry 3 \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            -o /tmp/ftr/base.zip \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${BASELINE_ARTIFACT_ID}/zip"
+          unzip -q /tmp/ftr/base.zip -d /tmp/ftr/base
+          test -f /tmp/ftr/base/dist/atlas/ligament-id.png
+          test -f /tmp/ftr/base/dist/atlas/ligament-front.png
+          test -f /tmp/ftr/base/dist/data/atlas-map.json
+          test "$(sha256sum /tmp/ftr/base/dist/atlas/ligament-id.png | awk '{print $1}')" = "$EXPECTED_LIGAMENT_ID_SHA256"
+          echo 'VERIFIED V29.9 BASELINE DOWNLOAD PASS'
+
+      - name: Derive red ligament beauty layer from exact baseline without rendering ID map
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf /tmp/ftr/derived
+          python tools/v30/derive_plan1_ligament_from_v299.py \
+            --baseline /tmp/ftr/base \
+            --output /tmp/ftr/derived \
+            --report /tmp/ftr/plan1-derived-report.json
+          test -f /tmp/ftr/plan1-derived-report.json
+          echo 'PLAN1 BASELINE-DERIVED ARTIFACT CREATED'
+
+      - name: Invisible ligament ID map must remain byte-identical
+        shell: bash
+        run: |
+          set -euo pipefail
+          base_sha="$(sha256sum /tmp/ftr/base/dist/atlas/ligament-id.png | awk '{print $1}')"
+          derived_sha="$(sha256sum /tmp/ftr/derived/dist/atlas/ligament-id.png | awk '{print $1}')"
+          echo "BASELINE_LIGAMENT_ID_SHA256=${base_sha}"
+          echo "DERIVED_LIGAMENT_ID_SHA256=${derived_sha}"
+          test "$base_sha" = "$EXPECTED_LIGAMENT_ID_SHA256"
+          test "$derived_sha" = "$EXPECTED_LIGAMENT_ID_SHA256"
+          cmp -s /tmp/ftr/base/dist/atlas/ligament-id.png /tmp/ftr/derived/dist/atlas/ligament-id.png
+          echo 'LIGAMENT ID MAP BYTE-IDENTICAL PASS'
+
+      - name: Beauty layer changes while all unrelated baseline artifact files remain identical
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          base=Path('/tmp/ftr/base')
+          derived=Path('/tmp/ftr/derived')
+          def h(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+          def tree(root):
+              return {p.relative_to(root).as_posix():h(p) for p in sorted(root.rglob('*')) if p.is_file()}
+          b=tree(base); d=tree(derived)
+          changed=sorted(k for k in b if d.get(k)!=b[k])
+          added=sorted(k for k in d if k not in b)
+          removed=sorted(k for k in b if k not in d)
+          assert changed == ['dist/atlas/ligament-front.png','dist/data/atlas-map.json'], changed
+          assert not added, added
+          assert not removed, removed
+          assert h(base/'dist/atlas/ligament-front.png') != h(derived/'dist/atlas/ligament-front.png')
+          report=json.loads(Path('/tmp/ftr/plan1-derived-report.json').read_text(encoding='utf-8'))
+          assert report['status']=='PLAN1_DERIVED_ARTIFACT_QA_PASS'
+          assert report['ligament_id_byte_identical'] is True
+          assert report['ligament_structure_contract_unchanged'] is True
+          assert report['structure_count']==292
+          assert report['recolored_ligament_pixels'] > 100
+          print('PLAN1 DERIVED SCOPE + BEAUTY CHANGE PASS', report['recolored_ligament_pixels'])
+          PY
+
+      - name: Static runtime and Plan 1 policy contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('/tmp/ftr/derived/dist/data/atlas-map.json').read_text(encoding='utf-8'))
+          assert data.get('render_mode')=='static-layered-atlas'
+          p=data.get('policy') or {}
+          assert p.get('webgl') is False
+          assert p.get('runtime_3d_models') is False
+          assert p.get('continuous_render_loop') is False
+          assert p.get('ligament_high_visibility_red') is True
+          assert p.get('ligament_skeleton_reference_preserved') is True
+          assert p.get('ligament_id_map_unchanged_by_recolor') is True
+          assert p.get('plan1_derived_from_physically_verified_v29_9') is True
+          print('PLAN1 STATIC RUNTIME + POLICY PASS')
+          PY
+
+      - name: Upload verified Plan 1 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v30-plan1-derived-from-v29.9
+          path: |
+            /tmp/ftr/derived
+            /tmp/ftr/plan1-derived-report.json
+          if-no-files-found: error
+          compression-level: 6
+          retention-days: 30
