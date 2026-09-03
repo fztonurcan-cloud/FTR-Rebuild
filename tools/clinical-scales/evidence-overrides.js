@@ -40,13 +40,23 @@
     format: 'Kas yanıt kalitesi + yakalama açısı birlikte kaydedilir. V1 mümkün olduğunca yavaş, V2 yerçekimi hızı, V3 mümkün olduğunca hızlıdır; R1 hızlı gerimde yakalama açısı, R2 yavaş gerimde tam pasif ROM olarak kaydedilir.',
     equipment: 'Gonyometre; test edilen ekleme uygun pozisyonlama alanı.',
     interpretation: 'R2−R1 farkı dinamik ton bileşenini anlamaya yardımcı olabilir. Kullanılan Tardieu/MTS sürümü ve reaksiyon kalite dereceleri açıkça belirtilmelidir.',
-    evidenceNote: 'RehabMeasures Modified Tardieu açıklaması.',
+    rights: {
+      mode: 'open',
+      label: 'Ücretsiz klinik araç',
+      note: 'RehabMeasures MTS için Cost: Free bildirir. FTR Akademi standart uygulama ve skor girişini sunar; kullanılan sürüm/terminoloji açıkça etiketlenir.'
+    },
+    evidenceNote: 'RehabMeasures Modified Tardieu açıklaması ve ücretsiz erişim bilgisi.',
     evidenceDate: '2026-09-03'
   });
 
   patch('penn', {
     format: 'İki parçalı öz-bildirim: spazm sıklığı 0–4, spazm şiddeti 1–3. Sıklık 0 ise şiddet bölümü uygulanmaz.',
     duration: 'Yaklaşık 1 dk.',
+    rights: {
+      mode: 'open',
+      label: 'Ücretsiz klinik araç',
+      note: 'RehabMeasures Penn Spasm Frequency Scale için Cost: Free bildirir; iki parçalı sıklık/şiddet skor yapısı kaynakla gösterilir.'
+    },
     evidenceNote: 'RehabMeasures Penn Spasm Frequency Scale.',
     evidenceDate: '2026-09-03'
   });
@@ -54,6 +64,11 @@
   patch('berg', {
     format: '14 performans görevi; her madde 0–4; toplam 0–56.',
     interpretation: '56 fonksiyonel dengeyi temsil eder. <45 eşiği bazı yaşlı örneklemlerde daha yüksek düşme riski ile ilişkilidir; inme ve diğer popülasyonlarda farklı cut-off değerleri bildirilmiştir. Uygulama popülasyonu belirtmeden tek eşik göstermez.',
+    rights: {
+      mode: 'open',
+      label: 'Public domain',
+      note: 'RehabMeasures Berg Balance Scale için Cost: Free ve public-domain availability bildirir. Popülasyona özgü cut-off bağlamı korunur.'
+    },
     evidenceNote: 'RehabMeasures BBS kaydı public-domain erişimi ve popülasyona özgü cut-off verilerini belirtir.',
     evidenceDate: '2026-09-03'
   });
@@ -71,12 +86,22 @@
     format: 'Uygulamada açıkça 16 maddelik / 28 puanlık POMA sürümü kullanılır: 9 denge maddesi + 7 yürüyüş maddesi.',
     equipment: 'Sert kolçaksız sandalye, kronometre/saat ve yaklaşık 4.57 m (15 ft) yürüyüş alanı.',
     duration: 'Yaklaşık 10–15 dk.',
+    rights: {
+      mode: 'open',
+      label: 'Ücretsiz erişim',
+      note: 'RehabMeasures 16 maddelik/28 puanlık POMA incelemesinde Cost: Free bildirir. Farklı POMA sürümleri bulunduğu için sürüm etiketi zorunludur.'
+    },
     evidenceNote: 'RehabMeasures POMA; farklı POMA sürümleri bulunduğu için sürüm etiketi zorunludur.',
     evidenceDate: '2026-09-03'
   });
 
   patch('dgi', {
-    evidenceNote: 'Sekiz dinamik yürüyüş görevi ve 24 puanlık yapı sürüm etiketiyle sunulur; popülasyona özgü yorum gerekir.',
+    rights: {
+      mode: 'open',
+      label: 'Ücretsiz erişim',
+      note: 'RehabMeasures DGI için Cost: Free ve instrument freely available bilgisini verir. Sekiz görev/24 puanlık sürüm açıkça etiketlenir.'
+    },
+    evidenceNote: 'RehabMeasures: sekiz dinamik yürüyüş görevi, 24 puanlık yapı ve ücretsiz erişim; popülasyona özgü yorum gerekir.',
     evidenceDate: '2026-09-03'
   });
 
@@ -138,7 +163,12 @@
     duration: 'Yaklaşık 1–3 dk.',
     equipment: 'Standart 9 delikli pegboard, 9 peg, peg kabı ve kronometre.',
     interpretation: 'Pegboard geometrisi/norm seti değişirse sonuçlar karşılaştırılamayabilir; kullanılan ekipman standardize edilmelidir.',
-    evidenceNote: 'RehabMeasures Nine-Hole Peg Test.',
+    rights: {
+      mode: 'open',
+      label: 'Süre kaydı — standart kit ücretli',
+      note: 'RehabMeasures 9-HPT için Cost: Not Free ve standart pegboard gereksinimi bildirir. FTR Akademi yalnız kullanıcının fiziksel testte ölçtüğü süreyi kaydeder; ticari kit, vendor materyali veya norm tablolarını çoğaltmaz.'
+    },
+    evidenceNote: 'RehabMeasures Nine-Hole Peg Test: standart prosedür, ekipman geometrisi ve fiziksel kit maliyeti bilgisi.',
     evidenceDate: '2026-09-03'
   });
 
