@@ -164,7 +164,8 @@
     'https://pubmed.ncbi.nlm.nih.gov/31294244/');
   byId['6mwt'].sources.push(['PubMed — 6MWT reference values in healthy Turkish children/adolescents 11–18 years','https://pubmed.ncbi.nlm.nih.gov/24987154/']);
 
-  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-4';
+  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-3';
+  db.turkishEvidenceRevision = '2026-09-03-pdms2-version-specific-plus-fma-registry';
   db.turkishEvidencePolicy = {
     populationNamed: true,
     editionNamed: true,
