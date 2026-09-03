@@ -1,6 +1,6 @@
 # FTR Akademi 3D Anatomi — FINAL PREMIUM DESIGN LOCK
 
-Status: **USER FINAL REFERENCE LOCK — 2026-09-02 / v29.9 development line**
+Status: **USER FINAL REFERENCE LOCK — 2026-09-02 / v29.9 development line; ligament visibility correction approved 2026-09-03**
 
 ## Absolute scope rule
 
@@ -8,6 +8,7 @@ Status: **USER FINAL REFERENCE LOCK — 2026-09-02 / v29.9 development line**
 - No lesson, quiz, auth, Supabase, Hareket Stüdyosu, Programım, favorite, note, notification, FTR AI, drawer or unrelated home component may be changed.
 - `FTR-Akademi-v29.7-BILDIRIM.apk` is the untouched safe checkpoint and must never be overwritten or repackaged in place.
 - v29.8.1 remains an earlier technical prototype. v29.9 work is isolated on its own branch.
+- The physically working v29.9 APK must not be overwritten; any post-phone-test usability correction is released as a new build such as v29.9.1.
 
 ## Final visual reference lock
 
@@ -40,13 +41,16 @@ There is **no runtime free 3D rotation**, no WebGL renderer, no runtime GLB mode
 
 The old right-side controls `Döndür / Yakınlaştır / Uzaklaştır / Sıfırla / Otomatik Döndür` are removed. This is intentional and is part of the user's final decision.
 
-## Selection colors
+## Selection and presentation colors
 
-- Muscle selection: vivid orange/purple premium highlight over anatomical red muscle.
+- Muscle presentation: anatomical red muscle; selected structure receives vivid orange/purple premium highlight.
 - Bone selection: blue.
-- Ligament selection: purple.
+- **Ligament presentation: ivory/cream skeleton with all tappable ligament structures rendered high-visibility red.**
+- **Ligament selection: selected ligament receives the existing vivid purple/premium highlight over the red ligament atlas, so both discoverability and selected-state identity remain clear.**
 - Vessel selection: artery red / vessel-system red; veins remain blue in the base atlas.
 - Nerve selection: yellow/gold.
+
+The 2026-09-03 ligament visibility correction changes only the visible ligament beauty layer. The invisible ligament ID map, structure identities, tap-selection mapping and all other systems remain unchanged.
 
 Raw Blender/export suffixes such as `001`, `.001`, `.L` and `.R` must never be shown as learner-facing names.
 
@@ -80,4 +84,4 @@ Generated visual copy is never accepted as medical truth. Unknown structures mus
 
 ## Release rule
 
-No v29.9 APK is `FINAL` or `LOCKED` until the user physically tests it. The safe rollback remains `FTR-Akademi-v29.7-BILDIRIM.apk`.
+No corrected v29.9.x APK is `FINAL` or `LOCKED` until the user physically tests that exact APK. The safe rollback remains `FTR-Akademi-v29.7-BILDIRIM.apk`; the previously working v29.9 APK is also preserved unchanged as the immediate pre-correction phone-tested build.
