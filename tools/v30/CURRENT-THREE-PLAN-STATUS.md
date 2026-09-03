@@ -132,10 +132,16 @@ Exact-logo rule remains fail-closed:
 - no resize/recolor/filter/sharpen/upscale;
 - exact PNG + SHA lock remains mandatory before APK packaging.
 
-Current exact-brand binary blocker:
-- `tools/brand/ftr-logo-exact.png` has NOT yet been committed;
-- `tools/brand/ftr-logo-exact.sha256` has NOT yet been committed;
-- release APK creation therefore remains blocked rather than accepting an approximation.
+Exact-brand binary status:
+- approved source image bytes SHA-256: `5ed581158210e861af0ce93c0bc804372398b595765388ed6842d79784407792`;
+- `tools/brand/ftr-logo-exact.png` is committed as a `112x112` lossless source-pixel crop;
+- exact PNG SHA-256: `4168f34bfee9a8cfe240758561a3c94845206ada891da5b9730b6fc1e4702d75`;
+- exact PNG Git blob SHA-1: `4439b92096d04d6d90e277371826029ffb8091fd`;
+- `tools/brand/ftr-logo-exact.sha256` is committed as the 64-character hash lock;
+- `tools/brand/ftr-logo-exact.metadata.json` records source, crop and forbidden-operation contract;
+- exact-logo materialization Run #1 completed successfully after checking decoded byte size, SHA-256, Git blob identity and PNG dimensions;
+- transfer-only temporary chunks and temporary materializer workflow were removed from the resulting tree;
+- physical-phone visual QA is still PENDING and this asset must not be called FINAL/LOCKED before phone verification.
 
 ## Release status
 
@@ -144,7 +150,7 @@ Current exact-brand binary blocker:
 - Plan 3 full premium host source: IMPLEMENTED
 - Plan 3 premium Clinical Scales shell: IMPLEMENTED
 - Plan 3 exact-logo navigation/source lock: PASS
-- Plan 3 exact binary asset/hash: PENDING
+- Plan 3 exact binary asset/hash integrity: PASS
 - v30 release APK: NOT BUILT
 - Physical phone QA: PENDING
 - FINAL/LOCKED: NO
