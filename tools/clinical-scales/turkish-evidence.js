@@ -39,9 +39,10 @@
     'https://pubmed.ncbi.nlm.nih.gov/31297483/');
 
   add('fma',
-    'Fugl-Meyer Türkiye’de inme araştırmalarında karşılaştırma ölçütü olarak kullanılmaktadır; 2026 Türkçe SULCS çalışmasında Fugl-Meyer ile güçlü yakınsak geçerlilik ilişkisi bildirilmiştir. Bu çalışma FMA’nın kendi Türkçe çeviri validasyonu değildir; FTR Akademi doğrudan Türkçe FMA validasyonu doğrulanmış gibi etiketlemez.',
+    'Fugl-Meyer Türkiye’de inme araştırmalarında karşılaştırma ölçütü olarak kullanılmaktadır; 2026 Türkçe SULCS çalışmasında Fugl-Meyer ile güçlü yakınsak geçerlilik ilişkisi bildirilmiştir. FMA’nın Türkçe kültürel adaptasyonu için NCT05823298 numaralı çalışma tamamlanmış görünmektedir; ancak erişilebilir kayıt tek başına yayımlanmış psikometrik sonuç makalesi yerine geçmez. FTR Akademi bu nedenle doğrudan Türkçe FMA validasyonu yayımlanmış gibi etiketlemez.',
     'PubMed — Turkish SULCS validation using Fugl-Meyer as comparator',
     'https://pubmed.ncbi.nlm.nih.gov/41500923/');
+  byId.fma.sources.push(['ClinicalTrials.gov registry — Turkish FMA adaptation study NCT05823298','https://clinicaltrials.gov/study/NCT05823298']);
 
   add('rivermead',
     'Rivermead Mobilite İndeksi’nin Türkçe formu 2007’de yaşlı bireylerde doğrudan geçerlilik ve güvenilirlik açısından incelenmiştir. Kurumda yaşayan dolaşabilen/yatağa bağımlı yaşlılar ile toplumda yaşayan yaşlıları içeren örneklemde test-tekrar test katsayısı r=0.98, KR-20 iç tutarlılık katsayısı 0.91 ve Brief Disability Questionnaire ile korelasyon r=0.66 bildirilmiştir. Bu doğrudan Türkçe validasyon kanıtı yaşlı popülasyona aittir; inme popülasyonuna otomatik genellenmez.',
@@ -118,6 +119,11 @@
     'PubMed — Turkish GMFM-88&66 validation 2024',
     'https://pubmed.ncbi.nlm.nih.gov/39334609/');
 
+  add('pdms',
+    'PDMS için Türkçe psikometrik kanıt sürüme özgüdür: 2025’te yayımlanan çalışma PDMS-2’nin Türkçe çevirisini 0–24 aylık riskli 120 bebekte değerlendirmiş; Cronbach alfa 0.865 ve hem Fine Motor Quotient hem Gross Motor Quotient için test-tekrar test ICC 0.998 bildirmiştir. Bu kanıt PDMS-2’ye ve bu yaş/risk popülasyonuna aittir; güncel ticari PDMS-3 sürümünün Türkçe validasyonu gibi gösterilmez ve PDMS-3 norm/puanlama sistemine otomatik taşınmaz.',
+    'PubMed — Turkish PDMS-2 translation and psychometric properties in at-risk infants',
+    'https://pubmed.ncbi.nlm.nih.gov/39996609/');
+
   add('dgi',
     'Türkçe psikometrik çalışma Modified Dynamic Gait Index (mDGI) sürümüne aittir; yaşlı erişkinlerde Cronbach alfa 0.97, test-tekrar test ve gözlemciler arası ICC 0.95 bildirilmiştir. Orijinal DGI ile mDGI aynı sürüm gibi gösterilmez.',
     'PubMed — Turkish Modified DGI validation',
@@ -158,7 +164,7 @@
     'https://pubmed.ncbi.nlm.nih.gov/31294244/');
   byId['6mwt'].sources.push(['PubMed — 6MWT reference values in healthy Turkish children/adolescents 11–18 years','https://pubmed.ncbi.nlm.nih.gov/24987154/']);
 
-  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-3';
+  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-4';
   db.turkishEvidencePolicy = {
     populationNamed: true,
     editionNamed: true,
@@ -166,6 +172,8 @@
     noUniversalCutoffInference: true,
     turkeyCohortEvidenceSeparatedFromTranslationLicense: true,
     languageValidationSeparatedFromPopulationReferenceValues: true,
-    indirectComparatorEvidenceExplicitlyLabeled: true
+    indirectComparatorEvidenceExplicitlyLabeled: true,
+    editionSpecificEvidenceNotTransferredAcrossVersions: true,
+    unpublishedOrRegistryOnlyValidationNotTreatedAsPublishedEvidence: true
   };
 })();
