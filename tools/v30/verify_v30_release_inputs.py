@@ -27,14 +27,21 @@ CLINICAL_REQUIRED = (
     "index.html",
     "style.css",
     "evidence-enhancer.css",
+    "premium-reference.css",
     "data.js",
     "evidence-overrides.js",
     "turkish-evidence.js",
     "scoring-evidence.js",
     "app.js",
+    "premium-reference.js",
     "visual-enhancer.js",
     "detail-evidence-enhancer.js",
     "RESEARCH-MANIFEST.md",
+)
+
+HOST_REQUIRED = (
+    "v30-three-plan.css",
+    "v30-three-plan.js",
 )
 
 
@@ -71,6 +78,12 @@ def normalized_ligament(data: dict) -> dict:
             for row in rows
         ],
     }
+
+
+def require_tokens(text: str, tokens: tuple[str, ...], label: str) -> None:
+    missing = [token for token in tokens if token not in text]
+    if missing:
+        raise SystemExit(f"RELEASE BLOCKED: {label} contract missing: {missing}")
 
 
 def main() -> None:
@@ -142,11 +155,13 @@ def main() -> None:
     html = (clinical / "index.html").read_text(encoding="utf-8")
     required_refs = (
         "./evidence-enhancer.css",
+        "./premium-reference.css",
         "./data.js",
         "./evidence-overrides.js",
         "./turkish-evidence.js",
         "./scoring-evidence.js",
         "./app.js",
+        "./premium-reference.js",
         "./visual-enhancer.js",
         "./detail-evidence-enhancer.js",
         "../brand/ftr-logo-exact.png",
@@ -154,6 +169,62 @@ def main() -> None:
     for ref in required_refs:
         if ref not in html:
             raise SystemExit(f"RELEASE BLOCKED: Clinical Scales index missing {ref}")
+    premium_clinical_css = (clinical / "premium-reference.css").read_text(encoding="utf-8")
+    premium_clinical_js = (clinical / "premium-reference.js").read_text(encoding="utf-8")
+    require_tokens(
+        html,
+        ("id=\"filterBtn\"", "class=\"clinical-bottom-nav\"", "Ölçek ara…"),
+        "Clinical Scales premium HTML",
+    )
+    require_tokens(
+        premium_clinical_css,
+        (".category-card:nth-child(8)", ".clinical-bottom-nav", "#catalogView .hero"),
+        "Clinical Scales premium CSS",
+    )
+    require_tokens(
+        premium_clinical_js,
+        ("filters-open", "../index.html?v30nav=", "window.location.href = '../index.html'"),
+        "Clinical Scales premium navigation",
+    )
+
+    host = repo / "tools" / "v30" / "integration"
+    host_missing = [name for name in HOST_REQUIRED if not (host / name).is_file()]
+    if host_missing:
+        raise SystemExit(f"RELEASE BLOCKED: premium host payload incomplete: {host_missing}")
+    host_js = (host / "v30-three-plan.js").read_text(encoding="utf-8")
+    host_css = (host / "v30-three-plan.css").read_text(encoding="utf-8")
+    require_tokens(
+        host_js,
+        (
+            "ftr-v30-premium-home",
+            "ftr-v30-premium-drawer",
+            "Merhaba, Fizyoterapist!",
+            "Derslerim",
+            "3D Anatomi",
+            "Hareket Stüdyosu",
+            "Klinik Ölçekler",
+            "Kısayollarım",
+            "Fizyoterapi Bilgi Platformu",
+            "./brand/ftr-logo-exact.png",
+            "./anatomy3d/index.html",
+            "./clinical-scales/index.html",
+            "v30nav",
+        ),
+        "Plan 3 premium host JS",
+    )
+    require_tokens(
+        host_css,
+        (
+            "Visual target: ChatGPT Image 3 Eyl 2026 13_01_16.png",
+            ".ftr-v30-premium-topbar",
+            ".ftr-v30-premium-hero",
+            ".ftr-v30-module-stack",
+            ".ftr-v30-shortcuts",
+            ".ftr-v30-bottom-nav",
+            ".ftr-v30-drawer",
+        ),
+        "Plan 3 premium host CSS",
+    )
 
     brand = repo / "tools" / "brand" / "ftr-logo-exact.png"
     brand_lock = repo / "tools" / "brand" / "ftr-logo-exact.sha256"
@@ -179,8 +250,17 @@ def main() -> None:
             "ligament_id_sha256": PLAN1_ID_SHA256,
             "structure_count": PLAN1_STRUCTURE_COUNT,
         },
-        "plan2": {"required_files": list(CLINICAL_REQUIRED), "count": len(CLINICAL_REQUIRED)},
-        "plan3": {"brand_sha256": actual_brand_sha, "dimensions": list(dims)},
+        "plan2": {
+            "required_files": list(CLINICAL_REQUIRED),
+            "count": len(CLINICAL_REQUIRED),
+            "premium_reference_shell": True,
+        },
+        "plan3": {
+            "brand_sha256": actual_brand_sha,
+            "dimensions": list(dims),
+            "premium_host_files": list(HOST_REQUIRED),
+            "full_premium_reference": True,
+        },
         "phone_qa_required": True,
         "final_locked": False,
     }
