@@ -107,8 +107,8 @@ jobs:
           grep -Fq "BERG.length !== 14 || BERG.length * 4 !== 56" "$app"
           grep -Fq "DGI.length !== 8 || DGI.length * 3 !== 24" "$app"
           grep -Fq "const expectedMax = {berg:56, tinetti:28, dgi:24}" "$app"
-          grep -Fq "Denge: ${balance} / 16" "$app"
-          grep -Fq "Yürüyüş: ${gait} / 12" "$app"
+          grep -Fq 'Denge: ${balance} / 16' "$app"
+          grep -Fq 'Yürüyüş: ${gait} / 12' "$app"
           grep -Fq "Standart fiziksel kit gereklidir" "$app"
           grep -Fq "Tek bir evrensel düşme-risk eşiği yoktur" "$app"
           echo 'CLINICAL INTERACTIVE SCORE CONTRACTS PASS'
