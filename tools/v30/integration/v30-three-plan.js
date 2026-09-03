@@ -146,6 +146,15 @@
     else if (name === 'quiz') legacyClick(['.v56-hot-nav-courses']);
   }
 
+  function consumeExternalRoute() {
+    const url = new URL(window.location.href);
+    const requested = url.searchParams.get('v30nav');
+    if (!requested) return;
+    url.searchParams.delete('v30nav');
+    history.replaceState(history.state, '', `${url.pathname}${url.search}${url.hash}`);
+    setTimeout(() => route(requested), 0);
+  }
+
   function install() {
     const shell = document.querySelector(SHELL_SELECTOR);
     if (!shell || shell.classList.contains(INSTALL_CLASS)) return false;
@@ -160,6 +169,7 @@
       const routeName = event.target.closest('[data-v30-route]')?.dataset.v30Route;
       if (routeName) route(routeName);
     });
+    consumeExternalRoute();
     return true;
   }
 
