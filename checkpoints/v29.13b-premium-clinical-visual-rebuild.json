@@ -1,0 +1,25 @@
+{
+  "status": "PHONE_TEST_PENDING",
+  "locked": false,
+  "apk": "FTR-Akademi-v29.13b-PREMIUM-CLINICAL-VISUAL-REBUILD-PHONE-TEST.apk",
+  "sha256": "5ee84ebbb157f4cfb86ac7d888f8cca97119eb000c705fd2bfc4f59be2c043a8",
+  "size_bytes": 1146744617,
+  "certificate_sha256": "8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2",
+  "signing": {"v1": true, "v2": true, "v3": false},
+  "base_preserved": "FTR-Akademi-v29.13-PREMIUM-CLINICAL-REBUILD-PHONE-TEST.apk",
+  "reference_ui_sha256": "756d09f5863f03526c9d6dd8673b0793e09755f7426752269380f6dd62428305",
+  "clinical_visuals_added": 69,
+  "mapped_content_items": 516,
+  "content": {
+    "clinical_cases": 128,
+    "clinical_case_questions": 768,
+    "daily_cases": 128,
+    "daily_case_questions": 768,
+    "skills_lab_items": 125,
+    "clinical_pocket_cards": 135
+  },
+  "answer_display": "runtime shuffled; statistically balanced A/B/C/D positions",
+  "allowlist_diff": "PASS",
+  "protected_core_hashes": "UNCHANGED",
+  "notes": "Physical phone test required before promotion to locked checkpoint. Supabase clinical daily scheduling schema exists but server content tables remain unpopulated; APK uses local Europe/Istanbul daily rotation until backend content deployment."
+}
