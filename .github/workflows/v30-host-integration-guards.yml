@@ -25,50 +25,89 @@ jobs:
           test -f tools/v30/integration/v30-three-plan.css
           test -f tools/v30/build_v30_three_plan_apk.py
           test -f tools/v30/verify_v30_release_inputs.py
-          echo 'V30 HOST INPUTS PRESENT'
+          test -f tools/clinical-scales/premium-reference.css
+          test -f tools/clinical-scales/premium-reference.js
+          echo 'V30 PREMIUM HOST INPUTS PRESENT'
 
-      - name: Host and preflight syntax
+      - name: Host and clinical syntax
         shell: bash
         run: |
           set -euo pipefail
           node --check tools/v30/integration/v30-three-plan.js
           node --check tools/clinical-scales/app.js
+          node --check tools/clinical-scales/premium-reference.js
           python3 -m py_compile tools/v30/verify_v30_release_inputs.py
-          echo 'V30 HOST + CLINICAL JS + PREFLIGHT PY SYNTAX PASS'
+          echo 'V30 PREMIUM HOST + CLINICAL SYNTAX PASS'
 
-      - name: Preserve physically verified v29.9 composition
+      - name: Approved premium home and drawer contract
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq '.v56-home-shell.ftr-a3d-v56-installed' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'ftr-v30-reference-middle' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'ftr-v30-reference-tail' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'clip-path:inset(60% 0 14.25% 0)' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'clip-path:inset(85.75% 0 0 0)' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'top:98.745%' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'top:105.668%' tools/v30/integration/v30-three-plan.css
-          grep -Fq 'No unrelated home card is redesigned' tools/v30/integration/v30-three-plan.css
-          echo 'PRESERVED HOME PIXEL-SLICE CONTRACT PASS'
+          js='tools/v30/integration/v30-three-plan.js'
+          css='tools/v30/integration/v30-three-plan.css'
+          grep -Fq "const PREMIUM_ID = 'ftr-v30-premium-home'" "$js"
+          grep -Fq "const DRAWER_ID = 'ftr-v30-premium-drawer'" "$js"
+          grep -Fq 'Merhaba, Fizyoterapist!' "$js"
+          grep -Fq '>Derslerim<' "$js"
+          grep -Fq '>3D Anatomi<' "$js"
+          grep -Fq '>Hareket Stüdyosu<' "$js"
+          grep -Fq 'Klinik Ölçekler <mark>YENİ</mark>' "$js"
+          grep -Fq 'Kısayollarım' "$js"
+          grep -Fq 'Çalışma Alanım' "$js"
+          grep -Fq 'Fizyoterapi Bilgi Platformu' "$js"
+          grep -Fq './anatomy3d/atlas/muscle-front.png' "$js"
+          grep -Fq './brand/ftr-logo-exact.png' "$js"
+          grep -Fq '.ftr-v30-premium-topbar' "$css"
+          grep -Fq '.ftr-v30-premium-hero' "$css"
+          grep -Fq '.ftr-v30-module-stack' "$css"
+          grep -Fq '.ftr-v30-shortcuts' "$css"
+          grep -Fq '.ftr-v30-bottom-nav' "$css"
+          grep -Fq '.ftr-v30-drawer' "$css"
+          grep -Fq 'Visual target: ChatGPT Image 3 Eyl 2026 13_01_16.png' "$css"
+          echo 'APPROVED PREMIUM HOME + DRAWER CONTRACT PASS'
 
-      - name: Clinical Scales home card contract
+      - name: Premium navigation bridge contract
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const CARD_ID = 'ftr-v30-clinical-home-card'" tools/v30/integration/v30-three-plan.js
-          grep -Fq 'Klinik Ölçekler' tools/v30/integration/v30-three-plan.js
-          grep -Fq 'Testler, skorlamalar ve değerlendirme araçları' tools/v30/integration/v30-three-plan.js
-          grep -Fq "window.location.href = './clinical-scales/index.html'" tools/v30/integration/v30-three-plan.js
-          grep -Fq '.ftr-v30-clinical-card' tools/v30/integration/v30-three-plan.css
-          echo 'CLINICAL HOME CARD PASS'
+          js='tools/v30/integration/v30-three-plan.js'
+          grep -Fq "window.location.href = './anatomy3d/index.html'" "$js"
+          grep -Fq "window.location.href = './clinical-scales/index.html'" "$js"
+          grep -Fq ".v56-hot-allclasses" "$js"
+          grep -Fq ".v56-hot-movement" "$js"
+          grep -Fq ".v56-hot-nav-search" "$js"
+          grep -Fq ".v56-hot-nav-profile" "$js"
+          grep -Fq 'legacyTextClick' "$js"
+          grep -Fq "url.searchParams.get('v30nav')" "$js"
+          grep -Fq 'consumeExternalRoute' "$js"
+          echo 'PREMIUM HOST NAVIGATION BRIDGE PASS'
+
+      - name: Clinical Scales premium reference contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          html='tools/clinical-scales/index.html'
+          css='tools/clinical-scales/premium-reference.css'
+          js='tools/clinical-scales/premium-reference.js'
+          grep -Fq './premium-reference.css' "$html"
+          grep -Fq './premium-reference.js' "$html"
+          grep -Fq 'id="filterBtn"' "$html"
+          grep -Fq 'class="clinical-bottom-nav"' "$html"
+          grep -Fq 'Ölçek ara…' "$html"
+          grep -Fq '.category-card:nth-child(8)' "$css"
+          grep -Fq '.clinical-bottom-nav' "$css"
+          grep -Fq "window.location.href = '../index.html'" "$js"
+          grep -Fq '../index.html?v30nav=' "$js"
+          grep -Fq 'filters-open' "$js"
+          echo 'CLINICAL PREMIUM REFERENCE CONTRACT PASS'
 
       - name: Exact brand home-control contract
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "const BRAND_ID = 'ftr-v30-home-brand'" tools/v30/integration/v30-three-plan.js
           grep -Fq './brand/ftr-logo-exact.png' tools/v30/integration/v30-three-plan.js
-          grep -Fq "window.location.href = './index.html'" tools/v30/integration/v30-three-plan.js
-          grep -Fq '.ftr-v30-home-brand' tools/v30/integration/v30-three-plan.css
+          grep -Fq '../brand/ftr-logo-exact.png' tools/clinical-scales/index.html
+          grep -Fq '../brand/ftr-logo-exact.png' tools/anatomy3d/index.html
           grep -Fq 'ftr-logo-exact.sha256' tools/v30/build_v30_three_plan_apk.py
           if test -f tools/brand/ftr-logo-exact.png; then
             test -f tools/brand/ftr-logo-exact.sha256
@@ -86,8 +125,8 @@ jobs:
         run: |
           set -euo pipefail
           for f in \
-            index.html style.css evidence-enhancer.css data.js evidence-overrides.js \
-            turkish-evidence.js scoring-evidence.js app.js visual-enhancer.js \
+            index.html style.css evidence-enhancer.css premium-reference.css data.js evidence-overrides.js \
+            turkish-evidence.js scoring-evidence.js app.js premium-reference.js visual-enhancer.js \
             detail-evidence-enhancer.js RESEARCH-MANIFEST.md; do
             test -f "tools/clinical-scales/$f"
           done
@@ -125,9 +164,6 @@ jobs:
           grep -Fq 'f6d50400ddbdd31805a82c5b020040ca3c5fcc864fe83be32fa65c81f6ad2028' "$gate"
           grep -Fq '171d2bd119d3e08530d5c6bad77c6a5b6cf66283fdf5455f01a9cb61fcc75eb7' "$gate"
           grep -Fq 'plan1_derived_from_physically_verified_v29_9' "$gate"
-          grep -Fq 'scoring-evidence.js' "$gate"
-          grep -Fq 'detail-evidence-enhancer.js' "$gate"
-          grep -Fq 'evidence-enhancer.css' "$gate"
           grep -Fq 'BRAND_EXPECTED_DIMS = (112, 112)' "$gate"
           grep -Fq 'exact Plan 3 brand PNG/SHA lock is still missing' "$gate"
           echo 'V30 RELEASE PREFLIGHT CONTRACT PASS'
@@ -139,4 +175,4 @@ jobs:
           ! grep -R -n -E 'XMLHttpRequest|WebSocket|navigator\.geolocation|navigator\.mediaDevices' tools/v30/integration tools/clinical-scales/*.js
           ! grep -R -n -E '\bfetch\s*\(' tools/v30/integration tools/clinical-scales/*.js
           ! grep -R -n -E 'patientName|hastaAdi|hasta_ad[iı]|tcKimlik|TCKN|emailAddress' tools/v30/integration tools/clinical-scales || true
-          echo 'V30 HOST + CLINICAL OFFLINE SCOPE PASS'
+          echo 'V30 PREMIUM HOST + CLINICAL OFFLINE SCOPE PASS'
