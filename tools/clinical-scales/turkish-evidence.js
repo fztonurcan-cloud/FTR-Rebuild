@@ -33,6 +33,22 @@
     'PubMed — Turkish Lawton IADL validation',
     'https://pubmed.ncbi.nlm.nih.gov/32743320/');
 
+  add('brunnstrom',
+    'Brunnstrom evreleri Türkiye’de inme rehabilitasyonu çalışmalarında klinik karşılaştırma ölçütü olarak kullanılmaktadır. Örneğin Türkçe Trunk Impairment Scale validasyonunda Brunnstrom evreleri yapı geçerliliği analizine dahil edilmiştir. Bu, Brunnstrom için ayrı bir Türkçe çeviri/validasyon çalışması olduğu anlamına gelmez.',
+    'PubMed — Turkey stroke study using Brunnstrom stages as convergent evidence',
+    'https://pubmed.ncbi.nlm.nih.gov/31297483/');
+
+  add('fma',
+    'Fugl-Meyer Türkiye’de inme araştırmalarında karşılaştırma ölçütü olarak kullanılmaktadır; 2026 Türkçe SULCS çalışmasında Fugl-Meyer ile güçlü yakınsak geçerlilik ilişkisi bildirilmiştir. Bu çalışma FMA’nın kendi Türkçe çeviri validasyonu değildir; FTR Akademi doğrudan Türkçe FMA validasyonu doğrulanmış gibi etiketlemez.',
+    'PubMed — Turkish SULCS validation using Fugl-Meyer as comparator',
+    'https://pubmed.ncbi.nlm.nih.gov/41500923/');
+
+  add('rivermead',
+    'Rivermead Mobility Index Türkiye’de inme çalışmalarında yapı/yakınsak geçerlilik karşılaştırıcısı olarak kullanılmaktadır. Türkçe Trunk Impairment Scale çalışmasında RMI ile anlamlı ilişkiler; Türkçe Stroke Activity Scale çalışmasında RMI ile güçlü yakınsak ilişki bildirilmiştir. Bunlar RMI için bağımsız Türkçe çeviri validasyonu değildir.',
+    'PubMed — Turkish stroke study using RMI as convergent measure',
+    'https://pubmed.ncbi.nlm.nih.gov/31297483/');
+  byId.rivermead.sources.push(['PubMed — Turkish Stroke Activity Scale validation using RMI','https://pubmed.ncbi.nlm.nih.gov/38536807/']);
+
   add('berg',
     'Türkçe Berg Denge Ölçeği 65 yaş üzeri sağlıklı Türk erişkinlerde doğrulanmıştır; toplam skor için test-tekrar test ICC 0.98, gözlemci içi ICC 0.98 ve gözlemciler arası ICC 0.97 bildirilmiştir. Bu çalışma yaşlı erişkin popülasyonuna özgüdür.',
     'PubMed — Turkish Berg Balance Scale validation',
@@ -48,6 +64,17 @@
     'Modified Tardieu Scale, Türkiye’de spinal kord yaralanmalı hastalarda MAS ile birlikte gözlemciler arası ve gözlemci içi güvenilirlik açısından incelenmiştir. Bu veri ölçeğin Türkçe telif/çeviri hakkını değil, Türkiye klinik örneklemindeki ölçüm güvenilirliğini destekler.',
     'PubMed — Modified Tardieu reliability in SCI, Turkey',
     'https://pubmed.ncbi.nlm.nih.gov/28485384/');
+
+  add('penn',
+    'Penn Spasm Frequency Scale Türkiye’de spinal kord yaralanması araştırmalarında karşılaştırma ölçütü olarak kullanılmıştır; Türkçe SCI-SETT kültürler arası uyarlama çalışmasında PSFS yakınsak geçerlilik analizine dahil edilmiştir. Bu kanıt PSFS için bağımsız bir Türkçe form validasyonu değildir.',
+    'PubMed — Turkish SCI-SETT study using Penn Spasm Frequency Scale',
+    'https://pubmed.ncbi.nlm.nih.gov/28225536/');
+
+  add('tug',
+    'Timed Up and Go dil bağımlı bir anket değildir. Türkiye’de toplumda yaşayan yaşlı bireylerde hem gözlemci içi hem gözlemciler arası güvenilirliği doğrudan incelenmiş; TUG için gözlemci içi ICC 0.962 ve gözlemciler arası ICC 0.995 bildirilmiştir. Ayrıca Türk yaşlılarda düşme ayrımı çalışmalarında TUG kullanılmıştır; eşikler popülasyona özgü ele alınır.',
+    'PubMed — TUG inter/intraobserver reliability in Turkish community-dwelling older adults',
+    'https://pubmed.ncbi.nlm.nih.gov/39297511/');
+  byId.tug.sources.push(['PubMed — TUG and fall discrimination in Turkish community-dwelling older adults','https://pubmed.ncbi.nlm.nih.gov/35303710/']);
 
   add('tinetti',
     'Performance-Oriented Mobility Assessment I (POMA-I/Tinetti) Türkçeye çevrilmiş ve 65 yaş üzeri Türk bireylerde kültürler arası uyarlama, iç tutarlılık, test-tekrar test ile gözlemciler arası/gözlemci içi güvenilirlik ve yapı geçerliliği incelenmiştir. Çalışmadaki POMA-I sürümü 28 puanlık denge+yürüme yapısıdır; diğer Tinetti/POMA varyantları bununla otomatik olarak eşitlenmez.',
@@ -100,6 +127,12 @@
     'PubMed — Jebsen-Taylor psychometrics, Hacettepe/Turkey',
     'https://pubmed.ncbi.nlm.nih.gov/32156578/');
 
+  add('9hpt',
+    'Nine-Hole Peg Test Türkiye’de farklı Türk klinik araştırmalarında karşılaştırıcı motor beceri ölçütü olarak kullanılmaktadır. Örneğin Parkinson hastalarında Türkçe Comprehensive Coordination Scale validasyonunda 9-HPT yakınsak geçerlilik ölçütlerinden biridir; romatoid artritte Türkçe ABILHAND çalışmasında da NHPT kullanılmıştır. Bunlar 9-HPT’nin kendisi için bağımsız Türkçe norm/validasyon çalışması değildir.',
+    'PubMed — Turkish Parkinson coordination-scale study using 9-HPT',
+    'https://pubmed.ncbi.nlm.nih.gov/39059284/');
+  byId['9hpt'].sources.push(['PubMed — Turkish ABILHAND-RA study using NHPT','https://pubmed.ncbi.nlm.nih.gov/32010888/']);
+
   add('purdue',
     'Hacettepe Üniversitesi örnekleminde Purdue Pegboard Testi’nin el yaralanmalı hastalarda yapı geçerliliği ve ayırt edici cut-off değerleri incelenmiştir. Bu çalışma standardize cihaz/protokol gereksinimini veya ticari materyal haklarını ortadan kaldırmaz.',
     'PubMed — Purdue Pegboard validity/cut-offs, Hacettepe/Turkey',
@@ -131,6 +164,7 @@
     psychometricValidationDoesNotGrantCopyright: true,
     noUniversalCutoffInference: true,
     turkeyCohortEvidenceSeparatedFromTranslationLicense: true,
-    languageValidationSeparatedFromPopulationReferenceValues: true
+    languageValidationSeparatedFromPopulationReferenceValues: true,
+    indirectComparatorEvidenceExplicitlyLabeled: true
   };
 })();
