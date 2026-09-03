@@ -99,7 +99,8 @@ jobs:
           if (!/0–4/.test(x.penn.format) || !/1–3/.test(x.penn.format)) throw new Error('Penn two-part scoring missing');
           if (!/PDMS-3/.test(x.pdms.format) || !/Pearson/.test(x.pdms.interpretation) || x.pdms.rights.mode !== 'restricted') throw new Error('PDMS-3 lock missing');
           if (!/Modified Dynamic Gait Index|mDGI/.test(x.dgi.turkish)) throw new Error('DGI/mDGI distinction missing');
-          if (!/GMFCS/.test(x.gmfcs.name) || !x.gmfcs.scoringArchitecture.some(v=>/sınıflandırma/i.test(v))) throw new Error('GMFCS classification lock missing');
+          const gmfcsText = [...x.gmfcs.scoringArchitecture, x.gmfcs.interpretation].join(' ');
+          if (x.gmfcs.id !== 'gmfcs' || !/beş seviyeli/i.test(gmfcsText) || !/sınıflandırma/i.test(gmfcsText) || !/test toplam puanı değildir/i.test(gmfcsText)) throw new Error('GMFCS classification lock missing');
           if (!x.gmfm.scoringArchitecture.some(v=>/GMAE/.test(v))) throw new Error('GMFM-66 GMAE lock missing');
           if (!x.womac.scoringArchitecture.some(v=>/5/.test(v)&&/2/.test(v)&&/17/.test(v))) throw new Error('WOMAC 5+2+17 lock missing');
           if (!x.hhs.scoringArchitecture.some(v=>/44/.test(v)&&/47/.test(v)&&/4/.test(v)&&/5/.test(v))) throw new Error('HHS 44+47+4+5 lock missing');
