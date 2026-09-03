@@ -92,7 +92,9 @@ jobs:
             if (s.interactive && !openInteractive.has(s.id)) throw new Error(`${s.id}: unexpected interactive tool`);
           }
           const x = Object.fromEntries(db.scales.map(s=>[s.id,s]));
-          if (!/evrensel değildir/i.test(x.berg.interpretation) || !/≥12 sn/.test(x.tug.interpretation) || !/evrensel değildir/i.test(x.tug.interpretation)) throw new Error('Berg/TUG population context missing');
+          const bergContext = /popülasyon/i.test(x.berg.interpretation) && /(tek eşik|evrensel)/i.test(x.berg.interpretation);
+          const tugContext = /≥12 sn/.test(x.tug.interpretation) && /evrensel değildir/i.test(x.tug.interpretation);
+          if (!bergContext || !tugContext) throw new Error('Berg/TUG population context missing');
           if (!/V1/.test(x.tardieu.format) || !/R1/.test(x.tardieu.format) || !/R2/.test(x.tardieu.format)) throw new Error('Tardieu velocity/R1/R2 missing');
           if (!/0–4/.test(x.penn.format) || !/1–3/.test(x.penn.format)) throw new Error('Penn two-part scoring missing');
           if (!/PDMS-3/.test(x.pdms.format) || !/Pearson/.test(x.pdms.interpretation) || x.pdms.rights.mode !== 'restricted') throw new Error('PDMS-3 lock missing');
