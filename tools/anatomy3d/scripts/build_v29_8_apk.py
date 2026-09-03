@@ -145,7 +145,7 @@ def verify_signing(apksigner: Path, output: Path) -> dict[str, object]:
         raise SystemExit(f"Expected exactly one APK signer, found {signer_count}")
 
     cert_match = re.search(
-        r"Signer #1 certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)",
+        r"(?:Signer #1\s*|V2 Signer:\s*)certificate SHA-256 digest:\s*([0-9A-Fa-f:]+)",
         text,
         flags=re.IGNORECASE,
     )
