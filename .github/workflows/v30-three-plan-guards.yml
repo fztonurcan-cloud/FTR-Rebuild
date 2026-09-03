@@ -1,0 +1,146 @@
+name: v30 three-plan fail-closed guards
+
+on:
+  push:
+    branches:
+      - v30-three-plan-premium
+  pull_request:
+    branches:
+      - v30-three-plan-premium
+
+permissions:
+  contents: read
+
+jobs:
+  three-plan-source-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout v30 branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enforce exact three-plan scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='6abf0aab2c2ede44b9ef9ffd35af878160a85ba1'
+          git cat-file -e "${BASE}^{commit}"
+          bad=0
+          while IFS= read -r path; do
+            case "$path" in
+              THREE-PLAN-SCOPE-LOCK.md) ;;
+              .github/workflows/v30-three-plan-guards.yml) ;;
+              tools/clinical-scales/*) ;;
+              tools/brand/*) ;;
+              tools/anatomy3d/index.html) ;;
+              tools/anatomy3d/src/brand-nav.css) ;;
+              tools/anatomy3d/src/brand-nav.js) ;;
+              tools/v30/*) ;;
+              *) echo "FORBIDDEN OUT-OF-SCOPE CHANGE: $path"; bad=1 ;;
+            esac
+          done < <(git diff --name-only "$BASE" HEAD)
+          test "$bad" -eq 0
+          echo 'THREE-PLAN SCOPE PASS'
+
+      - name: JavaScript syntax QA
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tools/clinical-scales/data.js
+          node --check tools/clinical-scales/app.js
+          node --check tools/anatomy3d/src/brand-nav.js
+
+      - name: Validate Clinical Scales catalogue contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const source = fs.readFileSync('tools/clinical-scales/data.js','utf8');
+          const context = { window: {} };
+          vm.createContext(context);
+          vm.runInContext(source, context, {filename:'data.js'});
+          const db = context.window.FTR_CLINICAL_SCALES;
+          if (!db) throw new Error('Database global missing');
+          if (db.categories.length !== 8) throw new Error(`Expected 8 categories, got ${db.categories.length}`);
+          if (db.scales.length !== 29) throw new Error(`Expected 29 instruments, got ${db.scales.length}`);
+          const categoryIds = new Set(db.categories.map(x => x.id));
+          if (categoryIds.size !== 8) throw new Error('Duplicate category id');
+          const ids = new Set();
+          const openInteractive = new Set(['mas','tardieu','penn','berg','tug','tinetti','dgi','9hpt','6mwt']);
+          for (const scale of db.scales) {
+            if (!scale.id || ids.has(scale.id)) throw new Error(`Duplicate/missing scale id: ${scale.id}`);
+            ids.add(scale.id);
+            if (!categoryIds.has(scale.category)) throw new Error(`${scale.id}: unknown category ${scale.category}`);
+            for (const field of ['name','short','visual','purpose','population','format','duration','equipment','interpretation','turkish']) {
+              if (!String(scale[field] || '').trim()) throw new Error(`${scale.id}: missing ${field}`);
+            }
+            if (!Array.isArray(scale.domains) || !scale.domains.length) throw new Error(`${scale.id}: domains missing`);
+            if (!Array.isArray(scale.tags) || !scale.tags.length) throw new Error(`${scale.id}: tags missing`);
+            if (!scale.rights || !['open','reference','restricted'].includes(scale.rights.mode)) throw new Error(`${scale.id}: invalid rights`);
+            if (!Array.isArray(scale.sources) || !scale.sources.length) throw new Error(`${scale.id}: sources missing`);
+            for (const pair of scale.sources) {
+              if (!Array.isArray(pair) || pair.length !== 2 || !/^https:\/\//.test(pair[1])) throw new Error(`${scale.id}: invalid source`);
+            }
+            if (scale.rights.mode !== 'open' && scale.interactive !== null) {
+              throw new Error(`${scale.id}: protected/reference instrument must not expose full interactive scoring`);
+            }
+            if (scale.interactive && !openInteractive.has(scale.id)) throw new Error(`${scale.id}: unexpected interactive tool`);
+          }
+          if (ids.size !== 29) throw new Error('Scale id count mismatch');
+          for (const required of ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt']) {
+            if (!ids.has(required)) throw new Error(`Required instrument missing: ${required}`);
+          }
+          console.log('CLINICAL CATALOGUE PASS', {categories: db.categories.length, scales: db.scales.length});
+          NODE
+
+      - name: Enforce offline privacy and clinical module boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -n -E 'fetch\(|XMLHttpRequest|WebSocket|navigator\.geolocation|navigator\.mediaDevices' tools/clinical-scales/*.js
+          ! grep -R -n -E 'patientName|hastaAdi|hasta_ad[iı]|tcKimlik|TCKN|emailAddress' tools/clinical-scales || true
+          grep -q 'Klinik karar desteği' tools/clinical-scales/index.html
+          grep -q 'Tanı aracı değildir' tools/clinical-scales/index.html
+          echo 'OFFLINE / NO-PATIENT-IDENTITY CONTRACT PASS'
+
+      - name: Validate Plan 1 ligament contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py
+          grep -q 'ligament_high_visibility_red' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          grep -q 'ligament_id_map_unchanged_by_recolor' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          grep -q 'ligament_skeleton_reference_preserved' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          echo 'PLAN 1 LIGAMENT SOURCE CONTRACT PASS'
+
+      - name: Validate exact-brand navigation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q '../brand/ftr-logo-exact.png' tools/anatomy3d/index.html
+          grep -q '../brand/ftr-logo-exact.png' tools/clinical-scales/index.html
+          grep -q 'anatomyHomeBrand' tools/anatomy3d/src/brand-nav.js
+          grep -q "window.location.href = '../index.html'" tools/anatomy3d/src/brand-nav.js
+          grep -q "location.href = '../index.html'" tools/clinical-scales/app.js
+          grep -q 'Do **not** replace it with AI regeneration' tools/brand/EXACT-BRAND-ASSET-LOCK.md
+          if test -f tools/brand/ftr-logo-exact.png; then
+            echo 'EXACT BRAND BINARY PRESENT — release asset can proceed to visual/hash QA.'
+          else
+            echo 'EXACT BRAND BINARY PENDING — source QA passes, RELEASE BUILD MUST REMAIN BLOCKED.'
+          fi
+
+      - name: Confirm no runtime WebGL regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -n -E 'WebGLRenderer|GLTFLoader|OrbitControls|three/examples' tools/anatomy3d/src tools/clinical-scales
+          echo 'NO WEBGL/GLB RUNTIME REGRESSION PASS'
