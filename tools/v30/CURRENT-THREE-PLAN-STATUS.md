@@ -21,11 +21,9 @@ ONLY these three plans are in scope:
 
 1. Plan 1 — Ligament visibility.
 2. Plan 2 — Clinical Scales.
-3. Plan 3 — Exact approved brand + navigation.
+3. Plan 3 — user-approved full premium reference presentation + exact brand + navigation bridges.
 
-FTR AI, lessons, quizzes, Movement Studio, notes, favorites, auth, notifications and all other existing working modules are out of scope and must remain untouched.
-
-A fresh compare from the physically verified v29.9 source/QA checkpoint to the v30 branch confirms no FTR AI, lesson, quiz, Movement Studio, notes/favorites, auth or notification implementation files are modified. The changed-file set remains restricted to Plan 1 anatomy surfaces, Plan 2 Clinical Scales, Plan 3 brand/navigation, and their build/QA guards.
+FTR AI, lessons, quizzes, Movement Studio business/content logic, notes, favorites, auth, notifications and all other existing working modules remain protected. Plan 3 is allowed to replace the approved host presentation and invoke existing navigation/action surfaces, but it must not rewrite those protected modules' content/business logic.
 
 ## Plan 1 — Ligament visibility
 
@@ -53,8 +51,6 @@ Verified artifact lock:
 - ID map byte-identical to v29.9: PASS
 - Structure contract unchanged, count 292: PASS
 - Static layered atlas/no runtime WebGL/no GLB/no continuous render: PASS
-
-Plan 1 artifact workflow is now path-scoped so unrelated Plan 2/Plan 3 documentation/content commits do not regenerate the locked Plan 1 artifact.
 
 Plan 1 still requires final physical-phone visual QA in the packaged APK.
 
@@ -85,7 +81,7 @@ Clinical safety rules:
 - Turkey comparator/use evidence must not be mislabeled as direct Turkish translation validation;
 - performance-test Turkey reference evidence is separated from language-form validation.
 
-Interactive score contracts now fail closed at source/host QA:
+Interactive score contracts:
 - Berg: 14 items / maximum 56;
 - Tinetti/POMA-I: 16 items, Balance 16 + Gait 12 = maximum 28;
 - DGI: 8 items / maximum 24;
@@ -94,65 +90,61 @@ Interactive score contracts now fail closed at source/host QA:
 - Tardieu/MTS: R1/R2 + reaction quality, without automatic diagnosis;
 - 6MWT: distance/protocol recording, with population-specific reference interpretation.
 
-Recent rights clarification:
-- Berg: public-domain availability per RehabMeasures;
-- DGI, Tinetti/POMA, Modified Tardieu and Penn: free availability/cost status documented by RehabMeasures;
-- 9-HPT: app may record measured time, but RehabMeasures lists the standard physical kit as not free; vendor kit/norm tables are not reproduced.
-
-Recent Turkey-context evidence expansion:
-- Brunnstrom: Turkey stroke research use; not mislabeled as direct translation validation.
-- Fugl-Meyer: used as comparator in Turkish validation research; not mislabeled as direct FMA Turkish validation.
-- Rivermead Mobility Index: direct Turkish-form validity/reliability evidence exists in an elderly population; this is explicitly not generalized automatically to stroke populations.
-- Penn: used as convergent measure in Turkish SCI research; not mislabeled as direct PSFS validation.
-- TUG: direct inter/intraobserver reliability evidence in Turkish community-dwelling older adults.
-- 9-HPT: Turkey clinical comparator evidence; not mislabeled as direct 9-HPT Turkish norm/validation.
-
-Latest CI after the scoring-contract shell-guard correction:
-- v30 host integration fail-closed guards Run #24: SUCCESS.
-- v30 three-plan fail-closed guards Run #48: SUCCESS.
+Premium Clinical Scales presentation now follows the approved right-hand reference screen:
+- compact `Klinik Ölçekler` heading and subtitle;
+- `Ölçek ara…` search field plus filter button;
+- 8 colored category cards;
+- compact phone-first spacing;
+- fixed four-item bottom navigation;
+- filter button exposes existing Recent/Favorites controls without changing clinical data logic.
 
 Plan 2 still requires final packaged-phone navigation, scrolling, rendering and content spot-check QA.
 
-## Plan 3 — Exact approved brand + navigation
+## Plan 3 — Full premium reference + exact brand + navigation
 
-User decision is exact-reference only. No AI regeneration, tracing, old logo, alternative skull/spine art or stylistic reinterpretation is allowed.
+The user's final decision is to continue with the full premium design shown in `ChatGPT Image 3 Eyl 2026 13_01_16.png`. The temporary logo-only simplification is superseded and must not be used.
 
 Approved source reference:
 - `ChatGPT Image 3 Eyl 2026 13_01_16.png`
 - expected dimensions `1536x1024`
 - circular skull + full spine + cyan/blue laurel/arc emblem.
 
-Library search was repeated for a standalone original copy of this exact emblem. Only composite design boards containing the emblem were found; no separate exact source PNG was found. Therefore no other Library logo is accepted as a substitute.
+Implemented premium host presentation:
+- dark navy/black premium home shell;
+- menu button + centered exact-logo/FTR AKADEMİ brand + notification surface;
+- `Merhaba, Fizyoterapist!` hero and offline anatomy visual;
+- four primary cards in locked order: Derslerim → 3D Anatomi → Hareket Stüdyosu → Klinik Ölçekler;
+- Clinical Scales `YENİ` badge;
+- shortcut row: Quizler, Favoriler, Notlarım, Programlarım;
+- four-item bottom navigation: Ana Sayfa, Dersler, Çalışma Alanım, Profilim;
+- premium drawer matching the approved information hierarchy;
+- drawer/home buttons bridge to existing host actions rather than rewriting protected feature implementations;
+- Clinical Scales bottom navigation returns to host routes through the `v30nav` bridge.
 
 Navigation contract:
 - logo tap => direct `Ana Sayfa`;
 - normal Back / Android Back => hierarchical previous screen;
 - Clinical Scales and 3D Anatomy point to the same exact runtime brand asset.
 
-Prepared extraction utility:
-- `tools/brand/extract_exact_logo_from_reference.ps1`
-- approved large in-app emblem crop rectangle is locked in original 1536×1024 reference coordinates;
-- rectangular source-pixel crop only;
-- lossless PNG output;
-- no resize/recolor/filter/sharpen/trace/AI/upscale;
-- writes output SHA-256 lock and metadata;
-- visual phone QA remains mandatory.
+Exact-logo rule remains fail-closed:
+- no AI regeneration, tracing, old logo or substitute art;
+- pixel-preserving crop rectangle remains locked at source coordinates x=137, y=468, width=112, height=112;
+- no resize/recolor/filter/sharpen/upscale;
+- exact PNG + SHA lock remains mandatory before APK packaging.
 
-Current release blocker:
+Current exact-brand binary blocker:
 - `tools/brand/ftr-logo-exact.png` has NOT yet been committed;
 - `tools/brand/ftr-logo-exact.sha256` has NOT yet been committed;
-- therefore release APK creation MUST remain blocked.
-
-The approved source image is available in the ChatGPT file library, but the current local binary-processing runtime is returning `ClientError`. Do not bypass this by generating an approximate logo.
+- release APK creation therefore remains blocked rather than accepting an approximation.
 
 ## Release status
 
 - Plan 1 source/artifact QA: PASS
-- Plan 2 source/clinical/rights/offline/scoring QA: PASS
-- Plan 3 navigation/source lock: PASS
+- Plan 2 source/clinical/rights/offline/scoring QA: PASS before the latest premium-shell commits; new presentation guards are running again
+- Plan 3 full premium host source: IMPLEMENTED
+- Plan 3 premium Clinical Scales shell: IMPLEMENTED
+- Plan 3 exact-logo navigation/source lock: PASS
 - Plan 3 exact binary asset/hash: PENDING
-- Host integration fail-closed QA: PASS
-- Three-plan fail-closed QA: PASS
 - v30 release APK: NOT BUILT
 - Physical phone QA: PENDING
 - FINAL/LOCKED: NO
