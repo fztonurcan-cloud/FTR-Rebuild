@@ -1,125 +1,158 @@
-/* v30 three-plan host bridge.
-   The physically verified v29.9 home remains the visual base. This file only:
-   1) opens one new slot after Hareket Stüdyosu for Klinik Ölçekler,
-   2) continues the untouched lower reference pixels below that slot,
-   3) overlays the exact approved FTR brand as a Home control.
-   No unrelated home card is redesigned. */
+/* FTR Akademi v30 — user-approved premium reference shell.
+   Visual target: ChatGPT Image 3 Eyl 2026 13_01_16.png.
+   Scope: presentation + navigation bridge only. Existing business/content logic is
+   preserved underneath and invoked through the legacy bridge in v30-three-plan.js. */
 
 .v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed{
-  overflow:visible!important;
-  margin-bottom:clamp(42px,11vw,88px)!important;
+  position:relative!important;
+  overflow:hidden!important;
+  min-height:100svh!important;
+  margin-bottom:0!important;
+  background:#020b14!important;
 }
 
-/* Existing v29.9 bottom reference is now the middle slice. It still starts at
-   the exact v29.9 position; only the original lower 14.25% is clipped away so
-   a new clinical slot can be inserted without repainting the upper home. */
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.ftr-v30-reference-middle{
-  top:14%!important;
-  height:86%!important;
-  clip-path:inset(60% 0 14.25% 0)!important;
-}
-
-/* Pixel-preserving continuation of the untouched lower part of the v29.9
-   reference. Mapping proof:
-   original lower split = 85.75%; 0.86*85.75 + 25 = 98.745 shell %. */
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.ftr-v30-reference-tail{
-  position:absolute!important;
-  inset:auto 0!important;
-  top:25%!important;
-  width:100%!important;
-  height:86%!important;
-  object-fit:fill!important;
-  clip-path:inset(85.75% 0 0 0)!important;
+/* Hide the old screenshot/card presentation only. Existing legacy controls stay in
+   the DOM for programmatic bridging and are never deleted or rewritten. */
+.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.v56-home-reference,
+.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.ftr-a3d-v56-card,
+.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.ftr-v30-clinical-card,
+.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.ftr-v30-home-brand{
+  opacity:0!important;
   pointer-events:none!important;
 }
 
-/* Move only hotspots whose source pixels live in the preserved tail slice. */
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.v56-quick-overlay{
-  top:98.745%!important;
-}
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.v56-hot-nav-home,
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.v56-hot-nav-courses,
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.v56-hot-nav-search,
-.v56-home-shell.ftr-a3d-v56-installed.ftr-v30-three-plan-installed>.v56-hot-nav-profile{
-  top:105.668%!important;
-}
-
-.ftr-v30-clinical-card{
+.ftr-v30-premium-home{
+  --navy:#020b14;
+  --navy2:#061422;
+  --panel:#0a1928;
+  --panel2:#0d2031;
+  --line:#1a3143;
+  --text:#f7f9fc;
+  --muted:#a8b6c3;
+  --cyan:#22aef4;
+  --purple:#9d62f5;
+  --green:#55e0ac;
   position:absolute;
-  z-index:7;
-  left:4%;
-  top:87.88%;
-  width:90.5%;
-  height:10.45%;
-  margin:0;
-  padding:0 clamp(11px,2.6vw,18px);
-  display:grid;
-  grid-template-columns:clamp(38px,10vw,54px) minmax(0,1fr) clamp(20px,5vw,30px);
-  align-items:center;
-  gap:clamp(8px,2vw,13px);
-  border:1px solid rgba(70,224,167,.33);
-  border-radius:clamp(10px,2.6vw,16px);
-  background:linear-gradient(105deg,rgba(6,42,42,.96),rgba(6,24,31,.98) 70%,rgba(5,15,24,.98));
-  box-shadow:inset 0 1px rgba(255,255,255,.025),0 5px 18px rgba(0,0,0,.24);
-  color:#f6fbff;
-  text-align:left;
-  cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
+  inset:0;
+  z-index:40;
+  overflow:auto;
+  overscroll-behavior:contain;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 87% 10%,rgba(21,107,166,.18),transparent 25%),
+    linear-gradient(180deg,#020b14 0%,#04111e 54%,#020a12 100%);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  padding:calc(env(safe-area-inset-top) + 7px) 16px calc(env(safe-area-inset-bottom) + 82px);
   box-sizing:border-box;
 }
-.ftr-v30-clinical-card *{box-sizing:border-box}
-.ftr-v30-clinical-card:active{transform:scale(.994)}
-.ftr-v30-clinical-card:focus-visible{outline:2px solid #4de0c1;outline-offset:2px}
-.ftr-v30-clinical-icon{
-  width:100%;
-  aspect-ratio:1;
-  border-radius:28%;
+.ftr-v30-premium-home *{box-sizing:border-box}
+.ftr-v30-premium-home button{font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+
+.ftr-v30-premium-topbar{
+  height:58px;
   display:grid;
-  place-items:center;
-  color:#4de0c1;
-  background:rgba(16,91,72,.28);
-  border:1px solid rgba(77,224,193,.24);
-}
-.ftr-v30-clinical-icon svg{width:66%;height:66%;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
-.ftr-v30-clinical-icon .ftr-v30-clinical-check{stroke:#86f1d5;stroke-width:3.2}
-.ftr-v30-clinical-copy{min-width:0;display:flex;flex-direction:column;justify-content:center;gap:clamp(3px,.5vh,5px)}
-.ftr-v30-clinical-title{display:flex;align-items:center;gap:7px;font-size:clamp(12px,3.55vw,20px);line-height:1.05;font-weight:900;white-space:nowrap}
-.ftr-v30-clinical-title em{padding:2px 6px;border-radius:999px;background:#157fd1;color:#fff;font-size:clamp(6px,1.6vw,9px);font-style:normal;font-weight:850}
-.ftr-v30-clinical-sub{color:#b7c8d3;font-size:clamp(6px,1.7vw,10px);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ftr-v30-clinical-arrow{color:#9fb0bd;font-size:clamp(21px,5.6vw,31px);font-weight:300;text-align:right}
-
-/* Exact approved mark; the PNG itself is hash-locked by the release builder. */
-.ftr-v30-home-brand{
-  position:absolute;
-  z-index:9;
-  top:1.0%;
-  left:27%;
-  width:46%;
-  height:6.35%;
-  min-width:0;
-  padding:0 4px;
-  border:0;
-  border-radius:14px;
-  display:flex;
+  grid-template-columns:44px minmax(0,1fr) 44px;
   align-items:center;
-  justify-content:center;
-  gap:clamp(6px,1.7vw,10px);
-  color:#fff;
-  background:linear-gradient(90deg,rgba(2,12,22,.05),rgba(2,12,22,.74) 18%,rgba(2,12,22,.74) 82%,rgba(2,12,22,.05));
-  font:inherit;
-  font-size:clamp(10px,3.1vw,17px);
-  font-weight:900;
-  letter-spacing:.01em;
-  white-space:nowrap;
-  cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
+  gap:8px;
+  position:sticky;
+  top:0;
+  z-index:46;
+  margin:0 -2px 4px;
+  background:linear-gradient(180deg,rgba(2,11,20,.98) 72%,rgba(2,11,20,.80));
+  backdrop-filter:blur(12px);
 }
-.ftr-v30-home-brand img{height:82%;width:auto;aspect-ratio:1;object-fit:contain;border-radius:50%}
-.ftr-v30-home-brand:active{transform:scale(.992)}
-.ftr-v30-home-brand:focus-visible{outline:2px solid #49bfff;outline-offset:1px}
+.ftr-v30-icon-btn{
+  width:42px;height:42px;border:0;border-radius:13px;background:transparent;
+  display:grid;place-items:center;font-size:25px;cursor:pointer;
+}
+.ftr-v30-icon-btn:active{background:#0b2031}
+.ftr-v30-bell{font-size:22px;position:relative}
+.ftr-v30-bell i{position:absolute;right:7px;top:7px;width:7px;height:7px;border-radius:50%;background:#f15b4e;border:1.5px solid #07131e}
 
+.ftr-v30-premium-brand{
+  justify-self:center;min-width:0;height:48px;border:0;border-radius:14px;background:transparent;
+  display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px;cursor:pointer;
+}
+.ftr-v30-premium-brand:active{background:#0a1b2a}
+.ftr-v30-premium-brand img{width:35px;height:35px;object-fit:contain;border-radius:50%;flex:0 0 auto}
+.ftr-v30-premium-brand span{font-size:18px;line-height:1;font-weight:900;letter-spacing:.015em;white-space:nowrap}
+
+.ftr-v30-premium-hero{height:146px;position:relative;overflow:hidden;display:flex;align-items:flex-start;padding:19px 0 0}
+.ftr-v30-premium-greeting{position:relative;z-index:2;max-width:69%}
+.ftr-v30-premium-greeting h1{margin:0 0 8px;font-size:17px;line-height:1.2;font-weight:900;letter-spacing:-.018em}
+.ftr-v30-premium-greeting h1 span{font-size:16px}
+.ftr-v30-premium-greeting p{margin:0;color:#e4ebf1;font-size:13px;line-height:1.52}
+.ftr-v30-hero-anatomy{
+  position:absolute;z-index:1;right:-10px;bottom:-15px;width:42%;height:142px;object-fit:contain;
+  object-position:center bottom;filter:drop-shadow(0 0 13px rgba(21,119,190,.38));opacity:.94;
+  mask-image:linear-gradient(180deg,#000 0%,#000 75%,transparent 100%);
+}
+
+.ftr-v30-section-title{margin:2px 0 10px;font-size:16px;line-height:1.2;font-weight:900;letter-spacing:-.015em}
+.ftr-v30-module-stack{display:grid;gap:9px}
+.ftr-v30-module-card{
+  width:100%;min-height:73px;border:1px solid #183047;border-radius:14px;background:linear-gradient(110deg,#0a1928,#081521 78%);
+  display:grid;grid-template-columns:46px minmax(0,1fr) 21px;align-items:center;gap:10px;padding:10px 10px 10px 12px;
+  text-align:left;box-shadow:inset 0 1px rgba(255,255,255,.018),0 5px 16px rgba(0,0,0,.12);cursor:pointer;
+}
+.ftr-v30-module-card:active{transform:scale(.995);background:#0d2030}
+.ftr-v30-module-card>span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:5px}
+.ftr-v30-module-card b{font-size:15px;line-height:1.05;font-weight:900;display:flex;align-items:center;gap:7px;white-space:nowrap}
+.ftr-v30-module-card small{color:#a9b8c5;font-size:10px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftr-v30-module-card em{font-style:normal;color:#8699aa;font-size:27px;font-weight:300;text-align:center}
+.ftr-v30-module-card mark{padding:2px 6px;border-radius:999px;background:#147fd2;color:#fff;font-size:8px;font-weight:900}
+.ftr-v30-module-icon{width:43px;height:43px;border-radius:13px;display:grid;place-items:center;font-size:27px;font-weight:800}
+.ftr-v30-module-card.courses .ftr-v30-module-icon{color:#20aef2;background:rgba(23,124,190,.13)}
+.ftr-v30-module-card.anatomy .ftr-v30-module-icon{color:#a067ff;background:rgba(118,69,197,.14)}
+.ftr-v30-module-card.movement .ftr-v30-module-icon{color:#16a9e8;background:rgba(22,132,192,.12)}
+.ftr-v30-module-card.clinical .ftr-v30-module-icon{color:#57e1ab;background:rgba(41,170,122,.13)}
+
+.ftr-v30-shortcuts-title{margin-top:17px}
+.ftr-v30-shortcuts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.ftr-v30-shortcuts button{
+  min-width:0;height:77px;border:1px solid #173044;border-radius:14px;background:#071522;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;
+}
+.ftr-v30-shortcuts button:active{background:#0c2030;transform:scale(.985)}
+.ftr-v30-shortcuts span{font-size:28px;line-height:1}.ftr-v30-shortcuts small{font-size:9px;color:#d6e0e8;white-space:nowrap}
+.ftr-v30-shortcuts button:nth-child(1) span{color:#9e64f2}.ftr-v30-shortcuts button:nth-child(2) span{color:#ffc027}.ftr-v30-shortcuts button:nth-child(3) span{color:#50e2a6}.ftr-v30-shortcuts button:nth-child(4) span{color:#2bb6f5}
+
+.ftr-v30-bottom-nav{
+  position:fixed;z-index:47;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,760px);
+  height:calc(72px + env(safe-area-inset-bottom));padding:7px 14px env(safe-area-inset-bottom);
+  display:grid;grid-template-columns:repeat(4,1fr);align-items:start;border-top:1px solid #152b3d;
+  background:linear-gradient(180deg,rgba(4,14,24,.96),rgba(2,9,16,.995));backdrop-filter:blur(15px);
+}
+.ftr-v30-bottom-nav button{height:56px;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#7f91a0;cursor:pointer}
+.ftr-v30-bottom-nav button span{font-size:22px;line-height:1}.ftr-v30-bottom-nav button small{font-size:9px;white-space:nowrap}.ftr-v30-bottom-nav button.active{color:#1daef5}
+
+.ftr-v30-drawer-layer{position:fixed;inset:0;z-index:60}.ftr-v30-drawer-layer[hidden]{display:none!important}
+.ftr-v30-drawer-scrim{position:absolute;inset:0;border:0;background:rgba(0,0,0,.66);backdrop-filter:blur(1px)}
+.ftr-v30-drawer{
+  position:absolute;left:0;top:0;bottom:0;width:min(82vw,330px);overflow:auto;
+  padding:calc(env(safe-area-inset-top) + 54px) 20px calc(env(safe-area-inset-bottom) + 20px);
+  background:linear-gradient(160deg,#061624 0%,#04111d 56%,#020b13 100%);
+  border-right:1px solid #163047;box-shadow:18px 0 44px rgba(0,0,0,.45);
+}
+.ftr-v30-drawer-brand{display:flex;align-items:center;gap:12px;margin:0 2px 28px}
+.ftr-v30-drawer-brand img{width:56px;height:56px;border-radius:50%;object-fit:contain;flex:0 0 auto}
+.ftr-v30-drawer-brand div{min-width:0;display:flex;flex-direction:column;gap:5px}.ftr-v30-drawer-brand b{font-size:17px;white-space:nowrap}.ftr-v30-drawer-brand small{font-size:10px;color:#8fa3b4;white-space:nowrap}
+.ftr-v30-drawer nav{display:grid;gap:3px}.ftr-v30-drawer nav button{
+  min-height:48px;border:0;border-radius:12px;background:transparent;display:grid;grid-template-columns:29px minmax(0,1fr) auto;align-items:center;gap:8px;
+  padding:0 8px;color:#e7edf3;text-align:left;font-size:14px;cursor:pointer;
+}
+.ftr-v30-drawer nav button:active{background:#0b2233}.ftr-v30-drawer nav button.active{color:#20aef3}.ftr-v30-drawer nav button i{font-style:normal;font-size:21px;text-align:center}.ftr-v30-drawer nav button mark{justify-self:end;padding:2px 7px;border-radius:999px;background:#147fd2;color:white;font-size:8px;font-weight:900}
+.ftr-v30-drawer nav hr{width:100%;height:1px;border:0;background:#132b3d;margin:7px 0}
+
+@media(max-width:390px){
+  .ftr-v30-premium-home{padding-left:12px;padding-right:12px}
+  .ftr-v30-premium-topbar{grid-template-columns:40px minmax(0,1fr) 40px}
+  .ftr-v30-premium-brand img{width:32px;height:32px}.ftr-v30-premium-brand span{font-size:16px}
+  .ftr-v30-premium-hero{height:136px}.ftr-v30-premium-greeting h1{font-size:16px}.ftr-v30-premium-greeting p{font-size:12px}
+  .ftr-v30-module-card{min-height:69px;grid-template-columns:42px minmax(0,1fr) 18px;gap:8px;padding-left:10px}.ftr-v30-module-icon{width:40px;height:40px;font-size:24px}.ftr-v30-module-card b{font-size:14px}.ftr-v30-module-card small{font-size:9px}
+  .ftr-v30-shortcuts{gap:6px}.ftr-v30-shortcuts button{height:72px}.ftr-v30-shortcuts span{font-size:25px}.ftr-v30-shortcuts small{font-size:8px}
+}
 @media(max-width:340px){
-  .ftr-v30-clinical-card{grid-template-columns:34px minmax(0,1fr) 18px;padding-left:8px;padding-right:8px;gap:7px}
-  .ftr-v30-clinical-title{font-size:11px}.ftr-v30-clinical-sub{font-size:6px}
-  .ftr-v30-home-brand{left:25%;width:50%;font-size:10px}
+  .ftr-v30-premium-home{padding-left:9px;padding-right:9px}.ftr-v30-premium-brand span{font-size:14px}.ftr-v30-premium-brand{gap:5px}.ftr-v30-premium-hero{height:126px}.ftr-v30-premium-greeting h1{font-size:14px}.ftr-v30-hero-anatomy{width:39%}.ftr-v30-module-card small{font-size:8px}.ftr-v30-shortcuts small{font-size:7.5px}
 }
