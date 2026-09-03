@@ -52,6 +52,8 @@ Required visual/branding behavior:
 - Implement the reference's dark navy/black premium application shell, top bar, logo proportions, drawer/header presentation, card styling, spacing, typography hierarchy, icon treatment and bottom navigation language as closely as technically possible.
 - The home presentation shown in the approved reference is part of Plan 3. Preserve all existing working home content/behaviors while applying this approved visual treatment; do not delete or functionally rewrite unrelated modules.
 - The Klinik Ölçekler visual presentation shown in the reference is also part of the approved Plan 3 visual system, while its clinical content remains governed by Plan 2.
+- **Launcher visual parity is part of Plan 3:** the icon visible on the Android phone home/app screen must use the same canonical exact FTR Akademi artwork as the in-app premium brand. The canonical exact logo file remains hash-locked and must not be AI-regenerated, traced, recolored or substituted.
+- **Startup visual parity is part of Plan 3:** when the app opens, the previous light welcome artwork is visually superseded by a dark premium startup presentation using the exact canonical FTR mark, the existing offline anatomy asset and an explicit visible **BAŞLA** control. This is presentation-only; authentication and application business logic remain unchanged.
 - The FTR Akademi logo is an active Home control: tapping it from any approved module returns directly to Ana Sayfa.
 - Normal Back/Android back follows hierarchy rather than acting as Home. Example: Berg → Denge & Mobilite → Klinik Ölçekler → Ana Sayfa.
 - Preserve prior screen/list position when returning where practical.
