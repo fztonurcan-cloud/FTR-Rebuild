@@ -2,7 +2,7 @@
 
 Status: USER 100/100 SCOPE LOCK — 2026-09-03
 
-This branch may change **only** the three plans below. All other existing application areas are protected and must remain behaviorally and visually unchanged unless a change is strictly required to expose one of these three approved plans.
+This branch may change **only** the three plans below. All other existing application areas are protected and must remain behaviorally unchanged unless a change is strictly required to expose one of these three approved plans.
 
 ## PLAN 1 — Ligament visibility
 
@@ -40,22 +40,27 @@ Research/clinical rules:
 - Each instrument receives a purpose-matched original visual/diagram representing its clinical administration or measured domain; copyrighted web forms/photos are not copied.
 - Module is offline-first and must remain usable on the low-end Android acceptance device.
 
-## PLAN 3 — Exact user-approved premium branding + navigation bridge
+## PLAN 3 — Full user-approved premium visual design + exact branding + navigation bridge
 
 The user-supplied reference image `ChatGPT Image 3 Eyl 2026 13_01_16.png` is the **100/100 visual lock**. It is not merely inspiration.
 
-Required branding behavior:
+Latest user decision: **do not simplify Plan 3 back to logo-only. Implement the approved premium design shown in the reference and continue from that decision.**
+
+Required visual/branding behavior:
 
 - Use the exact approved skull + full spine + cyan/blue laurel/arc FTR Akademi mark from the supplied reference. Do not regenerate, reinterpret, redraw or substitute a different logo when the exact source asset is available.
-- Match the reference's dark navy/black premium in-app identity, logo proportions, top-bar treatment and drawer/header presentation for the new branding surfaces.
+- Implement the reference's dark navy/black premium application shell, top bar, logo proportions, drawer/header presentation, card styling, spacing, typography hierarchy, icon treatment and bottom navigation language as closely as technically possible.
+- The home presentation shown in the approved reference is part of Plan 3. Preserve all existing working home content/behaviors while applying this approved visual treatment; do not delete or functionally rewrite unrelated modules.
+- The Klinik Ölçekler visual presentation shown in the reference is also part of the approved Plan 3 visual system, while its clinical content remains governed by Plan 2.
 - The FTR Akademi logo is an active Home control: tapping it from any approved module returns directly to Ana Sayfa.
 - Normal Back/Android back follows hierarchy rather than acting as Home. Example: Berg → Denge & Mobilite → Klinik Ölçekler → Ana Sayfa.
 - Preserve prior screen/list position when returning where practical.
-- Do not turn this plan into a general home redesign. Existing unrelated home content remains protected.
+- Do not invent an alternate premium theme, rearrange content arbitrarily, or replace the approved reference with a different design concept.
+- Plan 3 is a visual/navigation layer only: existing unrelated business logic, content, data and working feature behavior remain protected.
 
-## PROTECTED AREAS — DO NOT CHANGE
+## PROTECTED AREAS — DO NOT CHANGE FUNCTIONAL CONTENT OR BEHAVIOR
 
-Unless a minimal host bridge is required solely to expose Plan 2 or Plan 3, do not alter:
+Unless a minimal host bridge or approved Plan 3 visual wrapper is required solely to expose one of the three plans, do not alter the underlying content/business logic of:
 
 - Dersler / lesson content / class content
 - Quizzes
@@ -66,12 +71,12 @@ Unless a minimal host bridge is required solely to expose Plan 2 or Plan 3, do n
 - Notifications
 - FTR AI
 - Existing contributor/preparer content
-- Any other unrelated drawer/home component
+- Any other unrelated module content or business logic
 
 ## Release and QA rule
 
 - Existing working v29.9 remains untouched and usable as the immediate safe working build.
 - Immutable v29.7 rollback remains untouched.
-- Build guards must fail closed if any existing payload outside the explicitly approved host bootstrap changes.
+- Build guards must fail closed if any existing payload outside the explicitly approved host/bootstrap/Plan 3 visual surface changes functionally without authorization.
 - Static CI/QA never equals physical approval.
 - No new APK is FINAL or LOCKED until the user completes physical phone testing of all three plans.
