@@ -1,0 +1,42 @@
+/* FTR Akademi Plan 3 — Clinical Scales premium reference lock.
+   Presentation-only override. Clinical data, rights, scoring and evidence logic stay unchanged. */
+
+.clinical-app{max-width:430px;padding-left:15px;padding-right:15px;padding-bottom:calc(env(safe-area-inset-bottom) + 88px)}
+.topbar{height:62px;grid-template-columns:44px minmax(0,1fr) 44px;background:linear-gradient(180deg,rgba(2,10,18,.99) 72%,rgba(2,10,18,.88));}
+.brand-button{height:48px;gap:8px}.brand-logo{width:35px;height:35px}.brand-button span{font-size:17px}
+
+#catalogView .hero{min-height:auto;margin:15px 1px 10px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;display:block}
+#catalogView .hero .eyebrow,#catalogView .hero-badge{display:none}
+#catalogView .hero h1{margin:0 0 6px;font-size:25px;line-height:1.08;letter-spacing:-.025em}
+#catalogView .hero p{font-size:12px;color:#d0d9e1}
+
+.catalog-search-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;align-items:center;gap:9px;margin:14px 0 10px}
+.catalog-search-row .search-box{height:43px;margin:0;border-radius:11px;background:#0a1826;border-color:#182f42;grid-template-columns:27px 1fr 32px}
+.catalog-search-row .search-box input{font-size:13px}.catalog-search-row .search-box>span{font-size:19px}
+.catalog-filter-button{height:43px;width:44px;border:1px solid #182f42;border-radius:11px;background:#091725;color:#d7e2ea;font-size:22px;cursor:pointer}
+.catalog-filter-button:active,.catalog-filter-button[aria-expanded="true"]{border-color:#2188c6;background:#0b2b44;color:#58c8ff}
+.catalog-tools{display:none;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+.clinical-app.filters-open .catalog-tools{display:grid}
+.catalog-tools button{height:40px;border-radius:11px;font-size:11px}
+.result-summary{display:none}
+
+.category-list{gap:9px}
+.category-card{min-height:58px;border-radius:11px;padding:8px 10px;grid-template-columns:37px minmax(0,1fr) auto;gap:9px;border-width:1px;background:linear-gradient(100deg,color-mix(in srgb,var(--card-accent) 16%,#071522),#071522 76%)}
+.category-card .card-icon{width:36px;height:36px;border-radius:10px;background:color-mix(in srgb,var(--card-accent) 17%,#071522)}
+.category-card .card-icon svg{width:26px;height:26px}
+.category-card .card-copy strong{font-size:12.5px;color:var(--card-accent);font-weight:850}
+.category-card .card-copy small{font-size:9px;margin-top:3px;color:#bcc8d1}
+.category-card .card-count{gap:7px}.category-card .card-count small{font-size:10px;color:#d9e0e6}.category-card .card-count b{font-size:23px}
+
+.category-card:nth-child(1){--card-accent:#56e0b2!important}.category-card:nth-child(2){--card-accent:#aa6af5!important}.category-card:nth-child(3){--card-accent:#ffb629!important}.category-card:nth-child(4){--card-accent:#2aaef3!important}.category-card:nth-child(5){--card-accent:#ff6d6d!important}.category-card:nth-child(6){--card-accent:#5be29e!important}.category-card:nth-child(7){--card-accent:#b16be9!important}.category-card:nth-child(8){--card-accent:#ffc126!important}
+
+.section-heading{padding:15px 3px 12px}.section-heading h1{font-size:25px}.section-heading p{font-size:12px}
+.scale-list{gap:8px}.scale-card{min-height:66px;border-radius:13px;padding:9px 10px}.scale-card .card-copy strong{font-size:13px}.scale-card .card-copy small{font-size:9.5px}
+.scale-hero{margin-top:10px;border-radius:17px;padding:12px;grid-template-columns:112px minmax(0,1fr)}
+.scale-hero-copy h1{font-size:22px}.detail-tabs button{height:37px;border-radius:10px;font-size:11px}.detail-body{border-radius:15px;padding:14px}.clinical-note{margin-bottom:0}
+
+.clinical-bottom-nav{position:fixed;z-index:50;left:50%;bottom:0;transform:translateX(-50%);width:min(100%,430px);height:calc(71px + env(safe-area-inset-bottom));padding:7px 10px env(safe-area-inset-bottom);display:grid;grid-template-columns:repeat(4,1fr);align-items:start;border-top:1px solid #142b3d;background:linear-gradient(180deg,rgba(4,14,23,.97),rgba(2,9,16,.995));backdrop-filter:blur(14px)}
+.clinical-bottom-nav button{height:55px;border:0;background:transparent;color:#7f909f;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer}
+.clinical-bottom-nav button span{font-size:21px;line-height:1}.clinical-bottom-nav button small{font-size:8px;white-space:nowrap}.clinical-bottom-nav button.active{color:#1caef5}
+
+@media(max-width:360px){.clinical-app{padding-left:10px;padding-right:10px}.category-card{grid-template-columns:34px minmax(0,1fr) auto}.category-card .card-icon{width:33px;height:33px}.category-card .card-copy strong{font-size:11.5px}.category-card .card-copy small{font-size:8.3px}.brand-button span{font-size:15px}}
