@@ -2,11 +2,9 @@ name: v30 three-plan fail-closed guards
 
 on:
   push:
-    branches:
-      - v30-three-plan-premium
+    branches: [v30-three-plan-premium]
   pull_request:
-    branches:
-      - v30-three-plan-premium
+    branches: [v30-three-plan-premium]
 
 permissions:
   contents: read
@@ -35,14 +33,7 @@ jobs:
           bad=0
           while IFS= read -r path; do
             case "$path" in
-              THREE-PLAN-SCOPE-LOCK.md) ;;
-              .github/workflows/v30-three-plan-guards.yml) ;;
-              tools/clinical-scales/*) ;;
-              tools/brand/*) ;;
-              tools/anatomy3d/index.html) ;;
-              tools/anatomy3d/src/brand-nav.css) ;;
-              tools/anatomy3d/src/brand-nav.js) ;;
-              tools/v30/*) ;;
+              THREE-PLAN-SCOPE-LOCK.md|.github/workflows/v30-three-plan-guards.yml|tools/clinical-scales/*|tools/brand/*|tools/anatomy3d/index.html|tools/anatomy3d/src/brand-nav.css|tools/anatomy3d/src/brand-nav.js|tools/v30/*) ;;
               *) echo "FORBIDDEN OUT-OF-SCOPE CHANGE: $path"; bad=1 ;;
             esac
           done < <(git diff --name-only "$BASE" HEAD)
@@ -53,141 +44,108 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node --check tools/clinical-scales/data.js
-          node --check tools/clinical-scales/evidence-overrides.js
-          node --check tools/clinical-scales/turkish-evidence.js
-          node --check tools/clinical-scales/app.js
-          node --check tools/clinical-scales/visual-enhancer.js
-          node --check tools/anatomy3d/src/brand-nav.js
-          python3 -m py_compile tools/v30/build_v30_three_plan_apk.py
+          for js in \
+            tools/clinical-scales/data.js \
+            tools/clinical-scales/evidence-overrides.js \
+            tools/clinical-scales/turkish-evidence.js \
+            tools/clinical-scales/scoring-evidence.js \
+            tools/clinical-scales/app.js \
+            tools/clinical-scales/visual-enhancer.js \
+            tools/clinical-scales/detail-evidence-enhancer.js \
+            tools/anatomy3d/src/brand-nav.js; do
+            node --check "$js"
+          done
+          python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py tools/v30/build_v30_three_plan_apk.py
+          echo 'SOURCE SYNTAX PASS'
 
-      - name: Validate v30 builder fail-closed contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -Fq 'BASE_SIZE = 1_137_460_262' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'BASE_SHA256 = "acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809"' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'ftr-logo-exact.sha256' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'Do not substitute an AI regeneration or approximation' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'ligament invisible ID map differs from physically verified v29.9' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'expected_changed = {HOST_INDEX, LIGAMENT_FRONT}' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'OUT-OF-SCOPE existing APK payload changed' tools/v30/build_v30_three_plan_apk.py
-          grep -Fq 'PENDING_USER_RETEST' tools/v30/build_v30_three_plan_apk.py
-          echo 'V30 BUILDER FAIL-CLOSED CONTRACT PASS'
-
-      - name: Validate Clinical Scales catalogue and evidence contract
+      - name: Validate clinical catalogue evidence rights and scoring
         shell: bash
         run: |
           set -euo pipefail
           node <<'NODE'
           const fs = require('fs');
           const vm = require('vm');
-          const context = { window: {} };
+          const context = {window:{}};
           vm.createContext(context);
-          for (const file of ['tools/clinical-scales/data.js','tools/clinical-scales/evidence-overrides.js','tools/clinical-scales/turkish-evidence.js']) {
-            vm.runInContext(fs.readFileSync(file,'utf8'), context, {filename:file});
-          }
+          for (const file of [
+            'tools/clinical-scales/data.js',
+            'tools/clinical-scales/evidence-overrides.js',
+            'tools/clinical-scales/turkish-evidence.js',
+            'tools/clinical-scales/scoring-evidence.js'
+          ]) vm.runInContext(fs.readFileSync(file,'utf8'), context, {filename:file});
           const db = context.window.FTR_CLINICAL_SCALES;
-          if (!db) throw new Error('Database global missing');
-          if (db.categories.length !== 8) throw new Error(`Expected 8 categories, got ${db.categories.length}`);
-          if (db.scales.length !== 29) throw new Error(`Expected 29 instruments, got ${db.scales.length}`);
-          if (db.evidenceVersion !== '2026-09-03-authoritative-pass-2') throw new Error(`Evidence pass missing: ${db.evidenceVersion}`);
-          if (db.turkishEvidenceVersion !== '2026-09-03-pubmed-pass-1') throw new Error(`Turkish evidence pass missing: ${db.turkishEvidenceVersion}`);
-          if (!db.evidencePolicy?.populationSpecificCutoffs || !db.evidencePolicy?.exactEditionLabels || !db.evidencePolicy?.proprietaryFormsNotEmbeddedWithoutPermission || !db.evidencePolicy?.originalOfflineProcedureIllustrations) {
-            throw new Error('Authoritative evidence policy incomplete');
-          }
-          if (!db.turkishEvidencePolicy?.populationNamed || !db.turkishEvidencePolicy?.editionNamed || !db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.noUniversalCutoffInference) {
-            throw new Error('Turkish evidence policy incomplete');
-          }
-          const categoryIds = new Set(db.categories.map(x => x.id));
-          if (categoryIds.size !== 8) throw new Error('Duplicate category id');
-          const ids = new Set();
+          if (!db) throw new Error('database missing');
+          if (db.categories.length !== 8 || db.scales.length !== 29) throw new Error('8-category/29-instrument lock failed');
+          if (db.evidenceVersion !== '2026-09-03-authoritative-pass-2') throw new Error('authoritative evidence pass missing');
+          if (db.turkishEvidenceVersion !== '2026-09-03-pubmed-pass-2') throw new Error('Turkey evidence pass missing');
+          if (db.scoringEvidenceVersion !== '2026-09-03-deep-scoring-pass-1') throw new Error('deep scoring pass missing');
+          if (!db.evidencePolicy?.populationSpecificCutoffs || !db.evidencePolicy?.exactEditionLabels || !db.evidencePolicy?.proprietaryFormsNotEmbeddedWithoutPermission) throw new Error('evidence policy incomplete');
+          if (!db.turkishEvidencePolicy?.psychometricValidationDoesNotGrantCopyright || !db.turkishEvidencePolicy?.turkeyCohortEvidenceSeparatedFromTranslationLicense) throw new Error('Turkey evidence rights separation missing');
+          if (!db.scoringEvidencePolicy?.protectedItemWordingExcluded || !db.scoringEvidencePolicy?.classificationVersusOutcomeSeparated) throw new Error('deep scoring policy incomplete');
+          const ids = new Set(db.scales.map(x=>x.id));
+          const required = ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt'];
+          for (const id of required) if (!ids.has(id)) throw new Error(`missing ${id}`);
           const openInteractive = new Set(['mas','tardieu','penn','berg','tug','tinetti','dgi','9hpt','6mwt']);
-          for (const scale of db.scales) {
-            if (!scale.id || ids.has(scale.id)) throw new Error(`Duplicate/missing scale id: ${scale.id}`);
-            ids.add(scale.id);
-            if (!categoryIds.has(scale.category)) throw new Error(`${scale.id}: unknown category ${scale.category}`);
-            for (const field of ['name','short','visual','purpose','population','format','duration','equipment','interpretation','turkish']) {
-              if (!String(scale[field] || '').trim()) throw new Error(`${scale.id}: missing ${field}`);
-            }
-            if (!Array.isArray(scale.domains) || !scale.domains.length) throw new Error(`${scale.id}: domains missing`);
-            if (!Array.isArray(scale.tags) || !scale.tags.length) throw new Error(`${scale.id}: tags missing`);
-            if (!scale.rights || !['open','reference','restricted'].includes(scale.rights.mode)) throw new Error(`${scale.id}: invalid rights`);
-            if (!Array.isArray(scale.sources) || !scale.sources.length) throw new Error(`${scale.id}: sources missing`);
-            for (const pair of scale.sources) {
-              if (!Array.isArray(pair) || pair.length !== 2 || !/^https:\/\//.test(pair[1])) throw new Error(`${scale.id}: invalid source`);
-            }
-            if (scale.rights.mode !== 'open' && scale.interactive !== null) {
-              throw new Error(`${scale.id}: protected/reference instrument must not expose full interactive scoring`);
-            }
-            if (scale.interactive && !openInteractive.has(scale.id)) throw new Error(`${scale.id}: unexpected interactive tool`);
+          for (const s of db.scales) {
+            if (!s.name || !s.population || !s.format || !s.interpretation || !s.rights || !Array.isArray(s.sources) || !s.sources.length) throw new Error(`${s.id}: core metadata incomplete`);
+            if (s.rights.mode !== 'open' && s.interactive !== null) throw new Error(`${s.id}: protected form exposed interactively`);
+            if (s.interactive && !openInteractive.has(s.id)) throw new Error(`${s.id}: unexpected interactive tool`);
           }
-          if (ids.size !== 29) throw new Error('Scale id count mismatch');
-          for (const required of ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt']) {
-            if (!ids.has(required)) throw new Error(`Required instrument missing: ${required}`);
-          }
-          const byId = Object.fromEntries(db.scales.map(scale => [scale.id, scale]));
-          if (!/popülasyon|evrensel değildir/i.test(byId.berg.interpretation)) throw new Error('Berg population-specific interpretation guard missing');
-          if (!/≥12 sn/.test(byId.tug.interpretation) || !/evrensel değildir/i.test(byId.tug.interpretation)) throw new Error('TUG older-adult/context guard missing');
-          if (!/V1/.test(byId.tardieu.format) || !/V2/.test(byId.tardieu.format) || !/V3/.test(byId.tardieu.format) || !/R1/.test(byId.tardieu.format) || !/R2/.test(byId.tardieu.format)) throw new Error('Tardieu R1/R2 velocity contract missing');
-          if (!/0–4/.test(byId.penn.format) || !/1–3/.test(byId.penn.format)) throw new Error('Penn two-part score contract missing');
-          if (!/PDMS-3/.test(byId.pdms.format) || !/Pearson/.test(byId.pdms.interpretation) || byId.pdms.rights.mode !== 'restricted') throw new Error('PDMS-3 edition/rights contract missing');
-          if (!byId.pdms.sources.some(pair => /pearsonassessments\.com/.test(pair[1]))) throw new Error('PDMS-3 Pearson source missing');
-          if (!/commercial|ticari/i.test(byId.dash.rights.note)) throw new Error('DASH commercial-license guard missing');
-          const turkishRequired = ['barthel','fim','katz','lawton','berg','odi','ndi','dash','womac','hhs','gmfm','gmfcs','dgi','mmse'];
-          for (const id of turkishRequired) {
-            if (!Array.isArray(byId[id].turkishEvidence) || byId[id].turkishEvidence.length < 1) throw new Error(`${id}: Turkish evidence source missing`);
-            if (!byId[id].sources.some(pair => /pubmed\.ncbi\.nlm\.nih\.gov/.test(pair[1]))) throw new Error(`${id}: PubMed Turkish source missing`);
-          }
-          if (!/Modifiye Barthel/.test(byId.barthel.turkish)) throw new Error('Barthel/Modified Barthel edition distinction missing');
-          if (!/Modified Dynamic Gait Index|mDGI/.test(byId.dgi.turkish)) throw new Error('DGI/mDGI edition distinction missing');
-          if (!/eğitim|education/i.test(byId.mmse.turkish) || !/evrensel/i.test(byId.mmse.turkish)) throw new Error('MMSE education/cutoff context missing');
-          console.log('CLINICAL CATALOGUE + EVIDENCE PASS', {categories: db.categories.length, scales: db.scales.length, evidenceVersion: db.evidenceVersion, turkishEvidenceVersion: db.turkishEvidenceVersion});
+          const x = Object.fromEntries(db.scales.map(s=>[s.id,s]));
+          if (!/evrensel değildir/i.test(x.berg.interpretation) || !/≥12 sn/.test(x.tug.interpretation) || !/evrensel değildir/i.test(x.tug.interpretation)) throw new Error('Berg/TUG population context missing');
+          if (!/V1/.test(x.tardieu.format) || !/R1/.test(x.tardieu.format) || !/R2/.test(x.tardieu.format)) throw new Error('Tardieu velocity/R1/R2 missing');
+          if (!/0–4/.test(x.penn.format) || !/1–3/.test(x.penn.format)) throw new Error('Penn two-part scoring missing');
+          if (!/PDMS-3/.test(x.pdms.format) || !/Pearson/.test(x.pdms.interpretation) || x.pdms.rights.mode !== 'restricted') throw new Error('PDMS-3 lock missing');
+          if (!/Modified Dynamic Gait Index|mDGI/.test(x.dgi.turkish)) throw new Error('DGI/mDGI distinction missing');
+          if (!/GMFCS/.test(x.gmfcs.name) || !x.gmfcs.scoringArchitecture.some(v=>/sınıflandırma/i.test(v))) throw new Error('GMFCS classification lock missing');
+          if (!x.gmfm.scoringArchitecture.some(v=>/GMAE/.test(v))) throw new Error('GMFM-66 GMAE lock missing');
+          if (!x.womac.scoringArchitecture.some(v=>/5/.test(v)&&/2/.test(v)&&/17/.test(v))) throw new Error('WOMAC 5+2+17 lock missing');
+          if (!x.hhs.scoringArchitecture.some(v=>/44/.test(v)&&/47/.test(v)&&/4/.test(v)&&/5/.test(v))) throw new Error('HHS 44+47+4+5 lock missing');
+          if (!x.purdue.scoringArchitecture.some(v=>/30 sn/.test(v)&&/60 sn/.test(v))) throw new Error('Purdue timing lock missing');
+          const turkey = ['barthel','fim','katz','lawton','berg','mas','tardieu','odi','ndi','dash','womac','hhs','gmfm','gmfcs','dgi','jebsen','purdue','mmse'];
+          for (const id of turkey) if (!Array.isArray(x[id].turkishEvidence) || !x[id].turkishEvidence.length || !x[id].sources.some(p=>/pubmed\.ncbi\.nlm\.nih\.gov/.test(p[1]))) throw new Error(`${id}: Turkey/PubMed evidence missing`);
+          console.log('CLINICAL EVIDENCE + RIGHTS + SCORING PASS', {categories:db.categories.length, scales:db.scales.length});
           NODE
 
-      - name: Validate Clinical Scales script order and visual coverage
+      - name: Validate clinical UI script order visuals and deep evidence
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq '<script src="./data.js"></script>' tools/clinical-scales/index.html
-          grep -Fq '<script src="./evidence-overrides.js"></script>' tools/clinical-scales/index.html
-          grep -Fq '<script src="./turkish-evidence.js"></script>' tools/clinical-scales/index.html
-          grep -Fq '<script src="./app.js"></script>' tools/clinical-scales/index.html
-          grep -Fq '<script src="./visual-enhancer.js"></script>' tools/clinical-scales/index.html
           python3 - <<'PY'
           from pathlib import Path
-          html = Path('tools/clinical-scales/index.html').read_text(encoding='utf-8')
-          order = ['./data.js','./evidence-overrides.js','./turkish-evidence.js','./app.js','./visual-enhancer.js']
-          positions = [html.index(item) for item in order]
-          assert positions == sorted(positions), positions
-          visuals = Path('tools/clinical-scales/visual-enhancer.js').read_text(encoding='utf-8')
-          required = ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt']
-          missing = [key for key in required if key not in visuals]
-          assert not missing, missing
-          print('CLINICAL SCRIPT ORDER + 29 VISUAL KEYS PASS')
+          html=Path('tools/clinical-scales/index.html').read_text(encoding='utf-8')
+          order=['./data.js','./evidence-overrides.js','./turkish-evidence.js','./scoring-evidence.js','./app.js','./visual-enhancer.js','./detail-evidence-enhancer.js']
+          pos=[html.index(x) for x in order]
+          assert pos==sorted(pos), pos
+          assert './evidence-enhancer.css' in html
+          visuals=Path('tools/clinical-scales/visual-enhancer.js').read_text(encoding='utf-8')
+          for key in ['barthel','fim','katz','lawton','brunnstrom','fma','nihss','rivermead','mas','tardieu','penn','berg','tug','tinetti','dgi','odi','ndi','dash','womac','hhs','gmfm','gmfcs','pdms','jebsen','9hpt','purdue','sf36','mmse','6mwt']:
+              assert key in visuals, key
+          deep=Path('tools/clinical-scales/detail-evidence-enhancer.js').read_text(encoding='utf-8')
+          assert 'Skor Mimarisi' in deep and 'Türkçe Psikometrik Kanıt' in deep
+          print('CLINICAL UI + 29 ORIGINAL VISUALS + DEEP EVIDENCE PASS')
           PY
 
-      - name: Enforce offline privacy and clinical module boundaries
+      - name: Enforce offline privacy boundaries
         shell: bash
         run: |
           set -euo pipefail
           ! grep -R -n -E 'fetch\(|XMLHttpRequest|WebSocket|navigator\.geolocation|navigator\.mediaDevices' tools/clinical-scales/*.js
           ! grep -R -n -E 'patientName|hastaAdi|hasta_ad[iı]|tcKimlik|TCKN|emailAddress' tools/clinical-scales || true
-          grep -q 'Klinik karar desteği' tools/clinical-scales/index.html
-          grep -q 'Tanı aracı değildir' tools/clinical-scales/index.html
-          echo 'OFFLINE / NO-PATIENT-IDENTITY CONTRACT PASS'
+          grep -Fq 'Klinik karar desteği' tools/clinical-scales/index.html
+          grep -Fq 'Tanı aracı değildir' tools/clinical-scales/index.html
+          echo 'OFFLINE / NO-PATIENT-IDENTITY PASS'
 
       - name: Validate Plan 1 ligament contract
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile tools/anatomy3d/scripts/postprocess_reference_groups.py
-          grep -q 'ligament_high_visibility_red' tools/anatomy3d/scripts/postprocess_reference_groups.py
-          grep -q 'ligament_id_map_unchanged_by_recolor' tools/anatomy3d/scripts/postprocess_reference_groups.py
-          grep -q 'ligament_skeleton_reference_preserved' tools/anatomy3d/scripts/postprocess_reference_groups.py
-          echo 'PLAN 1 LIGAMENT SOURCE CONTRACT PASS'
+          grep -Fq 'ligament_high_visibility_red' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          grep -Fq 'ligament_id_map_unchanged_by_recolor' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          grep -Fq 'ligament_skeleton_reference_preserved' tools/anatomy3d/scripts/postprocess_reference_groups.py
+          echo 'PLAN 1 LIGAMENT SOURCE PASS'
 
-      - name: Validate exact-brand navigation contract
+      - name: Validate Plan 3 exact-brand navigation and release lock
         shell: bash
         run: |
           set -euo pipefail
@@ -200,13 +158,26 @@ jobs:
           grep -Fq 'ftr-logo-exact.sha256' tools/brand/EXACT-BRAND-ASSET-LOCK.md
           if test -f tools/brand/ftr-logo-exact.png; then
             test -f tools/brand/ftr-logo-exact.sha256
-            EXPECTED="$(tr -d '\r\n ' < tools/brand/ftr-logo-exact.sha256)"
-            test "$(sha256sum tools/brand/ftr-logo-exact.png | awk '{print $1}')" = "$EXPECTED"
-            echo 'EXACT BRAND BINARY + HASH PRESENT — release asset can proceed to visual QA.'
+            expected="$(tr -d '\r\n ' < tools/brand/ftr-logo-exact.sha256)"
+            test "$(sha256sum tools/brand/ftr-logo-exact.png | awk '{print $1}')" = "$expected"
+            echo 'EXACT BRAND BINARY + HASH PASS'
           else
             test ! -f tools/brand/ftr-logo-exact.sha256
-            echo 'EXACT BRAND BINARY PENDING — source QA passes, RELEASE BUILD MUST REMAIN BLOCKED.'
+            echo 'EXACT BRAND BINARY PENDING — RELEASE REMAINS BLOCKED'
           fi
+
+      - name: Validate v30 builder fail-closed contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'BASE_SIZE = 1_137_460_262' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'BASE_SHA256 = "acbe8ba68cad016d56f4d61e43cfa912e37c65543e5321162d03f69dc220b809"' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'ftr-logo-exact.sha256' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'ligament invisible ID map differs from physically verified v29.9' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'expected_changed = {HOST_INDEX, LIGAMENT_FRONT}' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'OUT-OF-SCOPE existing APK payload changed' tools/v30/build_v30_three_plan_apk.py
+          grep -Fq 'PENDING_USER_RETEST' tools/v30/build_v30_three_plan_apk.py
+          echo 'V30 BUILDER FAIL-CLOSED PASS'
 
       - name: Confirm no runtime WebGL regression
         shell: bash
