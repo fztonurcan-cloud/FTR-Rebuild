@@ -1,0 +1,46 @@
+name: FTR v29.10b Native Workbench
+
+on:
+  push:
+    branches: [v29.10b-premium-work]
+    paths:
+      - 'tools/v2910b-native/**'
+      - '.github/workflows/ftr-v2910b-native.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decompile-native:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Decode current v29.10b classes.dex
+        run: |
+          mkdir -p work
+          base64 -d tools/v2910b-native/classes.dex.b64 > work/classes.dex
+          sha256sum work/classes.dex
+      - name: Download JADX 1.5.6
+        run: |
+          curl -fL --retry 3 -o work/jadx.zip https://github.com/skylot/jadx/releases/download/v1.5.6/jadx-1.5.6.zip
+          unzip -q work/jadx.zip -d work/jadx
+      - name: Decompile native wrapper
+        run: |
+          mkdir -p work/decompiled
+          work/jadx/bin/jadx --show-bad-code -d work/decompiled work/classes.dex
+          find work/decompiled -type f | sort
+      - name: Upload decompiled native wrapper
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2910b-native-decompiled
+          path: work/decompiled
+          if-no-files-found: error
+          retention-days: 7
