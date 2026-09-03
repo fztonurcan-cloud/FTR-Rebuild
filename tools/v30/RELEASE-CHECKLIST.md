@@ -38,23 +38,38 @@ Status is fail-closed. A checked source/CI item is not equivalent to physical-ph
 - [x] Turkey psychometric evidence separated from translation/copyright licence (`turkish-evidence.js`).
 - [x] Detailed evidence rendering layer present (`detail-evidence-enhancer.js`).
 - [x] 29 original offline procedure/domain illustrations.
-- [x] Clinical home card host bridge present.
-- [x] Source and host-integration CI guards pass.
+- [x] Premium Clinical Scales shell matches the approved reference structure: compact title/subtitle, search + filter control, 8 colored category cards and four-item bottom navigation.
+- [x] Clinical bottom navigation bridges back to host routes without changing the clinical scoring/evidence engine.
 - [ ] Final editorial spot-check of all 29 detail pages after packaging.
 - [ ] Physical-phone navigation/content/scroll/performance test.
 
-## Plan 3 — Exact approved FTR brand
+## Plan 3 — Exact approved premium FTR design + navigation
 
-Approved source only: `ChatGPT Image 3 Eyl 2026 13_01_16.png`.
+Approved visual lock only: `ChatGPT Image 3 Eyl 2026 13_01_16.png`.
 
 - [x] Exact-brand lock explicitly forbids AI regeneration, tracing, older logos and stylistic substitutes.
-- [x] Host, Clinical Scales and 3D Anatomy navigation paths target the same exact runtime asset.
+- [x] Full premium reference decision is restored and locked; this is not a logo-only change.
+- [x] Premium home shell implemented with approved dark navy/black visual language.
+- [x] Top bar includes menu, exact-logo slot + `FTR AKADEMİ`, and notification surface.
+- [x] Home hero includes `Merhaba, Fizyoterapist!` and anatomy visual while preserving offline assets.
+- [x] Four primary cards are locked in this order: `Derslerim → 3D Anatomi → Hareket Stüdyosu → Klinik Ölçekler`.
+- [x] Four shortcut cards are present: Quizler, Favoriler, Notlarım, Programlarım.
+- [x] Four-item bottom navigation is present: Ana Sayfa, Dersler, Çalışma Alanım, Profilim.
+- [x] Premium drawer is implemented with approved section/order language, including Clinical Scales `YENİ` badge.
+- [x] Existing host behavior is invoked through bridge selectors/text targets; unrelated business/content implementation is not rewritten.
+- [x] Clinical Scales and 3D Anatomy target the same exact runtime logo asset.
 - [x] Logo is a Home control; normal Back remains hierarchical.
+- [x] Clinical Scales bottom navigation can return to host routes through `v30nav` bridge handling.
 - [ ] Pixel-preserving logo crop extracted from the approved source image.
 - [ ] `tools/brand/ftr-logo-exact.png` committed.
 - [ ] `tools/brand/ftr-logo-exact.sha256` committed and matches exactly.
 - [ ] CI reports `EXACT BRAND BINARY + HASH PASS` rather than pending.
-- [ ] Physical-phone visual comparison to approved reference.
+- [ ] Physical-phone visual comparison to approved reference at 360×800 and 390×844 class devices.
+- [ ] Drawer, primary cards, shortcuts, bottom nav and logo Home behavior physically verified.
+
+## Protected existing areas
+
+The premium presentation must not rewrite the business/content implementation for FTR AI, lessons, quizzes, authentication, notifications, Movement Studio, programs, favorites/notes or other unrelated working modules. The host bridge may only invoke their existing navigation/action surfaces.
 
 ## Packaging scope
 
@@ -63,7 +78,7 @@ The v30 builder may change existing APK payload only at:
 1. `assets/app/index.html`
 2. `assets/app/anatomy3d/atlas/ligament-front.png`
 
-New payload is restricted to the v30 host bridge, Clinical Scales module and hash-locked brand asset. No existing unrelated payload may be removed or altered.
+New payload is restricted to the v30 premium host bridge, Clinical Scales module and hash-locked brand asset. No existing unrelated payload may be removed or altered.
 
 ## Pre-phone binary QA
 
@@ -75,7 +90,7 @@ New payload is restricted to the v30 host bridge, Clinical Scales module and has
 - [ ] Existing-payload diff exactly `{index.html, ligament-front.png}`.
 - [ ] `ligament-id.png` byte-identical to base.
 - [ ] Exact brand SHA survives packaging unchanged.
-- [ ] Clinical release payload includes core data, authoritative evidence, Turkish evidence, deep scoring evidence, detail evidence UI and all 29 visuals.
+- [ ] Clinical release payload includes core data, authoritative evidence, Turkish evidence, deep scoring evidence, detail evidence UI, premium reference CSS/JS and all 29 visuals.
 - [ ] No runtime WebGL/GLB regression.
 
 ## Physical phone gate
@@ -83,8 +98,11 @@ New payload is restricted to the v30 host bridge, Clinical Scales module and has
 v30 must remain **NOT FINAL / NOT LOCKED** until the user confirms on a real phone:
 
 - install/update succeeds without data-loss workaround;
-- home remains visually intact;
+- premium home visually matches the approved reference closely enough for the user's 100/100 decision;
 - exact FTR logo matches the approved reference and taps Home;
+- drawer opens/closes correctly and routes correctly;
+- four primary cards, shortcuts and bottom navigation work;
+- FTR AI and all unrelated existing working content remain intact;
 - 3D Anatomy still performs smoothly and all five systems work;
 - ligaments are clearly red while skeleton remains ivory, with correct purple selection;
 - Clinical Scales opens, all 8 categories and 29 instruments browse correctly;
