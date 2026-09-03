@@ -126,12 +126,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q '../brand/ftr-logo-exact.png' tools/anatomy3d/index.html
-          grep -q '../brand/ftr-logo-exact.png' tools/clinical-scales/index.html
-          grep -q 'anatomyHomeBrand' tools/anatomy3d/src/brand-nav.js
-          grep -q "window.location.href = '../index.html'" tools/anatomy3d/src/brand-nav.js
-          grep -q "location.href = '../index.html'" tools/clinical-scales/app.js
-          grep -q 'Do **not** replace it with AI regeneration' tools/brand/EXACT-BRAND-ASSET-LOCK.md
+          grep -Fq '../brand/ftr-logo-exact.png' tools/anatomy3d/index.html
+          grep -Fq '../brand/ftr-logo-exact.png' tools/clinical-scales/index.html
+          grep -Fq 'anatomyHomeBrand' tools/anatomy3d/src/brand-nav.js
+          grep -Fq "window.location.href = '../index.html'" tools/anatomy3d/src/brand-nav.js
+          grep -Fq "location.href = '../index.html'" tools/clinical-scales/app.js
+          grep -Fq 'Do **not** replace it with AI regeneration' tools/brand/EXACT-BRAND-ASSET-LOCK.md
           if test -f tools/brand/ftr-logo-exact.png; then
             echo 'EXACT BRAND BINARY PRESENT — release asset can proceed to visual/hash QA.'
           else
