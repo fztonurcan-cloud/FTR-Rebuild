@@ -10,14 +10,18 @@
   <link rel="stylesheet" href="/src/layout-lock.css" />
   <link rel="stylesheet" href="/src/mobile-premium.css" />
   <link rel="stylesheet" href="/src/visual-reference.css" />
+  <link rel="stylesheet" href="/src/brand-nav.css" />
 </head>
 <body>
   <main id="anatomy-app" class="anatomy-app" data-system="muscle">
     <header class="topbar">
       <button id="backBtn" class="icon-btn" type="button" aria-label="Geri">←</button>
-      <div class="topbar-title">
-        <h1>3D ANATOMİ</h1>
-        <p id="systemSubtitle">KAS SİSTEMİ</p>
+      <div class="topbar-brand-wrap">
+        <button id="anatomyHomeBrand" class="brand-home-button" type="button" aria-label="FTR Akademi ana sayfasına dön">
+          <img src="../brand/ftr-logo-exact.png" alt="" aria-hidden="true" />
+          <span>FTR AKADEMİ</span>
+        </button>
+        <p class="brand-page-line"><b>3D ANATOMİ</b><span aria-hidden="true">•</span><span id="systemSubtitle">KAS SİSTEMİ</span></p>
       </div>
       <button id="focusModeBtn" class="icon-btn" type="button" aria-label="Tam ekran">⛶</button>
     </header>
@@ -81,5 +85,6 @@
   <script type="module" src="/src/main.js"></script>
   <script type="module" src="/src/mobile-browser.js"></script>
   <script type="module" src="/src/qa-layout.js"></script>
+  <script type="module" src="/src/brand-nav.js"></script>
 </body>
 </html>
