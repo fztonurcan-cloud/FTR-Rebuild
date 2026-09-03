@@ -42,15 +42,27 @@ jobs:
           curl -fL --retry 3 -o work/billing.aar https://dl.google.com/dl/android/maven2/com/android/billingclient/billing/9.1.0/billing-9.1.0.aar
           mkdir -p work/billing
           unzip -q work/billing.aar -d work/billing
-      - name: Locate SDK smali toolchain
+      - name: Resolve deterministic Smali 2.5.2 toolchain
         run: |
-          test -f "$ANDROID_HOME/tools/lib/baksmali-2.2.1.jar"
-          test -f "$ANDROID_HOME/tools/lib/smali-2.2.1.jar"
-          echo "$ANDROID_HOME/tools/lib/*" > work/smali-entrypoints.txt
+          cat > work/smali-pom.xml <<'POM'
+          <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>com.ftrakademi</groupId><artifactId>v2910b-smali-tools</artifactId><version>1</version>
+            <dependencies>
+              <dependency><groupId>org.smali</groupId><artifactId>baksmali</artifactId><version>2.5.2</version></dependency>
+              <dependency><groupId>org.smali</groupId><artifactId>smali</artifactId><version>2.5.2</version></dependency>
+            </dependencies>
+          </project>
+          POM
+          mvn -q -f work/smali-pom.xml dependency:build-classpath -Dmdep.outputFile="$GITHUB_WORKSPACE/work/smali.cp"
+          test -s work/smali.cp
+          tr ':' '\n' < work/smali.cp | sort > work/smali-entrypoints.txt
+          grep -q 'baksmali' work/smali-entrypoints.txt
+          grep -q '/smali-' work/smali-entrypoints.txt
       - name: Disassemble locked MainActivity dex
         run: |
           mkdir -p work/smali
-          java -cp "$ANDROID_HOME/tools/lib/*" org.jf.baksmali.Main disassemble work/classes.dex -o work/smali
+          java -cp "$(cat work/smali.cp)" org.jf.baksmali.Main disassemble work/classes.dex -o work/smali
           test -f work/smali/com/ftrakademi/preview3/MainActivity.smali
           grep -n 'addJavascriptInterface' work/smali/com/ftrakademi/preview3/MainActivity.smali | tee work/main-bridge-lines.txt
       - name: Patch exactly one Billing bootstrap call into onCreate
@@ -73,7 +85,7 @@ jobs:
           grep -n -C 5 'BillingBootstrap' work/smali/com/ftrakademi/preview3/MainActivity.smali
       - name: Reassemble patched locked native dex
         run: |
-          java -cp "$ANDROID_HOME/tools/lib/*" org.jf.smali.Main assemble work/smali -o work/classes-patched.dex
+          java -cp "$(cat work/smali.cp)" org.jf.smali.Main assemble work/smali -o work/classes-patched.dex
           test -s work/classes-patched.dex
           sha256sum work/classes.dex work/classes-patched.dex
       - name: Compile isolated FTRBilling bridge with Play Billing 9.1.0
@@ -102,6 +114,7 @@ jobs:
             'patched_classes_sha256':sha('work/classes-patched.dex'),
             'billing_classes5_sha256':sha('work/classes5.dex'),
             'billing_library':'com.android.billingclient:billing:9.1.0',
+            'smali_toolchain':'org.smali 2.5.2 from Maven Central',
             'mainactivity_patch':'single BillingBootstrap.install(Activity) call after WebChromeClient setup',
             'base_mainactivity_recompiled':False,
           }
