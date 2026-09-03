@@ -1,0 +1,35 @@
+name: FTR v29.11 Billing Manifest Inspect
+
+on:
+  push:
+    branches: [v29.10b-premium-work]
+    paths:
+      - '.github/workflows/ftr-v2911-billing-manifest.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Billing 9.1.0 AAR and extract manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          curl -fL --retry 3 -o out/billing-9.1.0.aar https://dl.google.com/dl/android/maven2/com/android/billingclient/billing/9.1.0/billing-9.1.0.aar
+          unzip -p out/billing-9.1.0.aar AndroidManifest.xml > out/billing-AndroidManifest.xml
+          sha256sum out/billing-9.1.0.aar out/billing-AndroidManifest.xml | tee out/SHA256SUMS.txt
+          cat out/billing-AndroidManifest.xml
+      - name: Upload manifest evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: billing-9.1.0-manifest-evidence
+          path: |
+            out/billing-AndroidManifest.xml
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 7
