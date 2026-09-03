@@ -38,6 +38,17 @@
     'PubMed — Turkish Berg Balance Scale validation',
     'https://pubmed.ncbi.nlm.nih.gov/18489806/');
 
+  add('mas',
+    'Türkiye’de post-inme dirsek fleksör tonusunun değerlendirilmesinde MAS/MMAS gözlemciler arası güvenilirliği incelenmiş; ayrıca Türkiye’de spinal kord yaralanmalı hastalarda MAS ve Modified Tardieu güvenilirliği birlikte araştırılmıştır. Bunlar “Türkçe form lisansı” değil, Türkiye klinik örneklemlerindeki ölçüm güvenilirliği kanıtıdır.',
+    'PubMed — MAS/MMAS post-stroke reliability, Turkey',
+    'https://pubmed.ncbi.nlm.nih.gov/20671560/');
+  byId.mas.sources.push(['PubMed — MAS + Modified Tardieu reliability in SCI, Turkey','https://pubmed.ncbi.nlm.nih.gov/28485384/']);
+
+  add('tardieu',
+    'Modified Tardieu Scale, Türkiye’de spinal kord yaralanmalı hastalarda MAS ile birlikte gözlemciler arası ve gözlemci içi güvenilirlik açısından incelenmiştir. Bu veri ölçeğin Türkçe telif/çeviri hakkını değil, Türkiye klinik örneklemindeki ölçüm güvenilirliğini destekler.',
+    'PubMed — Modified Tardieu reliability in SCI, Turkey',
+    'https://pubmed.ncbi.nlm.nih.gov/28485384/');
+
   add('odi',
     'ODI 2.0 Türkçe sürümü bel ağrılı 95 ayaktan hastada kültürler arası uyarlanmış; test-tekrar test ICC 0.938 ve yüksek iç tutarlılık bildirilmiştir.',
     'PubMed — Turkish Oswestry Disability Index validation',
@@ -79,6 +90,16 @@
     'PubMed — Turkish Modified DGI validation',
     'https://pubmed.ncbi.nlm.nih.gov/36121068/');
 
+  add('jebsen',
+    'Hacettepe Üniversitesi araştırmacıları Jebsen-Taylor El Fonksiyon Testi’ni 162 sağlıklı birey ve 143 el yaralanmalı hastada incelemiş; alt testler ve toplam skor için genel olarak iyi–mükemmel test-tekrar test güvenilirliği ve el yaralanmalarını ayırmaya yönelik cut-off analizi bildirmiştir. Bu çalışma Türkiye örneklem kanıtıdır.',
+    'PubMed — Jebsen-Taylor psychometrics, Hacettepe/Turkey',
+    'https://pubmed.ncbi.nlm.nih.gov/32156578/');
+
+  add('purdue',
+    'Hacettepe Üniversitesi örnekleminde Purdue Pegboard Testi’nin el yaralanmalı hastalarda yapı geçerliliği ve ayırt edici cut-off değerleri incelenmiştir. Bu çalışma standardize cihaz/protokol gereksinimini veya ticari materyal haklarını ortadan kaldırmaz.',
+    'PubMed — Purdue Pegboard validity/cut-offs, Hacettepe/Turkey',
+    'https://pubmed.ncbi.nlm.nih.gov/40337111/');
+
   add('mmse',
     'Standardize Mini Mental Test Türk toplumunda hafif demans ayrımında incelenmiş; eğitimli örneklemde 23/24 kesimi yüksek duyarlılık/özgüllük göstermiştir. Daha sonraki Türk çalışmaları yaş ve eğitim etkisini vurguladığından tek cut-off evrensel kabul edilmez.',
     'PubMed — Turkish standardized MMSE validation',
@@ -86,11 +107,12 @@
   byId.mmse.sources.push(['PubMed — Revised Turkish MMSE educated/uneducated older adults','https://pubmed.ncbi.nlm.nih.gov/19337986/']);
   byId.mmse.sources.push(['PubMed — Turkish MMSE normative psychometric caution','https://pubmed.ncbi.nlm.nih.gov/15729101/']);
 
-  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-1';
+  db.turkishEvidenceVersion = '2026-09-03-pubmed-pass-2';
   db.turkishEvidencePolicy = {
     populationNamed: true,
     editionNamed: true,
     psychometricValidationDoesNotGrantCopyright: true,
-    noUniversalCutoffInference: true
+    noUniversalCutoffInference: true,
+    turkeyCohortEvidenceSeparatedFromTranslationLicense: true
   };
 })();
