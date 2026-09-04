@@ -1,0 +1,32 @@
+FTR Akademi v29.13e Movement Interaction Fix
+
+Base: v29.13d-progressive-anatomy-back-fix
+Locked safety checkpoint remains: FTR-Akademi-v29.11b-PREMIUM-BILLING-PHONE-TEST.apk
+
+Phone-test APK:
+FTR-Akademi-v29.13e-MOVEMENT-INTERACTION-FIX-PHONE-TEST.apk
+SHA-256: c4817e8b033cae1efaaccc1e2d3e49b707990f3e39c40be69895040ac9f713c6
+Signing cert SHA-256: 8771cb32093de52d180d08270909fa5796850900bf7eecaf2b3181873c488be2
+V1: true
+V2: true
+
+Scope:
+- Movement Studio 1-8 week buttons interaction fix
+- Session cards and Antrenmana Basla interaction fix
+- Fitness Tumu/Biceps/category filters interaction fix
+- Movement Studio top heart now works as local favorite toggle for exercises/programs
+- Movement Studio nested hardware/back handler restored
+- Android WebView button touch hardening
+
+Protected:
+- Movement images/sequences unchanged
+- v29.13d progressive dosage unchanged
+- AndroidManifest, Billing, DEX, app core, 3D Anatomy, clinical premium unchanged
+
+Static self-test:
+fitness8=true
+reformer8=true
+allSessionsResolvable=true
+bicepsFilter=true
+
+Status: BUILD + STATIC QA PASS; PHONE TEST PENDING; NOT FINAL/LOCKED.
